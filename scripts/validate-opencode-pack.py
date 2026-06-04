@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 # ============================================================================
 # OpenCode Power Kit - Pack validator
-# Kiểm tra cấu trúc opencode-global/:
-#   - commands/*.md phải có frontmatter + description
-#   - agents/*.md phải có frontmatter + description + mode
-#   - skills/*/SKILL.md phải có heading và nội dung
+# Kiểm tra cấu trúc:
+#   - opencode-global/commands/*.md phải có frontmatter + description
+#   - opencode-global/agents/*.md phải có frontmatter + description + mode
+#   - opencode-global/skills/*/SKILL.md phải có heading và nội dung
+#   - profiles/*/commands/*.md phải có frontmatter + description
+#   - profiles/*/skills/*/SKILL.md phải có heading và nội dung
+#   - templates/openapi/*.example phải tồn tại (nếu openapi dir tồn tại)
 # Exit code 0 nếu pass, 1 nếu fail.
 # ============================================================================
 from __future__ import annotations
@@ -16,6 +19,8 @@ from pathlib import Path
 
 KIT_ROOT = Path(__file__).resolve().parent.parent
 GLOBAL_DIR = KIT_ROOT / "opencode-global"
+PROFILES_DIR = KIT_ROOT / "profiles"
+TEMPLATES_DIR = KIT_ROOT / "templates"
 
 
 def die(msg: str) -> "NoReturn":  # type: ignore[name-defined]
@@ -128,17 +133,68 @@ def validate_skills(skills_dir: Path) -> list[str]:
     return errors
 
 
+def validate_profile(profile_dir: Path) -> list[str]:
+    """Validate a single profile: commands/, skills/, README.md optional."""
+    errors: list[str] = []
+    name = profile_dir.name
+    print(f"[profile: {name}]")
+
+    # commands
+    cmds_dir = profile_dir / "commands"
+    if cmds_dir.is_dir():
+        errors += validate_commands(cmds_dir)
+    else:
+        ok(f"profile/{name}/commands/ not present (optional)")
+
+    # skills
+    skills_dir = profile_dir / "skills"
+    if skills_dir.is_dir():
+        errors += validate_skills(skills_dir)
+    else:
+        ok(f"profile/{name}/skills/ not present (optional)")
+
+    return errors
+
+
+def validate_openapi_templates() -> list[str]:
+    errors: list[str] = []
+    openapi_dir = TEMPLATES_DIR / "openapi"
+    if not openapi_dir.is_dir():
+        ok("templates/openapi/ not present (optional)")
+        return errors
+    examples = sorted(openapi_dir.glob("*.example"))
+    if not examples:
+        errors.append(f"templates/openapi/ exists but no *.example files")
+        return errors
+    for f in examples:
+        if f.is_file() and f.stat().st_size > 0:
+            ok(f"templates/openapi/{f.name} present and non-empty")
+        else:
+            errors.append(f"templates/openapi/{f.name} empty or not a file")
+    return errors
+
+
 def main() -> int:
     if not GLOBAL_DIR.is_dir():
         die(f"opencode-global not found at {GLOBAL_DIR}")
-    print(f"Validating opencode pack in: {GLOBAL_DIR}")
+    print(f"Validating opencode pack in: {KIT_ROOT}")
     errors: list[str] = []
-    print("[commands]")
+    print("[opencode-global/commands]")
     errors += validate_commands(GLOBAL_DIR / "commands")
-    print("[agents]")
+    print("[opencode-global/agents]")
     errors += validate_agents(GLOBAL_DIR / "agents")
-    print("[skills]")
+    print("[opencode-global/skills]")
     errors += validate_skills(GLOBAL_DIR / "skills")
+
+    if PROFILES_DIR.is_dir():
+        profile_dirs = sorted([d for d in PROFILES_DIR.iterdir() if d.is_dir()])
+        for p in profile_dirs:
+            errors += validate_profile(p)
+    else:
+        ok("profiles/ not present (optional)")
+
+    print("[templates/openapi]")
+    errors += validate_openapi_templates()
 
     if errors:
         print("\nPack validation FAILED:", file=sys.stderr)

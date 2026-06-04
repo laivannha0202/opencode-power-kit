@@ -32,6 +32,10 @@ jobs:
           set -e
           for f in install.sh verify.sh install-global.sh update-bmad.sh \
                    scripts/install-token-tools.sh \
+                   scripts/install-fullstack-profile.sh \
+                   scripts/install-security-tools.sh \
+                   scripts/install-api-tools.sh \
+                   scripts/install-js-quality-tools.sh \
                    scripts/integration-test.sh \
                    doctor.sh uninstall.sh; do
             if [ -f "$f" ]; then
@@ -71,7 +75,11 @@ jobs:
             exit 0
           fi
           for f in install.sh verify.sh install-global.sh update-bmad.sh \
-                   scripts/install-token-tools.sh; do
+                   scripts/install-token-tools.sh \
+                   scripts/install-fullstack-profile.sh \
+                   scripts/install-security-tools.sh \
+                   scripts/install-api-tools.sh \
+                   scripts/install-js-quality-tools.sh; do
             shellcheck -x "$f" || {
               echo "shellcheck warnings in $f (non-fatal at default level)"
             }
@@ -111,7 +119,11 @@ jobs:
             exit 0
           fi
           for f in install.sh verify.sh install-global.sh update-bmad.sh \
-                   scripts/install-token-tools.sh; do
+                   scripts/install-token-tools.sh \
+                   scripts/install-fullstack-profile.sh \
+                   scripts/install-security-tools.sh \
+                   scripts/install-api-tools.sh \
+                   scripts/install-js-quality-tools.sh; do
             shfmt -d "$f" || {
               echo "shfmt drift in $f (review before merging)"
             }
@@ -170,16 +182,16 @@ jobs:
           echo "ok: no whitespace/merge-conflict markers"
 
   # -----------------------------------------------------------------------
-  # 8) No MCP config in opencode-global/
+  # 8) No MCP config in opencode-global/ AND profiles/
   # -----------------------------------------------------------------------
   no-mcp:
-    name: no MCP in opencode-global
+    name: no MCP in opencode-global or profiles
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Scan for MCP config
+      - name: Scan for MCP config in opencode-global/
         run: |
           set +e
           hits=$(grep -rE '"mcp"\s*:' opencode-global/ 2>/dev/null)
@@ -189,6 +201,17 @@ jobs:
             exit 1
           fi
           echo "ok: no MCP config in opencode-global/"
+
+      - name: Scan for MCP config in profiles/
+        run: |
+          set +e
+          hits=$(grep -rE '"mcp"\s*:' profiles/ 2>/dev/null)
+          if [ -n "$hits" ]; then
+            echo "ERROR: MCP config found in profiles/" >&2
+            echo "$hits" >&2
+            exit 1
+          fi
+          echo "ok: no MCP config in profiles/"
 
   # -----------------------------------------------------------------------
   # 9) Secret-pattern scan
@@ -248,9 +271,31 @@ jobs:
             ["verify.sh"]=80
             ["install-global.sh"]=40
             ["scripts/install-token-tools.sh"]=50
+            ["scripts/install-fullstack-profile.sh"]=80
+            ["scripts/install-security-tools.sh"]=50
+            ["scripts/install-api-tools.sh"]=50
+            ["scripts/install-js-quality-tools.sh"]=50
             ["opencode-global/commands/spec-lite.md"]=10
+            ["opencode-global/commands/fullstack-scan.md"]=10
+            ["opencode-global/commands/openapi-check.md"]=10
+            ["opencode-global/commands/secret-scan.md"]=10
+            ["opencode-global/commands/sast-check.md"]=10
+            ["opencode-global/commands/e2e-plan.md"]=10
+            ["opencode-global/commands/test-matrix.md"]=10
+            ["opencode-global/commands/js-quality-check.md"]=10
+            ["opencode-global/commands/env-doctor.md"]=10
+            ["opencode-global/commands/docker-dev-doctor.md"]=10
             ["opencode-global/agents/plan-lite.md"]=10
             ["opencode-global/skills/safe-edit/SKILL.md"]=8
+            ["opencode-global/skills/openapi-contract/SKILL.md"]=10
+            ["opencode-global/skills/secure-fullstack/SKILL.md"]=10
+            ["opencode-global/skills/dependency-maintenance/SKILL.md"]=10
+            ["opencode-global/skills/fullstack-test-strategy/SKILL.md"]=10
+            ["opencode-global/skills/js-ts-quality/SKILL.md"]=10
+            ["opencode-global/skills/env-config-safe/SKILL.md"]=10
+            ["opencode-global/skills/docker-compose-safe/SKILL.md"]=10
+            ["opencode-global/skills/nest-react-mysql/SKILL.md"]=10
+            ["profiles/node-nest-react-mysql/README.md"]=30
           )
           fail=0
           for f in "${!mins[@]}"; do
@@ -297,6 +342,25 @@ jobs:
 
       - name: Make scripts executable
         run: chmod +x scripts/*.sh install.sh verify.sh install-global.sh update-bmad.sh doctor.sh uninstall.sh 2>/dev/null || true
+
+      - name: Validate JSON in templates/
+        run: |
+          for f in templates/biome.json.example templates/renovate.json.example; do
+            if [ -f "$f" ]; then
+              python3 -m json.tool "$f" >/dev/null
+              echo "ok: $f"
+            else
+              echo "skip (not present): $f"
+            fi
+          done
+
+      - name: Validate YAML in templates/
+        run: |
+          python3 -c "import yaml,sys; \
+yaml.safe_load(open('templates/openapi/spectral.yaml.example')); print('spectral.yaml.example ok')" \
+            2>/dev/null \
+            || (python3 -c "import sys" && pip install --quiet pyyaml && \
+                python3 -c "import yaml; yaml.safe_load(open('templates/openapi/spectral.yaml.example')); print('spectral.yaml.example ok')")
 
       - name: Run integration test
         run: bash scripts/integration-test.sh

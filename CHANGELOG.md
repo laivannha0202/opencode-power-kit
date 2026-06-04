@@ -5,6 +5,59 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-06-04
+
+### Added
+
+- **Full-stack profile** (`profiles/node-nest-react-mysql/`) cho stack
+  NestJS + React/Vite + MySQL:
+  - 5 commands: `fullstack-scan`, `api-e2e-flow`, `env-doctor`,
+    `docker-dev-doctor`, `seed-data-safe`.
+  - 5 skills: `nestjs-backend`, `react-vite-frontend`, `mysql-schema-safe`,
+    `auth-rbac-review`, `fullstack-test-strategy`.
+  - `AGENTS.append.md` + `OPENCODE.append.md` với rule layer + workflow.
+- **Profile installer** (`scripts/install-fullstack-profile.sh`): copy commands
+  + skills, append AGENTS/OPENCODE với marker idempotent, backup file user.
+  Từ chối chạy trong HOME hoặc trong `~/opencode-power-kit`.
+- **Global full-stack commands** (9 mới):
+  `fullstack-scan`, `openapi-check`, `secret-scan`, `sast-check`,
+  `e2e-plan`, `test-matrix`, `js-quality-check`, `env-doctor`,
+  `docker-dev-doctor`.
+- **Global full-stack skills** (8 mới):
+  `openapi-contract`, `secure-fullstack`, `dependency-maintenance`,
+  `fullstack-test-strategy`, `js-ts-quality`, `env-config-safe`,
+  `docker-compose-safe`, `nest-react-mysql`.
+- **Templates** (4 mới):
+  `biome.json.example`, `renovate.json.example`,
+  `openapi/openapi.yaml.example`, `openapi/spectral.yaml.example`.
+- **Optional install scripts** (3 mới):
+  `install-security-tools.sh`, `install-api-tools.sh`,
+  `install-js-quality-tools.sh`. Detect tool, in hướng dẫn, tạo report.
+  Không sudo, không curl|sh, không tự cài.
+
+### Changed
+
+- **Pack validator** (`scripts/validate-opencode-pack.py`): thêm validate
+  `profiles/*/commands/*.md` frontmatter + `profiles/*/skills/*/SKILL.md`
+  heading + `templates/openapi/*.example` tồn tại.
+- **Integration test** (`scripts/integration-test.sh`): thêm test
+  `install-fullstack-profile.sh` trong temp project, verify marker + artifacts.
+- **CI** (`.github/workflows/ci.yml`):
+  - `bash -n` thêm 4 script mới.
+  - `no-mcp` scan cả `profiles/`.
+  - `line-count-guard` thêm min lines cho 17 file mới.
+  - Validate JSON `biome.json.example`, `renovate.json.example`.
+  - Validate YAML `spectral.yaml.example`.
+
+### Safety (giữ nguyên policy)
+
+- Không thêm MCP config vào `opencode-global/` hay `profiles/`.
+- Không chứa `sk-`, `ghp_`, `AKIA`, `PRIVATE KEY`, `api_key=`, `password=`
+  pattern trong source.
+- Không sudo, không curl|sh trong install scripts.
+- Không tự cài dependency nặng (gitleaks, semgrep, biome, ...).
+- Backup trước khi append/sửa file user.
+
 ## [1.0.0] - 2026-06-04
 
 First production-grade release. Bumped from 9.4/10 → 10/10.

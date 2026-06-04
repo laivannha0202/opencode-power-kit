@@ -123,6 +123,65 @@ check_path "lefthook.yml"               "file"
 check_path "_bmad"                      "dir"
 check_path ".agents/skills"             "dir"
 check_path ".opencode/commands"         "dir"
+check_path "opencode-power-install-report.md" "file"
+
+# --- Test full-stack profile install ---
+if [ -x "$KIT_DIR/scripts/install-fullstack-profile.sh" ]; then
+  info "Running scripts/install-fullstack-profile.sh in $TMP_DIR ..."
+  set +e
+  ( cd "$TMP_DIR" && bash "$KIT_DIR/scripts/install-fullstack-profile.sh" ) >/tmp/profile.log 2>&1
+  profile_rc=$?
+  set -e
+
+  if [ "$profile_rc" -ne 0 ]; then
+    err "install-fullstack-profile.sh exited $profile_rc"
+    echo "----- /tmp/profile.log (tail) -----" >&2
+    tail -30 /tmp/profile.log >&2
+  else
+    ok "install-fullstack-profile.sh completed (rc=0)"
+  fi
+
+  # Verify profile artifacts
+  echo ""
+  info "Checking full-stack profile artifacts in $TMP_DIR ..."
+
+  # AGENTS.md must have fullstack marker after install
+  if [ -f "$TMP_DIR/AGENTS.md" ] && grep -qF "OPENCODE-POWER-KIT-MARKER: fullstack-profile-begin" "$TMP_DIR/AGENTS.md"; then
+    ok "AGENTS.md has fullstack marker"
+  else
+    err "AGENTS.md missing fullstack marker"
+  fi
+
+  if [ -f "$TMP_DIR/OPENCODE.md" ] && grep -qF "OPENCODE-POWER-KIT-MARKER: fullstack-profile-begin" "$TMP_DIR/OPENCODE.md"; then
+    ok "OPENCODE.md has fullstack marker"
+  else
+    err "OPENCODE.md missing fullstack marker"
+  fi
+
+  if [ -d "$TMP_DIR/.opencode/commands/fullstack" ]; then
+    cmd_n=$(find "$TMP_DIR/.opencode/commands/fullstack" -maxdepth 1 -name "*.md" | wc -l)
+    if [ "$cmd_n" -gt 0 ]; then
+      ok ".opencode/commands/fullstack/ ($cmd_n files)"
+    else
+      err ".opencode/commands/fullstack/ empty"
+    fi
+  else
+    err ".opencode/commands/fullstack/ not found"
+  fi
+
+  if [ -d "$TMP_DIR/.agents/skills" ]; then
+    skill_n=$(find "$TMP_DIR/.agents/skills" -mindepth 1 -maxdepth 1 -type d | wc -l)
+    if [ "$skill_n" -gt 0 ]; then
+      ok ".agents/skills/ ($skill_n skills)"
+    else
+      err ".agents/skills/ empty"
+    fi
+  else
+    err ".agents/skills/ not found"
+  fi
+else
+  warn "install-fullstack-profile.sh not present - skipping profile test"
+fi
 
 # --- Final ---
 echo ""

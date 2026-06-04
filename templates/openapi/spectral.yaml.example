@@ -1,0 +1,32 @@
+extends:
+  - spectral:oas
+  - ./ruleset-extra.yaml
+
+rules:
+  # --- Naming ---
+  operation-operationId: error
+  operation-tags: error
+  path-params: error
+  operation-singular-tag: warn
+
+  # --- Type safety ---
+  no-enum-type-mismatch: error
+  no-invalid-default: error
+  no-invalid-schema-examples: warn
+  no-schema-type-mismatch: error
+  no-type-mismatch: error
+  typed-enum: warn
+
+  # --- Description ---
+  info-contact: warn
+  info-description: warn
+  info-license: warn
+  operation-description: warn
+
+  # --- Security ---
+  oas3-api-servers: warn
+  oas3-valid-media-example: warn
+
+  # --- Loose (cảnh báo, không block) ---
+  no-eval-in-markdown: warn
+  no-script-tags-in-markdown: warn
