@@ -18,10 +18,10 @@ check() {
   local desc="$1" path="$2"
   if [ -e "$path" ]; then
     echo -e "  ${GREEN}✅${NC} $desc"
-    ((PASS++))
+    ((++PASS))
   else
     echo -e "  ${RED}❌${NC} $desc — KHÔNG TÌM THẤY: $path"
-    ((FAIL++))
+    ((++FAIL))
   fi
 }
 
@@ -29,10 +29,10 @@ check_warn() {
   local desc="$1" path="$2"
   if [ -e "$path" ]; then
     echo -e "  ${GREEN}✅${NC} $desc"
-    ((PASS++))
+    ((++PASS))
   else
     echo -e "  ${YELLOW}⚠️${NC} $desc — không bắt buộc: $path"
-    ((WARN++))
+    ((++WARN))
   fi
 }
 
@@ -51,10 +51,10 @@ echo "🌍 Global config (opencode-global/):"
 check "OPENCODE_CONFIG_DIR env in ~/.bashrc" "$HOME/.bashrc"
 if grep -qF 'OPENCODE_CONFIG_DIR' "$HOME/.bashrc" 2>/dev/null; then
   echo -e "  ${GREEN}✅${NC} OPENCODE_CONFIG_DIR đã set trong ~/.bashrc"
-  ((PASS++))
+  ((++PASS))
 else
   echo -e "  ${RED}❌${NC} OPENCODE_CONFIG_DIR chưa set trong ~/.bashrc"
-  ((FAIL++))
+  ((++FAIL))
 fi
 
 echo ""
@@ -72,6 +72,16 @@ check "review-diff.md" "$GLOBAL_DIR/commands/review-diff.md"
 check "repo-map.md" "$GLOBAL_DIR/commands/repo-map.md"
 check "token-pack.md" "$GLOBAL_DIR/commands/token-pack.md"
 check "db-readonly.md" "$GLOBAL_DIR/commands/db-readonly.md"
+echo "  --- v2: lifecycle + review + token ---"
+check "spec-lite.md" "$GLOBAL_DIR/commands/spec-lite.md"
+check "plan-work.md" "$GLOBAL_DIR/commands/plan-work.md"
+check "build-slice.md" "$GLOBAL_DIR/commands/build-slice.md"
+check "test-proof.md" "$GLOBAL_DIR/commands/test-proof.md"
+check "ship-check.md" "$GLOBAL_DIR/commands/ship-check.md"
+check "security-review.md" "$GLOBAL_DIR/commands/security-review.md"
+check "api-contract-review.md" "$GLOBAL_DIR/commands/api-contract-review.md"
+check "migration-safe.md" "$GLOBAL_DIR/commands/migration-safe.md"
+check "rtk-gain.md" "$GLOBAL_DIR/commands/rtk-gain.md"
 
 echo ""
 echo "📁 Global skills:"
@@ -80,16 +90,40 @@ check "serena-first/SKILL.md" "$GLOBAL_DIR/skills/serena-first/SKILL.md"
 check "safe-edit/SKILL.md" "$GLOBAL_DIR/skills/safe-edit/SKILL.md"
 check "repo-map/SKILL.md" "$GLOBAL_DIR/skills/repo-map/SKILL.md"
 check "js-ts-project/SKILL.md" "$GLOBAL_DIR/skills/js-ts-project/SKILL.md"
+echo "  --- v2: review + strategy + ADR ---"
+check "security-review/SKILL.md" "$GLOBAL_DIR/skills/security-review/SKILL.md"
+check "api-contract/SKILL.md" "$GLOBAL_DIR/skills/api-contract/SKILL.md"
+check "database-migration-safe/SKILL.md" "$GLOBAL_DIR/skills/database-migration-safe/SKILL.md"
+check "test-strategy/SKILL.md" "$GLOBAL_DIR/skills/test-strategy/SKILL.md"
+check "frontend-ui-review/SKILL.md" "$GLOBAL_DIR/skills/frontend-ui-review/SKILL.md"
+check "adr-architecture-decision/SKILL.md" "$GLOBAL_DIR/skills/adr-architecture-decision/SKILL.md"
+check "rtk-token-optimizer/SKILL.md" "$GLOBAL_DIR/skills/rtk-token-optimizer/SKILL.md"
+
+echo ""
+echo "📁 Scripts:"
+check "install-token-tools.sh" "$KIT_DIR/scripts/install-token-tools.sh"
 
 echo ""
 echo "🔧 External tools:"
 for tool in repomix rg fd ast-grep serena; do
   if command -v "$tool" &>/dev/null; then
     echo -e "  ${GREEN}✅${NC} $tool"
-    ((PASS++))
+    ((++PASS))
   else
     echo -e "  ${YELLOW}⚠️${NC} $tool — không tìm thấy (không bắt buộc)"
-    ((WARN++))
+    ((++WARN))
+  fi
+done
+
+echo ""
+echo "🔧 Token optimization tools (không bắt buộc, không fail nếu thiếu):"
+for tool in rtk tokscale; do
+  if command -v "$tool" &>/dev/null; then
+    echo -e "  ${GREEN}✅${NC} $tool"
+    ((++PASS))
+  else
+    echo -e "  ${YELLOW}⚠️${NC} $tool — chưa cài. Chạy: bash scripts/install-token-tools.sh"
+    ((++WARN))
   fi
 done
 
@@ -115,14 +149,14 @@ echo "📁 Gitignore:"
 if [ -f ".gitignore" ]; then
   if grep -qF "# >>> opencode-power-kit" .gitignore 2>/dev/null; then
     echo -e "  ${GREEN}✅${NC} .gitignore có nội dung Power Kit"
-    ((PASS++))
+    ((++PASS))
   else
     echo -e "  ${YELLOW}⚠️${NC} .gitignore chưa có nội dung Power Kit"
-    ((WARN++))
+    ((++WARN))
   fi
 else
   echo -e "  ${RED}❌${NC} .gitignore không tồn tại"
-  ((FAIL++))
+  ((++FAIL))
 fi
 
 echo ""
@@ -130,17 +164,17 @@ echo "📦 opencode.json content:"
 if [ -f ".opencode/opencode.json" ]; then
   if grep -q "superpowers" .opencode/opencode.json 2>/dev/null; then
     echo -e "  ${GREEN}✅${NC} Có superpowers plugin"
-    ((PASS++))
+    ((++PASS))
   else
     echo -e "  ${RED}❌${NC} Thiếu superpowers plugin"
-    ((FAIL++))
+    ((++FAIL))
   fi
   if grep -q "AGENTS.md" .opencode/opencode.json 2>/dev/null; then
     echo -e "  ${GREEN}✅${NC} Có AGENTS.md instruction"
-    ((PASS++))
+    ((++PASS))
   else
     echo -e "  ${RED}❌${NC} Thiếu AGENTS.md instruction"
-    ((FAIL++))
+    ((++FAIL))
   fi
 fi
 
@@ -164,7 +198,18 @@ fi
 
 if [ "$SAFE" = true ]; then
   echo -e "  ${GREEN}✅${NC} Không phát hiện secrets"
-  ((PASS++))
+  ((++PASS))
+fi
+
+# --- No-MCP guard ---
+# Power Kit v2 cam kết không copy MCP config vào repo.
+# Check opencode-global/ templates có chứa mcp section thật không.
+if grep -rE '^\s*"mcp"\s*:\s*\{' "$GLOBAL_DIR" 2>/dev/null; then
+  echo -e "  ${RED}❌${NC} opencode-global/ có chứa MCP config — KHÔNG ĐƯỢC copy vào repo!"
+  ((++FAIL))
+else
+  echo -e "  ${GREEN}✅${NC} opencode-global/ không có MCP config (đúng cam kết v2)"
+  ((++PASS))
 fi
 
 echo ""
