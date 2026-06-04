@@ -1,0 +1,21 @@
+# Lefthook configuration for OpenCode Power Kit
+# Docs: https://github.com/evilmartians/lefthook
+
+pre-commit:
+  parallel: true
+  commands:
+    lint:
+      glob: "*.{js,ts,jsx,tsx,json,md}"
+      run: npx eslint {staged_files} --fix --max-warnings=0
+      stage_fixed: true
+    typecheck:
+      run: npx tsc --noEmit
+    format:
+      glob: "*.{js,ts,jsx,tsx,json,css,md}"
+      run: npx prettier --write {staged_files}
+      stage_fixed: true
+
+commit-msg:
+  commands:
+    lint-commit:
+      run: npx commitlint --edit {1}
