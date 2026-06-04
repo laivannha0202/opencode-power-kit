@@ -5,6 +5,54 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-06-04
+
+### Added
+
+- **`setup.sh`** (root): menu tiếng Việt tương tác 7 mục + 7 cờ
+  non-interactive (`--global`, `--project`, `--fullstack`, `--all`,
+  `--doctor`, `--dry-run`, `--yes`, `--help`). Từ chối chạy per-project
+  install trong HOME hoặc trong chính kit. Báo lỗi rõ khi thiếu script
+  con. Idempotent: chạy nhiều lần không phá.
+- **`bin/opk`** (CLI wrapper): thin wrapper gọi lại các script sẵn có —
+  `help`, `version`, `path`, `global`, `install`, `fullstack`, `all`,
+  `doctor`, `verify`, `tools`. Tự phát hiện đường dẫn kit qua
+  `BASH_SOURCE` hoặc `OPK_KIT_DIR`. Không duplicate logic.
+- **`install-global.sh` cải tiến**:
+  - Tự cài `opk` vào `~/.local/bin/opk` (backup file cũ nếu tồn tại
+    vào `$HOME/.opencode-power-kit-backup-<ts>/local-bin/opk`).
+  - Đảm bảo `~/.local/bin` trong `PATH`, cảnh báo nếu chưa có trong
+    shell hiện tại.
+  - Verify `opk path` chạy được sau khi cài.
+  - Tạo `GLOBAL_PACK_REPORT.md` động: liệt kê đúng agents/commands/
+    skills đang có trong `opencode-global/`, kèm vị trí `opk` CLI và
+    trạng thái PATH.
+  - Backup thêm `~/.local/bin/opk` vào cùng thư mục backup.
+
+### Changed
+
+- `README.md`: thêm section "Dùng nhanh trong 30 giây" ở đầu, bảng
+  lệnh `opk`, mục "Có gì mới trong v1.2.0", cập nhật sơ đồ thư mục.
+- `VERSION`: bump 1.1.1 → 1.2.0.
+
+### Safety (giữ nguyên policy)
+
+- Không sudo, không `curl|sh` trong bất kỳ script nào.
+- Không in `token`, `password`, `secret`, `api_key`, `.env` value.
+- Không sửa `~/.config/opencode/opencode.json` của user.
+- Không xóa file project. Backup trước khi sửa `~/.bashrc`,
+  `~/.config/opencode/opencode.json`, `~/.local/bin/opk`.
+- Tất cả script `setup.sh`, `bin/opk`, `install-global.sh` đều
+  idempotent — chạy lại không tạo duplicate marker / không ghi đè
+  file user nếu chưa backup.
+
+### Compatibility
+
+- Tương thích ngược 100% với v1.1.1. Mọi script / flag / lệnh cũ
+  (`install.sh`, `install-global.sh`, `verify.sh`, `doctor.sh`,
+  `uninstall.sh`, `update-bmad.sh`, `scripts/install-*.sh`) đều chạy
+  bình thường. `setup.sh` và `opk` chỉ là lớp tiện ích bên ngoài.
+
 ## [1.1.1] - 2026-06-04
 
 ### Fixed

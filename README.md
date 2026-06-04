@@ -1,11 +1,86 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/nguoikhongten02022005-cell/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/nguoikhongten02022005-cell/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](./VERSION)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#ghi-chu-quan-trong)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#an-toan)
 
 Toolkit dùng lại cho mọi project OpenCode — cài Superpowers + BMAD Method chỉ với 1 lệnh.
+
+## Dùng nhanh trong 30 giây
+
+```bash
+# 1) Clone kit
+git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git ~/opencode-power-kit
+
+# 2) Cài global (commands / skills / agents + opk CLI + ~/.bashrc)
+bash ~/opencode-power-kit/setup.sh --global
+
+# 3) Kích hoạt + mở OpenCode
+source ~/.bashrc
+opk help
+opencode
+```
+
+Sau đó, với **mỗi project mới**, chỉ cần:
+
+```bash
+cd /path/to/your/project
+opk install           # cài AGENTS.md / OPENCODE.md / .opencode/opencode.json
+opk fullstack         # (tùy chọn) cài profile Node/Nest/React/MySQL
+opk verify            # kiểm tra project đã sẵn sàng
+```
+
+Hoặc dùng menu tương tác:
+
+```bash
+bash ~/opencode-power-kit/setup.sh
+```
+
+Cờ non-interactive đầy đủ:
+
+```bash
+bash setup.sh --global      # cài global
+bash setup.sh --project     # cài vào project hiện tại
+bash setup.sh --fullstack   # cài full-stack profile
+bash setup.sh --all         # cài tất cả (cần cd vào project)
+bash setup.sh --doctor      # chẩn đoán (read-only)
+bash setup.sh --dry-run     # in kế hoạch, không sửa gì
+bash setup.sh --yes         # skip confirm
+bash setup.sh --help        # in hướng dẫn
+```
+
+Sau khi cài global, lệnh `opk` có sẵn trong shell (PATH):
+
+| `opk ...`      | Tác dụng                                              |
+|----------------|--------------------------------------------------------|
+| `opk help`     | In trợ giúp đầy đủ                                    |
+| `opk version`  | In version kit                                         |
+| `opk path`     | In đường dẫn kit hiện tại                              |
+| `opk global`   | Cài global (commands / skills / agents + opk CLI)     |
+| `opk install`  | Cài vào project hiện tại                               |
+| `opk fullstack`| Cài full-stack profile                                 |
+| `opk all`      | Cài tất cả                                             |
+| `opk doctor`   | Chẩn đoán (read-only)                                  |
+| `opk verify`   | Kiểm tra project hiện tại                              |
+| `opk tools`    | Detect / hướng dẫn cài `rtk`, `tokscale`               |
+
+## Có gì mới trong v1.2.0
+
+- **`setup.sh`** — menu tiếng Việt tương tác + 7 cờ non-interactive
+  (`--global`, `--project`, `--fullstack`, `--all`, `--doctor`,
+  `--dry-run`, `--yes`). Từ chối chạy per-project install trong HOME
+  hoặc trong chính kit. Báo lỗi rõ nếu thiếu script con.
+- **`opk` CLI** — wrapper mỏng gọi lại các script có sẵn. Không duplicate
+  logic. Tự phát hiện đường dẫn kit qua `BASH_SOURCE` hoặc `OPK_KIT_DIR`.
+  Lệnh: `help`, `version`, `path`, `global`, `install`, `fullstack`,
+  `all`, `doctor`, `verify`, `tools`.
+- **`install-global.sh` cải tiến** — tự cài `opk` vào `~/.local/bin/opk`
+  (có backup nếu file đã tồn tại). Tạo `GLOBAL_PACK_REPORT.md` động,
+  liệt kê đúng agents/commands/skills đang cài, kèm vị trí `opk` và
+  trạng thái PATH. Tất cả thao tác đều idempotent.
+- **Không thay đổi hành vi v1.1.1** — tất cả script cũ vẫn chạy được,
+  flag mới chỉ là lớp tiện ích bên ngoài.
 
 ## Cài global toàn bộ OpenCode
 
@@ -44,7 +119,9 @@ git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git ~
 # Vào project cần cài
 cd /path/to/your/project
 
-# Chạy install
+# Cài bằng opk (cách khuyến nghị từ v1.2.0)
+opk install
+# hoặc
 bash ~/opencode-power-kit/install.sh
 ```
 
@@ -53,9 +130,14 @@ bash ~/opencode-power-kit/install.sh
 ```
 ~/opencode-power-kit/
 ├── README.md              # Tài liệu này
+├── setup.sh               # v1.2.0: menu + flags non-interactive
+├── bin/
+│   └── opk                # v1.2.0: CLI wrapper (gọi lại các script)
 ├── install.sh             # Script cài per-project
-├── install-global.sh      # Script cài global
+├── install-global.sh      # v1.2.0: cài global + opk CLI + report động
 ├── verify.sh              # Script kiểm tra
+├── doctor.sh              # Chẩn đoán (read-only)
+├── uninstall.sh           # Gỡ cài (có confirm / --yes)
 ├── update-bmad.sh         # Script cập nhật BMAD
 ├── scripts/
 │   └── install-token-tools.sh  # Kiểm tra + hướng dẫn cài rtk/tokscale

@@ -1,0 +1,196 @@
+#!/usr/bin/env bash
+# ============================================================================
+# OpenCode Power Kit - opk CLI wrapper
+# Thin wrapper gọi lại các script có sẵn trong kit. Không duplicate logic.
+#
+# Usage:
+#   opk help
+#   opk version
+#   opk global        # cài global
+#   opk install       # cài vào project hiện tại (= opk project)
+#   opk fullstack     # cài full-stack profile
+#   opk all           # cài tất cả (cần pwd = project dir)
+#   opk doctor        # chẩn đoán
+#   opk verify        # kiểm tra project
+#   opk tools         # install-token-tools (rtk/tokscale)
+#   opk path          # in đường dẫn kit
+# ============================================================================
+set -euo pipefail
+
+# --- Resolve kit dir from this script location ---
+SELF="${BASH_SOURCE[0]}"
+OPK_BIN_DIR="$(cd "$(dirname "$SELF")" && pwd)"
+
+# When installed to ~/.local/bin/opk, the parent dir is ~/.local (not the kit).
+# In that case the shim sets OPK_KIT_DIR; fall back to that.
+if [ -n "${OPK_KIT_DIR:-}" ] && [ -f "$OPK_KIT_DIR/install.sh" ]; then
+  KIT_DIR="$OPK_KIT_DIR"
+else
+  KIT_DIR="$(cd "$OPK_BIN_DIR/.." && pwd)"
+fi
+
+# Sanity check
+if [ ! -f "$KIT_DIR/install.sh" ] || [ ! -f "$KIT_DIR/install-global.sh" ]; then
+  echo "opk: không tìm thấy opencode-power-kit tại $KIT_DIR" >&2
+  echo "      Có thể bạn đang chạy từ ngoài kit. Hãy 'cd ~/opencode-power-kit' rồi chạy lại," >&2
+  echo "      hoặc export OPK_KIT_DIR=/đường/dẫn/đến/opencode-power-kit" >&2
+  exit 1
+fi
+
+VERSION="$(cat "$KIT_DIR/VERSION" 2>/dev/null || echo "?")"
+
+# --- Helpers ---
+err() { echo "opk: $*" >&2; exit 1; }
+
+require_file() {
+  [ -f "$1" ] || err "thiếu file: $1"
+}
+
+# --- Safety: per-project install KHONG chay trong cac root nguy hiem ---
+# Tranh: user chay nham tu $HOME, /, /tmp, /var/tmp, /usr, /etc, hoac
+# chinh repo kit. Refuse som de tranh ghi AGENTS.md / .opencode o sai cho.
+HOME_DIR="${HOME:-/root}"
+is_bad_project_dir() {
+  local pwd_real
+  pwd_real="$(pwd -P 2>/dev/null || pwd)"
+  case "$pwd_real" in "$HOME_DIR"|"$HOME_DIR/"|/) return 0 ;; esac
+  case "$pwd_real" in "$KIT_DIR"|"$KIT_DIR/"|"$KIT_DIR"/*) return 0 ;; esac
+  case "$pwd_real" in /tmp|/tmp/*) return 0 ;; esac
+  case "$pwd_real" in /var/tmp|/var/tmp/*) return 0 ;; esac
+  case "$pwd_real" in /usr|/usr/*) return 0 ;; esac
+  case "$pwd_real" in /etc|/etc/*) return 0 ;; esac
+  return 1
+}
+
+explain_blocked_dir() {
+  local pwd_now
+  pwd_now="$(pwd)"
+  echo "" >&2
+  echo "opk: TU CHOI cai vao: $pwd_now" >&2
+  echo "" >&2
+  echo "Ly do: project install KHONG chay trong:" >&2
+  echo "  - \$HOME                    ($HOME_DIR)" >&2
+  echo "  - chinh repo kit           ($KIT_DIR)" >&2
+  echo "  - /tmp, /var/tmp           (khong phai project that)" >&2
+  echo "  - /usr, /etc, /            (system dirs)" >&2
+  echo "" >&2
+  echo "Cach lam dung:" >&2
+  echo "" >&2
+  echo "  cd /path/to/your/project" >&2
+  echo "  opk install" >&2
+  echo "  opk fullstack" >&2
+  echo "" >&2
+  echo "Neu chua co project:" >&2
+  echo "" >&2
+  echo "  mkdir -p ~/projects/myapp && cd ~/projects/myapp" >&2
+  echo "  opk install" >&2
+  echo "" >&2
+}
+
+refuse_if_bad_project_dir() {
+  if is_bad_project_dir; then
+    explain_blocked_dir
+    err "tu choi chay trong $(pwd)"
+  fi
+}
+
+# --- Subcommand dispatch ---
+cmd="${1:-help}"
+shift || true
+
+case "$cmd" in
+  help|--help|-h)
+    cat <<EOF
+opk — OpenCode Power Kit CLI (v$VERSION)
+
+Cách dùng nhanh:
+  opk global      Cài global (commands/skills/agents + opk CLI)
+  opk install     Cài vào project hiện tại (cần cd vào project)
+  opk fullstack   Cài full-stack profile (Nest/React/MySQL)
+  opk all         Cài tất cả: global + project + fullstack
+  opk doctor      Chẩn đoán cấu hình (read-only)
+  opk verify      Kiểm tra project hiện tại
+  opk tools       Detect / hướng dẫn cài rtk + tokscale
+  opk path        In đường dẫn kit
+  opk version     In version
+
+Flags chung (forward cho sub-script):
+  --yes   skip confirm
+  --help  in trợ giúp của sub-script
+
+Ví dụ:
+  opk global
+  opk install --yes
+  opk fullstack
+  opk doctor
+  opk version
+
+Kit hiện tại: $KIT_DIR
+EOF
+    ;;
+
+  version|--version|-v)
+    echo "opk $VERSION"
+    ;;
+
+  path)
+    echo "$KIT_DIR"
+    ;;
+
+  global)
+    require_file "$KIT_DIR/install-global.sh"
+    exec bash "$KIT_DIR/install-global.sh" "$@"
+    ;;
+
+  install|project)
+    refuse_if_bad_project_dir
+    require_file "$KIT_DIR/install.sh"
+    exec bash "$KIT_DIR/install.sh" "$@"
+    ;;
+
+  fullstack)
+    refuse_if_bad_project_dir
+    require_file "$KIT_DIR/scripts/install-fullstack-profile.sh"
+    exec bash "$KIT_DIR/scripts/install-fullstack-profile.sh" "$@"
+    ;;
+
+  all)
+    require_file "$KIT_DIR/install-global.sh"
+    require_file "$KIT_DIR/install.sh"
+    require_file "$KIT_DIR/scripts/install-fullstack-profile.sh"
+    echo "opk: [1/3] install-global.sh"
+    bash "$KIT_DIR/install-global.sh"
+    pwd_now="$(pwd)"
+    if is_bad_project_dir; then
+      {
+        echo "opk: BỎ QUA install.sh + fullstack (pwd = $pwd_now là root nguy hiểm)."
+        echo "opk:   HOME / kit / / /tmp / /var/tmp / /usr / /etc đều bị từ chối."
+        echo "opk:   cd vào project thật, rồi chạy: opk install && opk fullstack"
+      } >&2
+    else
+      echo "opk: [2/3] install.sh trong $pwd_now"
+      bash "$KIT_DIR/install.sh"
+      echo "opk: [3/3] install-fullstack-profile.sh trong $pwd_now"
+      bash "$KIT_DIR/scripts/install-fullstack-profile.sh"
+    fi
+    ;;
+
+  doctor)
+    require_file "$KIT_DIR/doctor.sh"
+    exec bash "$KIT_DIR/doctor.sh" "$@"
+    ;;
+
+  verify)
+    require_file "$KIT_DIR/verify.sh"
+    exec bash "$KIT_DIR/verify.sh" "$@"
+    ;;
+
+  tools)
+    require_file "$KIT_DIR/scripts/install-token-tools.sh"
+    exec bash "$KIT_DIR/scripts/install-token-tools.sh" "$@"
+    ;;
+
+  *)
+    err "lệnh không hợp lệ: '$cmd'. Chạy 'opk help'."
+    ;;
+esac
