@@ -94,7 +94,7 @@ SAFE=true
 # Check no secrets
 for f in .env .env.local .env.production; do
   if [ -f "$f" ]; then
-    echo -e "  ${RED}❌${NC] CẢNH BÁO: $f tồn tại — đừng commit!"
+    echo -e "  ${RED}❌${NC} CẢNH BÁO: $f tồn tại — đừng commit!"
     SAFE=false
   fi
 done
