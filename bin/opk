@@ -6,14 +6,18 @@
 # Usage:
 #   opk help
 #   opk version
+#   opk path
 #   opk global        # cài global
-#   opk install       # cài vào project hiện tại (= opk project)
+#   opk install       # cài vào project hiện tại (= opk project = opk init)
+#   opk init          # alias: opk install
+#   opk quick         # alias: opk global (with --yes)
 #   opk fullstack     # cài full-stack profile
 #   opk all           # cài tất cả (cần pwd = project dir)
 #   opk doctor        # chẩn đoán
 #   opk verify        # kiểm tra project
 #   opk tools         # install-token-tools (rtk/tokscale)
-#   opk path          # in đường dẫn kit
+#   opk bootstrap     # gọi bootstrap.sh
+#   opk one           # alias: bootstrap.sh --global --yes
 # ============================================================================
 set -euo pipefail
 
@@ -105,12 +109,16 @@ opk — OpenCode Power Kit CLI (v$VERSION)
 
 Cách dùng nhanh:
   opk global      Cài global (commands/skills/agents + opk CLI)
-  opk install     Cài vào project hiện tại (cần cd vào project)
+  opk install     Cài vào project hiện tại (cần cd vào project) (= opk init)
+  opk init        Alias: opk install
+  opk quick       Alias: opk global (cài global nhanh)
   opk fullstack   Cài full-stack profile (Nest/React/MySQL)
   opk all         Cài tất cả: global + project + fullstack
   opk doctor      Chẩn đoán cấu hình (read-only)
   opk verify      Kiểm tra project hiện tại
   opk tools       Detect / hướng dẫn cài rtk + tokscale
+  opk bootstrap   Chạy bootstrap.sh (cài 1 lệnh, tự detect shell)
+  opk one         Alias: bootstrap.sh --global --yes
   opk path        In đường dẫn kit
   opk version     In version
 
@@ -124,6 +132,17 @@ Ví dụ:
   opk fullstack
   opk doctor
   opk version
+  opk one
+  opk bootstrap --all --yes
+
+Linux/macOS one-command (cài global không cần git clone trước):
+  bash -c 'KIT="\$HOME/opencode-power-kit"; if [ -d "\$KIT/.git" ]; then git -C "\$KIT" pull --ff-only; else git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git "\$KIT"; fi; bash "\$KIT/bootstrap.sh" --global'
+
+Windows PowerShell one-command:
+  powershell -ExecutionPolicy Bypass -File \$HOME\\opencode-power-kit\\bootstrap.ps1 -Global
+
+Project one-command (sau khi đã cài global):
+  cd /path/to/project && opk install
 
 Kit hiện tại: $KIT_DIR
 EOF
@@ -142,7 +161,7 @@ EOF
     exec bash "$KIT_DIR/install-global.sh" "$@"
     ;;
 
-  install|project)
+  install|project|init)
     refuse_if_bad_project_dir
     require_file "$KIT_DIR/install.sh"
     exec bash "$KIT_DIR/install.sh" "$@"
@@ -188,6 +207,21 @@ EOF
   tools)
     require_file "$KIT_DIR/scripts/install-token-tools.sh"
     exec bash "$KIT_DIR/scripts/install-token-tools.sh" "$@"
+    ;;
+
+  bootstrap)
+    require_file "$KIT_DIR/bootstrap.sh"
+    exec bash "$KIT_DIR/bootstrap.sh" "$@"
+    ;;
+
+  one)
+    require_file "$KIT_DIR/bootstrap.sh"
+    exec bash "$KIT_DIR/bootstrap.sh" --global --yes "$@"
+    ;;
+
+  quick)
+    require_file "$KIT_DIR/install-global.sh"
+    exec bash "$KIT_DIR/install-global.sh" --yes "$@"
     ;;
 
   *)

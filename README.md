@@ -1,11 +1,60 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/nguoikhongten02022005-cell/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/nguoikhongten02022005-cell/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](./VERSION)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#ghi-chu-quan-trong)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#an-toan)
+[![Cross-platform](https://img.shields.io/badge/cross--platform-Linux%20%7C%20macOS%20%7C%20Windows-blue.svg)](#cài-1-lệnh)
 
-Toolkit dùng lại cho mọi project OpenCode — cài Superpowers + BMAD Method chỉ với 1 lệnh.
+Toolkit dùng lại cho mọi project OpenCode — cài Superpowers + BMAD Method chỉ với 1 lệnh, hỗ trợ **Linux / macOS / Windows PowerShell** (Git Bash / WSL / native).
+
+## Cài 1 lệnh
+
+Không cần `git clone` trước — kit tự clone (hoặc `pull` nếu đã có) rồi bootstrap.
+
+### Linux / macOS / Git Bash / WSL
+
+```bash
+bash -c 'KIT="$HOME/opencode-power-kit"; if [ -d "$KIT/.git" ]; then git -C "$KIT" pull --ff-only; else git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git "$KIT"; fi; bash "$KIT/bootstrap.sh" --global'
+```
+
+Sau khi xong:
+
+```bash
+source ~/.bashrc    # zsh thì: source ~/.zshrc
+opk help
+opencode
+```
+
+### Windows PowerShell
+
+```powershell
+powershell -ExecutionPolicy Bypass -Command "$KIT = Join-Path $HOME 'opencode-power-kit'; if (Test-Path (Join-Path $KIT '.git')) { & git -C $KIT pull --ff-only } else { & git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git $KIT }; & (Join-Path $KIT 'bootstrap.ps1') -Global -Yes"
+```
+
+Sau khi xong: **mở PowerShell mới** (để load User PATH), rồi:
+
+```powershell
+opk.cmd help
+opk.cmd path
+opencode
+```
+
+### Project one-command
+
+Sau khi đã cài global ở trên, mỗi project mới chỉ cần 1 lệnh:
+
+```bash
+# Linux / macOS / Git Bash / WSL
+cd /path/to/your/project && opk install && opk fullstack
+```
+
+```powershell
+# Windows PowerShell
+cd C:\path\to\your\project; opk.cmd install; opk.cmd fullstack
+```
+
+> Bootstrap tự phát hiện shell: không sudo, không `curl|sh`, backup mọi file cũ, idempotent (chạy lại không duplicate PATH / marker / config). Từ chối cài project trong `$HOME`, kit dir, `/`, `/tmp`, `/var/tmp`, `/usr`, `/etc` (hoặc `C:\`, `C:\Windows`, `C:\Program Files*`, `$env:TEMP` trên Windows).
 
 ## Dùng nhanh trong 30 giây
 

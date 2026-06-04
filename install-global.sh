@@ -67,6 +67,14 @@ if [ -f "$HOME/.bashrc" ]; then
   BACKED_UP=true
 fi
 
+# macOS defaults to zsh since Catalina (10.15) — also backup ~/.zshrc nếu có
+if [ -f "$HOME/.zshrc" ]; then
+  mkdir -p "$BACKUP_DIR/home"
+  cp "$HOME/.zshrc" "$BACKUP_DIR/home/.zshrc"
+  ok "Đã backup ~/.zshrc"
+  BACKED_UP=true
+fi
+
 if [ -f "$OPENCODE_CONFIG_DIR/opencode.json" ]; then
   mkdir -p "$BACKUP_DIR/config-opencode"
   cp "$OPENCODE_CONFIG_DIR/opencode.json" "$BACKUP_DIR/config-opencode/opencode.json"
@@ -89,32 +97,53 @@ else
   info "$OPENCODE_CONFIG_DIR đã tồn tại."
 fi
 
-# --- Add OPENCODE_CONFIG_DIR to ~/.bashrc ---
-MARKER="# >>> opencode-power-kit-global"
-if [ -f "$HOME/.bashrc" ] && grep -qF "$MARKER" "$HOME/.bashrc" 2>/dev/null; then
-  warn "~/.bashrc đã có OPENCODE_CONFIG_DIR. Bỏ qua."
-else
-  {
-    echo ""
-    echo "$MARKER"
-    echo 'export OPENCODE_CONFIG_DIR="$HOME/opencode-power-kit/opencode-global"'
-    echo "# <<< opencode-power-kit-global"
-  } >> "$HOME/.bashrc"
-  ok "Đã thêm OPENCODE_CONFIG_DIR vào ~/.bashrc"
+# --- Detect shell: bash vs zsh ---
+# macOS (10.15+) default = zsh. Nếu $SHELL trỏ tới zsh HOẶC ~/.zshrc đã tồn tại
+# → coi như môi trường zsh và cập nhật cả ~/.zshrc. Vẫn giữ ~/.bashrc cho
+# Linux/WSL/Git Bash. Không bao giờ xóa marker cũ.
+USE_ZSH=false
+if [ -n "${SHELL:-}" ] && [[ "$SHELL" == */zsh ]]; then
+  USE_ZSH=true
+fi
+if [ -f "$HOME/.zshrc" ]; then
+  USE_ZSH=true
 fi
 
-# --- Ensure ~/.local/bin in PATH ---
-PATH_MARKER="# >>> opencode-power-kit-path"
-if [ -f "$HOME/.bashrc" ] && grep -qF "$PATH_MARKER" "$HOME/.bashrc" 2>/dev/null; then
-  warn "~/.bashrc đã có PATH update. Bỏ qua."
-else
+# --- Helper: append marker block to a rc file (idempotent) ---
+add_rc_marker() {
+  local rcfile="$1"
+  local marker="$2"
+  local content="$3"
+  if [ ! -f "$rcfile" ]; then
+    # Tạo mới nếu chưa có (ví dụ: user mới cài zsh chưa có ~/.zshrc)
+    : > "$rcfile"
+  fi
+  if grep -qF "$marker" "$rcfile" 2>/dev/null; then
+    warn "$rcfile đã có marker '$marker'. Bỏ qua."
+    return 0
+  fi
   {
     echo ""
-    echo "$PATH_MARKER"
-    echo 'export PATH="$HOME/.local/bin:$PATH"'
-    echo "# <<< opencode-power-kit-path"
-  } >> "$HOME/.bashrc"
-  ok "Đã thêm ~/.local/bin vào PATH"
+    echo "$marker"
+    echo "$content"
+    echo "# <<< ${marker#\# >>> }"
+  } >> "$rcfile"
+  ok "Đã thêm marker vào $rcfile"
+}
+
+# --- Add OPENCODE_CONFIG_DIR + PATH markers ---
+MARKER="# >>> opencode-power-kit-global"
+PATH_MARKER="# >>> opencode-power-kit-path"
+
+# Luôn cập nhật ~/.bashrc (Linux/WSL/Git Bash)
+add_rc_marker "$HOME/.bashrc" "$MARKER" 'export OPENCODE_CONFIG_DIR="$HOME/opencode-power-kit/opencode-global"'
+add_rc_marker "$HOME/.bashrc" "$PATH_MARKER" 'export PATH="$HOME/.local/bin:$PATH"'
+
+# Nếu là môi trường zsh, cập nhật thêm ~/.zshrc
+if [ "$USE_ZSH" = true ]; then
+  add_rc_marker "$HOME/.zshrc" "$MARKER" 'export OPENCODE_CONFIG_DIR="$HOME/opencode-power-kit/opencode-global"'
+  add_rc_marker "$HOME/.zshrc" "$PATH_MARKER" 'export PATH="$HOME/.local/bin:$PATH"'
+  ok "Đã cập nhật cả ~/.zshrc (môi trường zsh: $SHELL)"
 fi
 
 # --- Install opk CLI to ~/.local/bin/opk (SHIM, không copy trực tiếp) ---
@@ -161,6 +190,12 @@ SAFE=true
 if [ -f "$HOME/.bashrc" ]; then
   if grep -qiE "(token|password|secret|api_key|OPENAI_API_KEY|ANTHROPIC_API_KEY)" "$HOME/.bashrc" 2>/dev/null; then
     warn "~/.bashrc có chứa chuỗi giống secret. Kiểm tra thủ công."
+    SAFE=false
+  fi
+fi
+if [ -f "$HOME/.zshrc" ]; then
+  if grep -qiE "(token|password|secret|api_key|OPENAI_API_KEY|ANTHROPIC_API_KEY)" "$HOME/.zshrc" 2>/dev/null; then
+    warn "~/.zshrc có chứa chuỗi giống secret. Kiểm tra thủ công."
     SAFE=false
   fi
 fi

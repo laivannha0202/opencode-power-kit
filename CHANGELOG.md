@@ -5,6 +5,101 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-06-04
+
+### Added — Cross-platform (Linux / macOS / Windows PowerShell)
+
+- **`bootstrap.sh`** (root, Linux/macOS/Git Bash/WSL): one-command installer
+  với flags `--global`, `--project`, `--fullstack`, `--all`, `--project-dir`,
+  `--doctor`, `--dry-run`, `--yes`, `--help`. Tự chạy `setup.sh --global --yes`,
+  cập nhật `PATH` cho session hiện tại, in `opk path` + `opk version` +
+  `opk doctor`. Từ chối project install trong `$HOME`, kit dir, `/`, `/tmp`,
+  `/var/tmp`, `/usr`, `/etc`. Không sudo, không `curl|sh`.
+- **`bootstrap.ps1`** (root, Windows PowerShell): mirror PowerShell của
+  `bootstrap.sh`. Params `-Global`, `-Project`, `-Fullstack`, `-All`,
+  `-ProjectDir`, `-Doctor`, `-DryRun`, `-Yes`, `-Help`. Cập nhật `$env:Path`
+  cho session hiện tại, gọi `opk.cmd path`/`version`/`doctor`. Từ chối project
+  install trong `$HOME`, kit dir, `C:\`, `C:\Windows`, `C:\Program Files*`,
+  `$env:TEMP`/`$env:TMP`. Không admin, không sudo, không in secret.
+- **`setup.ps1`** (root, Windows PowerShell): menu tiếng Việt 7 mục + 7 params
+  non-interactive. Tương đương `setup.sh`. Từ chối per-project install trong
+  các root nguy hiểm (HOME, kit, `C:\`, `C:\Windows`, `C:\Program Files*`,
+  TEMP/TMP). Idempotent.
+- **`install-global.ps1`** (root, Windows PowerShell): cài global không cần
+  admin. Tạo `$HOME\.opencode-power-kit\bin`, cài shim `opk.cmd` + `opk.ps1`,
+  set User env `OPK_KIT_DIR` + `OPENCODE_CONFIG_DIR`, add `$HOME\.opencode-power-kit\bin`
+  vào User PATH (idempotent), cập nhật `$env:Path` cho session hiện tại. Backup
+  file cũ vào `$HOME\.opencode-power-kit-backup-<ts>\`. Tạo
+  `GLOBAL_INSTALL_REPORT.md` + `GLOBAL_PACK_REPORT.md` động. Không sửa
+  registry system-wide, chỉ User environment.
+- **`install.ps1`** (root, Windows PowerShell): mirror `install.sh`. Copy
+  templates, merge `.gitignore` (idempotent), copy `knip.json`/`lefthook.yml`
+  (skip nếu đã có), chạy `npx bmad-method install`, tạo report.
+- **`scripts/install-fullstack-profile.ps1`**: PowerShell port của
+  `install-fullstack-profile.sh`. Append AGENTS/OPENCODE qua marker
+  idempotent, copy commands + skills, backup file user.
+- **`bin/opk.ps1`** (Windows PowerShell CLI wrapper): mirror `bin/opk`. Hỗ trợ
+  `help`, `version`, `path`, `global`, `install`/`init`, `fullstack`, `all`,
+  `doctor`, `verify`, `tools`, `bootstrap`, `one`, `quick`. Dùng `OPK_KIT_DIR`
+  nếu có, fallback tự detect từ vị trí script. Không duplicate logic.
+- **`bin/opk.cmd`** (Windows CMD shim): gọi `opk.ps1` qua
+  `powershell -ExecutionPolicy Bypass -File`. Cần `OPK_KIT_DIR` env (set bởi
+  `install-global.ps1`).
+- **`doctor.ps1`** (Windows PowerShell): mirror `doctor.sh`. Check git, PS
+  version, `OPK_KIT_DIR`, `OPENCODE_CONFIG_DIR`, User PATH có
+  `.opencode-power-kit\bin`, `opk.cmd`/`opk.ps1` tồn tại, opencode-global
+  agents/commands/skills, không MCP config, secret pattern scan, 13 optional
+  tools. WARN nếu thiếu optional, không fail. Tạo `OPK_DOCTOR_REPORT.md`.
+- **`verify.ps1`** (Windows PowerShell): mirror `verify.sh`. Check project
+  files (`AGENTS.md`, `OPENCODE.md`, `.opencode\opencode.json`,
+  `.agents\skills`, `.opencode\commands`) + secret pattern scan. Tạo
+  `OPK_VERIFY_REPORT.md`. Không in secret.
+
+### Added — Bash improvements
+
+- **`bin/opk` bash thêm 4 lệnh mới**:
+  - `opk init` — alias của `opk install`.
+  - `opk quick` — alias của `opk global` (cài global nhanh).
+  - `opk bootstrap` — gọi `bootstrap.sh` (cài 1 lệnh cross-platform).
+  - `opk one` — alias `bootstrap.sh --global --yes`.
+- **Help text** `opk help` thêm 3 mục: Linux/macOS one-command, Windows
+  PowerShell one-command, Project one-command.
+
+### Changed — install-global.sh
+
+- **zsh support** (macOS 10.15+ default shell): phát hiện `$SHELL` ends with
+  `zsh` HOẶC `~/.zshrc` tồn tại → thêm markers vào cả `~/.zshrc`. Vẫn giữ
+  `~/.bashrc` cho Linux/WSL/Git Bash. Không duplicate marker (idempotent).
+- **Helper `add_rc_marker`**: function dùng chung, tránh duplicate logic
+  giữa bash/zsh. Marker pattern giữ nguyên format cũ.
+- **Secret scan** mở rộng: check cả `~/.zshrc` (không chỉ `~/.bashrc`).
+- **Backup** thêm `~/.zshrc` nếu tồn tại.
+
+### Changed — README.md
+
+- Thêm section **"Cài 1 lệnh"** ở đầu với 3 phần: Linux/macOS one-liner,
+  Windows PowerShell one-liner, Project one-command.
+- Thêm badge `cross-platform`.
+- Bump version badge 1.2.0 → 1.3.0.
+
+### Safety (giữ nguyên + mở rộng)
+
+- Không sudo, không `curl|sh` trong bất kỳ script nào (bash + PowerShell).
+- Không in `token`, `password`, `secret`, `api_key`, `.env` value.
+- Không sửa `~/.config/opencode/opencode.json` của user.
+- Không xóa file user.
+- **Windows**: không sửa registry system-wide — chỉ `User` environment
+  (qua `[Environment]::SetEnvironmentVariable(..., 'User')`).
+- Backup trước khi sửa config / PATH / profile / opk shim.
+- Tất cả script đều **idempotent**: chạy lại không duplicate marker, PATH,
+  config, shim, report.
+
+### Compatibility
+
+- **Tương thích ngược 100% với v1.2.0**. Mọi script / flag / lệnh cũ vẫn
+  chạy. Thêm mới: PowerShell port + `bootstrap.{sh,ps1}` + 4 lệnh mới
+  cho `opk` (`init`/`quick`/`bootstrap`/`one`).
+
 ## [1.2.0] - 2026-06-04
 
 ### Added
