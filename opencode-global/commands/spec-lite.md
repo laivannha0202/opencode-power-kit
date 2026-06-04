@@ -1,3 +1,7 @@
+---
+description: Tạo đặc tả ngắn gọn (lite spec) cho task hiện tại
+---
+
 Tạo đặc tả ngắn gọn (lite spec) cho task hiện tại:
 - Goal: 1-2 câu.
 - Scope: bullet 3-7 dòng, đúng những gì sẽ làm.

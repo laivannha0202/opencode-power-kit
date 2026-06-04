@@ -1,3 +1,7 @@
+---
+description: Chạy rtk gain hoặc hướng dẫn cài rtk
+---
+
 Nếu có rtk (Rust Token Killer) thì chạy:
     rtk gain
 Nếu chưa có rtk, in hướng dẫn cài (xem scripts/install-token-tools.sh):

@@ -1,3 +1,7 @@
+---
+description: Chia task thành các bước nhỏ có file + test rõ ràng
+---
+
 Chia task thành các bước nhỏ, mỗi bước có:
 - Bước N: mô tả 1 dòng.
 - Files: list file path sẽ chạm (ưu tiên ≤ 2 file/bước).

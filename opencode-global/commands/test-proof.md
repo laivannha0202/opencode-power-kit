@@ -1,3 +1,7 @@
+---
+description: Chạy và đề xuất test chứng minh tính đúng
+---
+
 Chạy và đề xuất test chứng minh tính đúng:
 1. Test tự động: unit/integration/e2e phù hợp stack.
 2. Test thủ công: command + input + expected output.

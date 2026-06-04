@@ -1,3 +1,7 @@
+---
+description: Kiểm tra migration và DB an toàn trước khi chạy
+---
+
 Kiểm tra migration/DB an toàn trước khi chạy:
 - KHÔNG DROP TABLE, KHÔNG TRUNCATE, KHÔNG DELETE hàng loạt không WHERE.
 - ADD COLUMN: có default? Có NULL safe? Lock timeout?

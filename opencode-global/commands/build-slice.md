@@ -1,3 +1,7 @@
+---
+description: Triển khai 1 lát cắt (slice) nhỏ theo plan
+---
+
 Triển khai 1 lát cắt (slice) nhỏ theo plan đã chốt:
 - Mỗi slice ≤ 2 file, ≤ 100 dòng diff.
 - Trước khi sửa: git status, git diff --stat.

@@ -1,3 +1,7 @@
+---
+description: Review security cho code vừa sửa
+---
+
 Review security cho code vừa sửa:
 - Secrets: scan .env, hardcoded token, password, api_key, private key.
 - Auth: endpoint có check auth? role/permission? token validation?

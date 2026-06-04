@@ -1,3 +1,7 @@
+---
+description: Kiểm tra API contract giữa frontend và backend
+---
+
 Kiểm tra API contract giữa frontend và backend:
 - Endpoint khớp: method, path, query, body shape.
 - Type khớp: string/number/boolean/null, required vs optional, enum values.
