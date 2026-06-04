@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 # ============================================================================
 # OpenCode Power Kit - Install Token Optimization Tools
 # Kiểm tra và hướng dẫn cài rtk (Rust Token Killer) + tokscale

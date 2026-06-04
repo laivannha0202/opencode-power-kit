@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 # ============================================================================
 # OpenCode Power Kit - Global Install Script
 # Cài đặt cấu hình global cho toàn bộ OpenCode

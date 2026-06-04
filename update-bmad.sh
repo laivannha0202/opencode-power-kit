@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 # ============================================================================
 # OpenCode Power Kit - Update BMAD
 # Cài đặt lại / cập nhật BMAD Method cho project hiện tại

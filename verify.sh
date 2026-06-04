@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 # ============================================================================
 # OpenCode Power Kit - Verify Script
 # Kiểm tra project và global config đã được cài đặt đúng chưa

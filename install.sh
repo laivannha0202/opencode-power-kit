@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 # ============================================================================
 # OpenCode Power Kit - Install Script
 # Cài đặt Superpowers + BMAD Method vào project hiện tại
