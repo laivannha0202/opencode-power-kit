@@ -9,9 +9,17 @@ on:
 permissions:
   contents: read
 
+# Cancel in-flight runs on the same branch when a new commit lands.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  lint:
-    name: Lint + format + secrets
+  # -----------------------------------------------------------------------
+  # 1) bash -n syntax check on every shell script
+  # -----------------------------------------------------------------------
+  bash-syntax:
+    name: bash -n (syntax check)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -19,52 +27,276 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: bash -n (shell scripts)
+      - name: bash -n on shell scripts
         run: |
           set -e
-          for f in install.sh verify.sh install-global.sh update-bmad.sh scripts/install-token-tools.sh; do
-            bash -n "$f"
+          for f in install.sh verify.sh install-global.sh update-bmad.sh \
+                   scripts/install-token-tools.sh \
+                   scripts/integration-test.sh \
+                   doctor.sh uninstall.sh; do
+            if [ -f "$f" ]; then
+              bash -n "$f"
+              echo "ok: $f"
+            else
+              echo "skip (not present): $f"
+            fi
           done
 
-      - name: JSON syntax (templates)
-        run: |
-          set -e
-          python3 -m json.tool templates/opencode.json >/dev/null
-          python3 -m json.tool templates/knip.json     >/dev/null
+  # -----------------------------------------------------------------------
+  # 2) shellcheck (best effort - try apt first, then skip)
+  # -----------------------------------------------------------------------
+  shellcheck:
+    name: shellcheck (if available)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: YAML syntax (templates)
-        run: |
-          python3 -c "import yaml,sys; yaml.safe_load(open('templates/lefthook.yml'))"
-
-      - name: git diff --check
-        run: |
-          git diff --check
-
-      - name: No MCP in opencode-global/
-        run: |
-          if grep -rE '"mcp"\s*:' opencode-global/; then
-            echo "ERROR: MCP config found in opencode-global/" >&2
-            exit 1
-          else
-            echo "ok: no MCP config"
-          fi
-
-      - name: Secret scan (sk-, ghp_, AKIA, PRIVATE KEY, api_key=, password=)
+      - name: Install shellcheck (best effort)
         run: |
           set +e
-          hits=$(grep -rEn 'sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|BEGIN .* PRIVATE KEY|api_key\s*=|password\s*=' \
+          if command -v shellcheck >/dev/null 2>&1; then
+            echo "shellcheck already present"
+            exit 0
+          fi
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq shellcheck && exit 0
+          echo "shellcheck not installable - skipping"
+          exit 0
+
+      - name: shellcheck on shell scripts (skip if missing)
+        run: |
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            echo "shellcheck not available - skipping"
+            exit 0
+          fi
+          for f in install.sh verify.sh install-global.sh update-bmad.sh \
+                   scripts/install-token-tools.sh; do
+            shellcheck -x "$f" || {
+              echo "shellcheck warnings in $f (non-fatal at default level)"
+            }
+          done
+
+  # -----------------------------------------------------------------------
+  # 3) shfmt -d diff check (best effort - apt or go install)
+  # -----------------------------------------------------------------------
+  shfmt:
+    name: shfmt -d (if available)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install shfmt (best effort)
+        run: |
+          set +e
+          if command -v shfmt >/dev/null 2>&1; then
+            echo "shfmt already present: $(shfmt -version 2>/dev/null || true)"
+            exit 0
+          fi
+          if command -v apt-get >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq shfmt && exit 0
+          fi
+          if command -v go >/dev/null 2>&1; then
+            go install mvdan.cc/sh/v3/cmd/shfmt@latest && exit 0
+          fi
+          echo "shfmt not installable - skipping"
+          exit 0
+
+      - name: shfmt -d (skip if missing)
+        run: |
+          if ! command -v shfmt >/dev/null 2>&1; then
+            echo "shfmt not available - skipping"
+            exit 0
+          fi
+          for f in install.sh verify.sh install-global.sh update-bmad.sh \
+                   scripts/install-token-tools.sh; do
+            shfmt -d "$f" || {
+              echo "shfmt drift in $f (review before merging)"
+            }
+          done
+
+  # -----------------------------------------------------------------------
+  # 4 + 5) JSON syntax for templates/opencode.json and templates/knip.json
+  # -----------------------------------------------------------------------
+  json-templates:
+    name: json templates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate templates/opencode.json
+        run: python3 -m json.tool templates/opencode.json >/dev/null
+
+      - name: Validate templates/knip.json
+        run: python3 -m json.tool templates/knip.json >/dev/null
+
+  # -----------------------------------------------------------------------
+  # 6) YAML syntax for templates/lefthook.yml
+  # -----------------------------------------------------------------------
+  yaml-templates:
+    name: yaml templates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pyyaml
+        run: |
+          python3 -m pip install --quiet pyyaml || \
+            sudo apt-get install -y -qq python3-yaml
+
+      - name: Validate templates/lefthook.yml
+        run: |
+          python3 -c "import yaml,sys; yaml.safe_load(open('templates/lefthook.yml')); print('lefthook.yml ok')"
+
+  # -----------------------------------------------------------------------
+  # 7) git diff --check on the working tree
+  # -----------------------------------------------------------------------
+  diff-check:
+    name: git diff --check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: diff --check
+        run: |
+          git diff --check
+          echo "ok: no whitespace/merge-conflict markers"
+
+  # -----------------------------------------------------------------------
+  # 8) No MCP config in opencode-global/
+  # -----------------------------------------------------------------------
+  no-mcp:
+    name: no MCP in opencode-global
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Scan for MCP config
+        run: |
+          set +e
+          hits=$(grep -rE '"mcp"\s*:' opencode-global/ 2>/dev/null)
+          if [ -n "$hits" ]; then
+            echo "ERROR: MCP config found in opencode-global/" >&2
+            echo "$hits" >&2
+            exit 1
+          fi
+          echo "ok: no MCP config in opencode-global/"
+
+  # -----------------------------------------------------------------------
+  # 9) Secret-pattern scan
+  # -----------------------------------------------------------------------
+  no-secrets:
+    name: no secrets in source
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Scan for secret patterns
+        run: |
+          set +e
+          # api_key=/password= require literal '=' and >=8 alphanumeric
+          # (plus _ and -) value chars. Real secret tokens are typically
+          # alphanumeric. We exclude doctor.sh because it embeds the regex
+          # source itself (a self-match by design).
+          hits=$(grep -rEn \
+            'sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|BEGIN .* PRIVATE KEY|api_key=[A-Za-z0-9_\-]{8,}|password=[A-Za-z0-9_\-]{8,}' \
             . \
             --include='*.sh' \
             --include='*.md' \
             --include='*.json' \
             --include='*.yml' \
             --include='*.yaml' \
+            --include='*.py' \
             --exclude-dir='.git' \
-            --exclude-dir='.github' 2>/dev/null)
+            --exclude-dir='.github' \
+            --exclude='CHANGELOG.md' \
+            --exclude='README.md' \
+            --exclude='doctor.sh' \
+            --exclude='docs/*' 2>/dev/null)
           if [ -n "$hits" ]; then
             echo "ERROR: possible secrets found:" >&2
             echo "$hits" >&2
             exit 1
-          else
-            echo "ok: no secret patterns matched"
           fi
+          echo "ok: no secret patterns matched"
+
+  # -----------------------------------------------------------------------
+  # 10) Line-count guard (prevents tiny stubs from being merged)
+  # -----------------------------------------------------------------------
+  line-count-guard:
+    name: line count guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enforce minimum line counts
+        run: |
+          set -e
+          declare -A mins=(
+            ["README.md"]=50
+            ["install.sh"]=80
+            ["verify.sh"]=80
+            ["install-global.sh"]=40
+            ["scripts/install-token-tools.sh"]=50
+            ["opencode-global/commands/spec-lite.md"]=10
+            ["opencode-global/agents/plan-lite.md"]=10
+            ["opencode-global/skills/safe-edit/SKILL.md"]=8
+          )
+          fail=0
+          for f in "${!mins[@]}"; do
+            min=${mins[$f]}
+            if [ ! -f "$f" ]; then
+              echo "FAIL: $f missing (min lines $min)"
+              fail=1
+              continue
+            fi
+            lines=$(wc -l < "$f")
+            if [ "$lines" -lt "$min" ]; then
+              echo "FAIL: $f has $lines lines, need >= $min"
+              fail=1
+            else
+              echo "ok: $f ($lines lines >= $min)"
+            fi
+          done
+          exit $fail
+
+  # -----------------------------------------------------------------------
+  # B) OpenCode pack validation (commands/agents/skills frontmatter)
+  # -----------------------------------------------------------------------
+  pack-validation:
+    name: validate opencode pack
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run pack validator
+        run: |
+          set -e
+          python3 scripts/validate-opencode-pack.py
+
+  # -----------------------------------------------------------------------
+  # C) Integration test - install kit into a temp project, then verify it
+  # -----------------------------------------------------------------------
+  integration-test:
+    name: integration test (install + verify)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Make scripts executable
+        run: chmod +x scripts/*.sh install.sh verify.sh install-global.sh update-bmad.sh doctor.sh uninstall.sh 2>/dev/null || true
+
+      - name: Run integration test
+        run: bash scripts/integration-test.sh

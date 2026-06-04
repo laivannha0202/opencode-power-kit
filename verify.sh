@@ -213,6 +213,27 @@ else
   ((++PASS))
 fi
 
+# --- Pack validation (frontmatter for commands/agents, skills structure) ---
+echo ""
+echo "📦 Pack validation (commands/agents/skills frontmatter):"
+if [ -x "$KIT_DIR/scripts/validate-opencode-pack.py" ] || [ -f "$KIT_DIR/scripts/validate-opencode-pack.py" ]; then
+  if command -v python3 >/dev/null 2>&1; then
+    if python3 "$KIT_DIR/scripts/validate-opencode-pack.py"; then
+      echo -e "  ${GREEN}✅${NC} Pack validation pass"
+      ((++PASS))
+    else
+      echo -e "  ${RED}❌${NC} Pack validation fail — xem output ở trên"
+      ((++FAIL))
+    fi
+  else
+    echo -e "  ${YELLOW}⚠️${NC} python3 không có — bỏ qua pack validation"
+    ((++WARN))
+  fi
+else
+  echo -e "  ${YELLOW}⚠️${NC} scripts/validate-opencode-pack.py không tồn tại"
+  ((++WARN))
+fi
+
 echo ""
 echo "=========================================="
 echo "  Kết quả: ${GREEN}$PASS pass${NC} | ${RED}$FAIL fail${NC} | ${YELLOW}$WARN warn${NC}"
