@@ -1,0 +1,70 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint + format + secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: bash -n (shell scripts)
+        run: |
+          set -e
+          for f in install.sh verify.sh install-global.sh update-bmad.sh scripts/install-token-tools.sh; do
+            bash -n "$f"
+          done
+
+      - name: JSON syntax (templates)
+        run: |
+          set -e
+          python3 -m json.tool templates/opencode.json >/dev/null
+          python3 -m json.tool templates/knip.json     >/dev/null
+
+      - name: YAML syntax (templates)
+        run: |
+          python3 -c "import yaml,sys; yaml.safe_load(open('templates/lefthook.yml'))"
+
+      - name: git diff --check
+        run: |
+          git diff --check
+
+      - name: No MCP in opencode-global/
+        run: |
+          if grep -rE '"mcp"\s*:' opencode-global/; then
+            echo "ERROR: MCP config found in opencode-global/" >&2
+            exit 1
+          else
+            echo "ok: no MCP config"
+          fi
+
+      - name: Secret scan (sk-, ghp_, AKIA, PRIVATE KEY, api_key=, password=)
+        run: |
+          set +e
+          hits=$(grep -rEn 'sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|BEGIN .* PRIVATE KEY|api_key\s*=|password\s*=' \
+            . \
+            --include='*.sh' \
+            --include='*.md' \
+            --include='*.json' \
+            --include='*.yml' \
+            --include='*.yaml' \
+            --exclude-dir='.git' \
+            --exclude-dir='.github' 2>/dev/null)
+          if [ -n "$hits" ]; then
+            echo "ERROR: possible secrets found:" >&2
+            echo "$hits" >&2
+            exit 1
+          else
+            echo "ok: no secret patterns matched"
+          fi
