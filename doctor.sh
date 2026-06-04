@@ -13,10 +13,19 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-info() { echo -e "${BLUE}[INFO]${NC} $*"; }
-ok()   { echo -e "${GREEN}[OK]${NC}   $*"; }
-warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
-err()  { echo -e "${RED}[FAIL]${NC} $*"; FAIL=1; }
+info() {
+  echo -e "${BLUE}[INFO]${NC} $*"
+}
+ok() {
+  echo -e "${GREEN}[OK]${NC}   $*"
+}
+warn() {
+  echo -e "${YELLOW}[WARN]${NC} $*"
+}
+err() {
+  echo -e "${RED}[FAIL]${NC} $*"
+  FAIL=1
+}
 
 FAIL=0
 WARN=0

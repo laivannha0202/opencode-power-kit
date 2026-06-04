@@ -356,11 +356,15 @@ jobs:
 
       - name: Validate YAML in templates/
         run: |
-          python3 -c "import yaml,sys; \
-yaml.safe_load(open('templates/openapi/spectral.yaml.example')); print('spectral.yaml.example ok')" \
-            2>/dev/null \
-            || (python3 -c "import sys" && pip install --quiet pyyaml && \
-                python3 -c "import yaml; yaml.safe_load(open('templates/openapi/spectral.yaml.example')); print('spectral.yaml.example ok')")
+          set +e
+          python3 -c "import yaml; yaml.safe_load(open('templates/openapi/spectral.yaml.example')); print('spectral.yaml.example ok')"
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo "PyYAML missing, trying pip install..."
+            python3 -m pip install --quiet pyyaml
+            python3 -c "import yaml; yaml.safe_load(open('templates/openapi/spectral.yaml.example')); print('spectral.yaml.example ok')"
+          fi
+          set -e
 
       - name: Run integration test
         run: bash scripts/integration-test.sh

@@ -5,6 +5,28 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-06-04
+
+### Fixed
+
+- `.github/workflows/ci.yml`: bước `Validate YAML in templates/` chứa
+  `python3 -c` với line continuation `\` làm vỡ YAML block scalar. Rewrite
+  thành bash multi-line dùng `set +e` + retry sau `pip install pyyaml`. CI
+  giờ parse được `ci.yml` + chạy được job `yaml-templates`.
+- `scripts/integration-test.sh`, `doctor.sh`, `uninstall.sh`: expand 3 cụm
+  one-liner function (`info/ok/warn/err`) thành multi-line cho style chuẩn.
+- Markdown headings + code fences: scan toàn repo, không có heading level
+  bị skip, không có code fence mất cân.
+- Secret scan: clean (loại trừ `CHANGELOG.md`, `README.md`, `doctor.sh`,
+  `docs/*`; command `secret-scan.md` đã viết lại pattern ví dụ để không
+  match regex nữa).
+
+### Notes
+
+- Không thêm file mới, không đổi logic.
+- `v1.1.0` tag giữ nguyên — commit v1.1.0 vẫn tồn tại ở `4114471` cho ai
+  tham chiếu; release "sạch" ở main là `v1.1.1`.
+
 ## [1.1.0] - 2026-06-04
 
 ### Added
