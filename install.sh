@@ -3,8 +3,15 @@
 # ============================================================================
 # OpenCode Power Kit - Install Script
 # Cài đặt Superpowers + BMAD Method vào project hiện tại
+#
+# Env overrides:
+#   BMAD_METHOD_VERSION  Pin version BMAD (mặc định: 6.8.0)
 # ============================================================================
 set -euo pipefail
+
+# --- BMAD Method version (env override, default 6.8.0) ---
+: "${BMAD_METHOD_VERSION:=6.8.0}"
+export BMAD_METHOD_VERSION
 
 # --- Colors ---
 RED='\033[0;31m'
@@ -13,52 +20,95 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-info()  { echo -e "${BLUE}[INFO]${NC} $*"; }
-ok()    { echo -e "${GREEN}[OK]${NC} $*"; }
-warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
-err()   { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
+info() {
+	echo -e "${BLUE}[INFO]${NC} $*"
+}
+ok() {
+	echo -e "${GREEN}[OK]${NC} $*"
+}
+warn() {
+	echo -e "${YELLOW}[WARN]${NC} $*"
+}
+err() {
+	echo -e "${RED}[ERROR]${NC} $*"
+	exit 1
+}
 
 # --- Paths ---
 KIT_DIR="$(cd "$(dirname "$0")" && pwd)"
 TARGET_DIR="$(pwd)"
 REPORT_FILE="$TARGET_DIR/opencode-power-install-report.md"
 BACKUP_DIR="$TARGET_DIR/.opencode-power-kit-backup-$(date +%Y%m%d%H%M%S)"
+BMAD_LOG="$TARGET_DIR/.opencode-power-bmad-install.log"
 
-# --- Safety checks ---
-if [ "$TARGET_DIR" = "$HOME" ]; then
-  err "Không được chạy install.sh trong thư mục HOME (~)."
-fi
+# --- Safety: detect bad project-dir (sync với bootstrap.sh / setup.sh / opk) ---
+HOME_DIR="${HOME:-/root}"
+is_bad_project_dir() {
+	local p="${1:-$TARGET_DIR}"
+	local p_real
+	p_real="$(cd "$p" 2>/dev/null && pwd -P 2>/dev/null || echo "$p")"
+	# HOME
+	case "$p_real" in "$HOME_DIR" | "$HOME_DIR/" | /) return 0 ;; esac
+	# Kit itself
+	case "$p_real" in "$KIT_DIR" | "$KIT_DIR/" | "$KIT_DIR"/*) return 0 ;; esac
+	# Temp / system roots
+	case "$p_real" in /tmp | /tmp/*) return 0 ;; esac
+	case "$p_real" in /var/tmp | /var/tmp/*) return 0 ;; esac
+	case "$p_real" in /usr | /usr/*) return 0 ;; esac
+	case "$p_real" in /etc | /etc/*) return 0 ;; esac
+	return 1
+}
 
-if [ "$TARGET_DIR" = "$KIT_DIR" ]; then
-  err "Không được chạy install.sh trong thư mục ~/opencode-power-kit."
+explain_blocked_dir() {
+	local p="${1:-$TARGET_DIR}"
+	echo ""
+	echo -e "${RED}✗ Từ chối cài vào: $p${NC}"
+	echo ""
+	echo "Lý do: project install KHÔNG chạy trong:"
+	echo "  - \$HOME                    ($HOME_DIR)"
+	echo "  - chính repo kit           ($KIT_DIR)"
+	echo "  - /tmp, /var/tmp           (không phải project thật)"
+	echo "  - /usr, /etc, /            (system dirs)"
+	echo ""
+	echo "Cách làm đúng:"
+	echo ""
+	echo -e "  ${GREEN}cd /path/to/your/project${NC}"
+	echo -e "  ${GREEN}opk install${NC}        # cài AGENTS.md + OPENCODE.md + .opencode/"
+	echo ""
+}
+
+if is_bad_project_dir; then
+	explain_blocked_dir
+	err "Không chạy install.sh trong $TARGET_DIR."
 fi
 
 if [ ! -d "$KIT_DIR/templates" ]; then
-  err "Không tìm thấy thư mục templates/ trong $KIT_DIR"
+	err "Không tìm thấy thư mục templates/ trong $KIT_DIR"
 fi
 
 info "Target project: $TARGET_DIR"
 info "Power Kit source: $KIT_DIR"
+info "BMAD Method version: $BMAD_METHOD_VERSION"
 
 # --- Backup existing files ---
 BACKUP_NEEDED=false
 for f in AGENTS.md OPENCODE.md .opencode/opencode.json; do
-  if [ -e "$TARGET_DIR/$f" ]; then
-    BACKUP_NEEDED=true
-    break
-  fi
+	if [ -e "$TARGET_DIR/$f" ]; then
+		BACKUP_NEEDED=true
+		break
+	fi
 done
 
 if [ "$BACKUP_NEEDED" = true ]; then
-  info "Backup files cũ vào $BACKUP_DIR ..."
-  mkdir -p "$BACKUP_DIR"
-  for f in AGENTS.md OPENCODE.md .opencode/opencode.json; do
-    if [ -e "$TARGET_DIR/$f" ]; then
-      mkdir -p "$BACKUP_DIR/$(dirname "$f")"
-      cp "$TARGET_DIR/$f" "$BACKUP_DIR/$f"
-      ok "Đã backup: $f"
-    fi
-  done
+	info "Backup files cũ vào $BACKUP_DIR ..."
+	mkdir -p "$BACKUP_DIR"
+	for f in AGENTS.md OPENCODE.md .opencode/opencode.json; do
+		if [ -e "$TARGET_DIR/$f" ]; then
+			mkdir -p "$BACKUP_DIR/$(dirname "$f")"
+			cp "$TARGET_DIR/$f" "$BACKUP_DIR/$f"
+			ok "Đã backup: $f"
+		fi
+	done
 fi
 
 # --- Copy templates ---
@@ -76,62 +126,82 @@ ok ".opencode/opencode.json"
 
 # --- Merge gitignore-extra ---
 if [ -f "$TARGET_DIR/.gitignore" ]; then
-  MARKER="# >>> opencode-power-kit"
-  if ! grep -qF "$MARKER" "$TARGET_DIR/.gitignore" 2>/dev/null; then
-    echo "" >> "$TARGET_DIR/.gitignore"
-    echo "$MARKER" >> "$TARGET_DIR/.gitignore"
-    cat "$KIT_DIR/templates/gitignore-extra.txt" >> "$TARGET_DIR/.gitignore"
-    echo "# <<< opencode-power-kit" >> "$TARGET_DIR/.gitignore"
-    ok "Đã merge gitignore-extra vào .gitignore"
-  else
-    warn ".gitignore đã có nội dung Power Kit, bỏ qua."
-  fi
+	MARKER="# >>> opencode-power-kit"
+	if ! grep -qF "$MARKER" "$TARGET_DIR/.gitignore" 2>/dev/null; then
+		{
+			echo ""
+			echo "$MARKER"
+			cat "$KIT_DIR/templates/gitignore-extra.txt"
+			echo "# <<< opencode-power-kit"
+		} >>"$TARGET_DIR/.gitignore"
+		ok "Đã merge gitignore-extra vào .gitignore"
+	else
+		warn ".gitignore đã có nội dung Power Kit, bỏ qua."
+	fi
 else
-  cp "$KIT_DIR/templates/gitignore-extra.txt" "$TARGET_DIR/.gitignore"
-  ok "Tạo mới .gitignore"
+	cp "$KIT_DIR/templates/gitignore-extra.txt" "$TARGET_DIR/.gitignore"
+	ok "Tạo mới .gitignore"
 fi
 
 # --- Copy knip.json (chưa có thì copy) ---
 if [ ! -f "$TARGET_DIR/knip.json" ]; then
-  cp "$KIT_DIR/templates/knip.json" "$TARGET_DIR/knip.json"
-  ok "knip.json"
+	cp "$KIT_DIR/templates/knip.json" "$TARGET_DIR/knip.json"
+	ok "knip.json"
 fi
 
 # --- Copy lefthook.yml (chưa có thì copy) ---
 if [ ! -f "$TARGET_DIR/lefthook.yml" ]; then
-  cp "$KIT_DIR/templates/lefthook.yml" "$TARGET_DIR/lefthook.yml"
-  ok "lefthook.yml"
+	cp "$KIT_DIR/templates/lefthook.yml" "$TARGET_DIR/lefthook.yml"
+	ok "lefthook.yml"
 fi
 
 # --- Install BMAD Method ---
-info "Cài đặt BMAD Method (module bmm)..."
+info "Cài đặt BMAD Method v${BMAD_METHOD_VERSION} (module bmm)..."
 if command -v npx &>/dev/null; then
-  npx bmad-method install \
-    --modules bmm \
-    --tools opencode \
-    --user-name nha \
-    --communication-language Vietnamese \
-    --document-output-language Vietnamese \
-    --directory "$TARGET_DIR" \
-    -y 2>&1 | tail -5
-  ok "BMAD Method đã cài xong"
+	# Capture full output to log, only show tail -50 to keep stdout readable.
+	# shellcheck disable=SC2317  # errexit is set; this block can be invoked via && fallback
+	if npx --yes "bmad-method@${BMAD_METHOD_VERSION}" install \
+		--modules bmm \
+		--tools opencode \
+		--user-name nha \
+		--communication-language Vietnamese \
+		--document-output-language Vietnamese \
+		--directory "$TARGET_DIR" \
+		-y >"$BMAD_LOG" 2>&1; then
+		ok "BMAD Method v${BMAD_METHOD_VERSION} đã cài xong"
+	else
+		bmad_rc=$?
+		echo ""
+		echo -e "${RED}✗ BMAD Method cài THẤT BẠI (exit code: $bmad_rc)${NC}"
+		echo ""
+		echo "Full log: $BMAD_LOG"
+		echo "----- tail -50 của log -----"
+		tail -50 "$BMAD_LOG" 2>/dev/null || echo "(không đọc được log)"
+		echo "----------------------------"
+		err "Sửa lỗi trong log rồi chạy lại: bash $KIT_DIR/update-bmad.sh"
+	fi
+	# Always print tail -50 for visibility even on success.
+	info "----- tail -50 BMAD log ($BMAD_LOG) -----"
+	tail -50 "$BMAD_LOG" 2>/dev/null || true
+	echo "-----------------------------------------"
 else
-  warn "npx không tìm thấy, bỏ qua BMAD install. Hãy cài Node.js trước."
+	warn "npx không tìm thấy, bỏ qua BMAD install. Hãy cài Node.js trước."
 fi
 
 # --- Lefthook install ---
 if [ -f "$TARGET_DIR/package.json" ] && [ -f "$TARGET_DIR/lefthook.yml" ]; then
-  info "Cài đặt lefthook..."
-  npx lefthook install 2>/dev/null || warn "lefthook install thất bại, bỏ qua."
+	info "Cài đặt lefthook..."
+	npx lefthook install 2>/dev/null || warn "lefthook install thất bại, bỏ qua."
 fi
 
 # --- Generate report ---
-cat > "$REPORT_FILE" << EOF
+cat >"$REPORT_FILE" <<EOF
 # OpenCode Power Kit - Install Report
 
 - **Thời gian:** $(date '+%Y-%m-%d %H:%M:%S')
 - **Project:** $TARGET_DIR
 - **Power Kit:** $KIT_DIR
+- **BMAD Method version:** $BMAD_METHOD_VERSION
 
 ## Files đã cài đặt
 
@@ -141,14 +211,16 @@ cat > "$REPORT_FILE" << EOF
 | OPENCODE.md | ✅ |
 | .opencode/opencode.json | ✅ |
 | .gitignore (merged) | ✅ |
-| knip.json | $( [ -f "$TARGET_DIR/knip.json" ] && echo "✅" || echo "⏭️ Đã có" ) |
-| lefthook.yml | $( [ -f "$TARGET_DIR/lefthook.yml" ] && echo "✅" || echo "⏭️ Đã có" ) |
+| knip.json | $([ -f "$TARGET_DIR/knip.json" ] && echo "✅" || echo "⏭️ Đã có") |
+| lefthook.yml | $([ -f "$TARGET_DIR/lefthook.yml" ] && echo "✅" || echo "⏭️ Đã có") |
 
 ## BMAD Method
 
 - Module: bmm
 - Tools: opencode
 - Language: Vietnamese
+- Version: $BMAD_METHOD_VERSION
+- Log: $BMAD_LOG
 
 ## Backup
 
@@ -157,7 +229,7 @@ $([ "$BACKUP_NEEDED" = true ] && echo "- Backup tại: $BACKUP_DIR" || echo "- K
 ## Bước tiếp theo
 
 1. Kiểm tra \`AGENTS.md\` và \`OPENCODE.md\` — chỉnh sửa nếu cần.
-2. Chạy \`bash ~/opencode-power-kit/verify.sh\` để kiểm tra.
+2. Chạy \`opk verify\` để kiểm tra.
 3. Commit: \`git add . && git commit -m "chore: init opencode power kit"\`
 EOF
 
@@ -168,4 +240,4 @@ echo -e "${GREEN}============================================${NC}"
 echo -e "${GREEN}  ✅ OpenCode Power Kit đã cài thành công!  ${NC}"
 echo -e "${GREEN}============================================${NC}"
 echo ""
-info "Chạy verify: bash ~/opencode-power-kit/verify.sh"
+info "Chạy verify: opk verify"

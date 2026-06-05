@@ -12,13 +12,16 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-info()  { echo -e "${BLUE}[INFO]${NC} $*"; }
-ok()    { echo -e "${GREEN}[OK]${NC} $*"; }
-warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
-err()   { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
+info() { echo -e "${BLUE}[INFO]${NC} $*"; }
+ok() { echo -e "${GREEN}[OK]${NC} $*"; }
+warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
+err() {
+	echo -e "${RED}[ERROR]${NC} $*"
+	exit 1
+}
 
 if [ "$(id -u)" -eq 0 ]; then
-  err "Không chạy với sudo/root."
+	err "Không chạy với sudo/root."
 fi
 
 KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -39,27 +42,27 @@ TRUFFLEHOG_PATH=""
 SEMGREP_PATH=""
 
 if command -v gitleaks &>/dev/null; then
-  GITLEAKS_PATH="$(command -v gitleaks)"
-  GITLEAKS_OK=true
-  ok "gitleaks:    tìm thấy tại $GITLEAKS_PATH"
+	GITLEAKS_PATH="$(command -v gitleaks)"
+	GITLEAKS_OK=true
+	ok "gitleaks:    tìm thấy tại $GITLEAKS_PATH"
 else
-  warn "gitleaks:   CHƯA CÓ"
+	warn "gitleaks:   CHƯA CÓ"
 fi
 
 if command -v trufflehog &>/dev/null; then
-  TRUFFLEHOG_PATH="$(command -v trufflehog)"
-  TRUFFLEHOG_OK=true
-  ok "trufflehog: tìm thấy tại $TRUFFLEHOG_PATH"
+	TRUFFLEHOG_PATH="$(command -v trufflehog)"
+	TRUFFLEHOG_OK=true
+	ok "trufflehog: tìm thấy tại $TRUFFLEHOG_PATH"
 else
-  warn "trufflehog: CHƯA CÓ"
+	warn "trufflehog: CHƯA CÓ"
 fi
 
 if command -v semgrep &>/dev/null; then
-  SEMGREP_PATH="$(command -v semgrep)"
-  SEMGREP_OK=true
-  ok "semgrep:    tìm thấy tại $SEMGREP_PATH"
+	SEMGREP_PATH="$(command -v semgrep)"
+	SEMGREP_OK=true
+	ok "semgrep:    tìm thấy tại $SEMGREP_PATH"
 else
-  warn "semgrep:    CHƯA CÓ"
+	warn "semgrep:    CHƯA CÓ"
 fi
 
 echo ""
@@ -67,29 +70,29 @@ info "=== Hướng dẫn cài thủ công (KHÔNG tự động chạy) ==="
 echo ""
 
 if [ "$GITLEAKS_OK" = false ]; then
-  info "gitleaks (secret scan):"
-  echo "    brew install gitleaks"
-  echo "    # hoặc: https://github.com/gitleaks/gitleaks/releases"
-  echo ""
+	info "gitleaks (secret scan):"
+	echo "    brew install gitleaks"
+	echo "    # hoặc: https://github.com/gitleaks/gitleaks/releases"
+	echo ""
 fi
 
 if [ "$TRUFFLEHOG_OK" = false ]; then
-  info "trufflehog (secret scan, có verify):"
-  echo "    brew install trufflehog"
-  echo "    # hoặc: go install github.com/trufflehog/trufflehog/v3/...@latest"
-  echo ""
+	info "trufflehog (secret scan, có verify):"
+	echo "    brew install trufflehog"
+	echo "    # hoặc: go install github.com/trufflehog/trufflehog/v3/...@latest"
+	echo ""
 fi
 
 if [ "$SEMGREP_OK" = false ]; then
-  info "semgrep (SAST):"
-  echo "    pip install semgrep"
-  echo "    # hoặc: brew install semgrep"
-  echo "    # docs: https://semgrep.dev/docs/getting-started"
-  echo ""
+	info "semgrep (SAST):"
+	echo "    pip install semgrep"
+	echo "    # hoặc: brew install semgrep"
+	echo "    # docs: https://semgrep.dev/docs/getting-started"
+	echo ""
 fi
 
 # --- Generate report ---
-cat > "$REPORT_FILE" << EOF
+cat >"$REPORT_FILE" <<EOF
 # Security Tools Report
 
 - **Thời gian:** $(date '+%Y-%m-%d %H:%M:%S')

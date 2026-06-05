@@ -12,13 +12,16 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-info()  { echo -e "${BLUE}[INFO]${NC} $*"; }
-ok()    { echo -e "${GREEN}[OK]${NC} $*"; }
-warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
-err()   { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
+info() { echo -e "${BLUE}[INFO]${NC} $*"; }
+ok() { echo -e "${GREEN}[OK]${NC} $*"; }
+warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
+err() {
+	echo -e "${RED}[ERROR]${NC} $*"
+	exit 1
+}
 
 if [ "$(id -u)" -eq 0 ]; then
-  err "Không chạy với sudo/root."
+	err "Không chạy với sudo/root."
 fi
 
 KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -39,31 +42,31 @@ OASDIFF_PATH=""
 OPENAPI_GEN_PATH=""
 
 if command -v spectral &>/dev/null; then
-  SPECTRAL_PATH="$(command -v spectral)"
-  SPECTRAL_OK=true
-  ok "spectral:           tìm thấy tại $SPECTRAL_PATH"
+	SPECTRAL_PATH="$(command -v spectral)"
+	SPECTRAL_OK=true
+	ok "spectral:           tìm thấy tại $SPECTRAL_PATH"
 else
-  warn "spectral:           CHƯA CÓ"
+	warn "spectral:           CHƯA CÓ"
 fi
 
 if command -v oasdiff &>/dev/null; then
-  OASDIFF_PATH="$(command -v oasdiff)"
-  OASDIFF_OK=true
-  ok "oasdiff:            tìm thấy tại $OASDIFF_PATH"
+	OASDIFF_PATH="$(command -v oasdiff)"
+	OASDIFF_OK=true
+	ok "oasdiff:            tìm thấy tại $OASDIFF_PATH"
 else
-  warn "oasdiff:            CHƯA CÓ"
+	warn "oasdiff:            CHƯA CÓ"
 fi
 
 if command -v openapi-generator-cli &>/dev/null; then
-  OPENAPI_GEN_PATH="$(command -v openapi-generator-cli)"
-  OPENAPI_GEN_OK=true
-  ok "openapi-generator:  tìm thấy tại $OPENAPI_GEN_PATH"
+	OPENAPI_GEN_PATH="$(command -v openapi-generator-cli)"
+	OPENAPI_GEN_OK=true
+	ok "openapi-generator:  tìm thấy tại $OPENAPI_GEN_PATH"
 elif command -v openapi-generator &>/dev/null; then
-  OPENAPI_GEN_PATH="$(command -v openapi-generator)"
-  OPENAPI_GEN_OK=true
-  ok "openapi-generator:  tìm thấy tại $OPENAPI_GEN_PATH"
+	OPENAPI_GEN_PATH="$(command -v openapi-generator)"
+	OPENAPI_GEN_OK=true
+	ok "openapi-generator:  tìm thấy tại $OPENAPI_GEN_PATH"
 else
-  warn "openapi-generator:  CHƯA CÓ"
+	warn "openapi-generator:  CHƯA CÓ"
 fi
 
 echo ""
@@ -71,30 +74,30 @@ info "=== Hướng dẫn cài thủ công (KHÔNG tự động chạy) ==="
 echo ""
 
 if [ "$SPECTRAL_OK" = false ]; then
-  info "spectral (OpenAPI lint):"
-  echo "    npm i -g @stoplight/spectral-cli"
-  echo "    # docs: https://stoplight.io/open-source/spectral"
-  echo ""
+	info "spectral (OpenAPI lint):"
+	echo "    npm i -g @stoplight/spectral-cli"
+	echo "    # docs: https://stoplight.io/open-source/spectral"
+	echo ""
 fi
 
 if [ "$OASDIFF_OK" = false ]; then
-  info "oasdiff (so sánh OpenAPI version, phát hiện breaking change):"
-  echo "    brew install oasdiff"
-  echo "    # hoặc: go install github.com/oasdiff/oasdiff/cmd/oasdiff@latest"
-  echo "    # docs: https://github.com/oasdiff/oasdiff"
-  echo ""
+	info "oasdiff (so sánh OpenAPI version, phát hiện breaking change):"
+	echo "    brew install oasdiff"
+	echo "    # hoặc: go install github.com/oasdiff/oasdiff/cmd/oasdiff@latest"
+	echo "    # docs: https://github.com/oasdiff/oasdiff"
+	echo ""
 fi
 
 if [ "$OPENAPI_GEN_OK" = false ]; then
-  info "openapi-generator (generate client từ OpenAPI):"
-  echo "    npm i -g @openapitools/openapi-generator-cli"
-  echo "    # hoặc: brew install openapi-generator"
-  echo "    # docs: https://openapi-generator.tech"
-  echo ""
+	info "openapi-generator (generate client từ OpenAPI):"
+	echo "    npm i -g @openapitools/openapi-generator-cli"
+	echo "    # hoặc: brew install openapi-generator"
+	echo "    # docs: https://openapi-generator.tech"
+	echo ""
 fi
 
 # --- Generate report ---
-cat > "$REPORT_FILE" << EOF
+cat >"$REPORT_FILE" <<EOF
 # API Tools Report
 
 - **Thời gian:** $(date '+%Y-%m-%d %H:%M:%S')

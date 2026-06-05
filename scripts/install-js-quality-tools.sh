@@ -12,13 +12,16 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-info()  { echo -e "${BLUE}[INFO]${NC} $*"; }
-ok()    { echo -e "${GREEN}[OK]${NC} $*"; }
-warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
-err()   { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
+info() { echo -e "${BLUE}[INFO]${NC} $*"; }
+ok() { echo -e "${GREEN}[OK]${NC} $*"; }
+warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
+err() {
+	echo -e "${RED}[ERROR]${NC} $*"
+	exit 1
+}
 
 if [ "$(id -u)" -eq 0 ]; then
-  err "Không chạy với sudo/root."
+	err "Không chạy với sudo/root."
 fi
 
 KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -45,71 +48,71 @@ VITEST_PATH=""
 TSC_PATH=""
 
 check() {
-  local name="$1"
-  local var_ok="$2"
-  local var_path="$3"
-  local cmd="$4"
-  if command -v "$cmd" &>/dev/null; then
-    eval "$var_ok=true"
-    eval "$var_path=\"$(command -v "$cmd")\""
-    ok "$name: tìm thấy tại $(command -v "$cmd")"
-  else
-    eval "$var_ok=false"
-    warn "$name: CHƯA CÓ"
-  fi
+	local name="$1"
+	local var_ok="$2"
+	local var_path="$3"
+	local cmd="$4"
+	if command -v "$cmd" &>/dev/null; then
+		eval "$var_ok=true"
+		eval "$var_path=\"$(command -v "$cmd")\""
+		ok "$name: tìm thấy tại $(command -v "$cmd")"
+	else
+		eval "$var_ok=false"
+		warn "$name: CHƯA CÓ"
+	fi
 }
 
-check "eslint"     ESLINT_OK    ESLINT_PATH    "eslint"
-check "prettier"   PRETTIER_OK  PRETTIER_PATH  "prettier"
-check "biome"      BIOME_OK     BIOME_PATH     "biome"
-check "knip"       KNIP_OK      KNIP_PATH      "knip"
-check "vitest"     VITEST_OK    VITEST_PATH    "vitest"
-check "tsc"        TSC_OK       TSC_PATH       "tsc"
+check "eslint" ESLINT_OK ESLINT_PATH "eslint"
+check "prettier" PRETTIER_OK PRETTIER_PATH "prettier"
+check "biome" BIOME_OK BIOME_PATH "biome"
+check "knip" KNIP_OK KNIP_PATH "knip"
+check "vitest" VITEST_OK VITEST_PATH "vitest"
+check "tsc" TSC_OK TSC_PATH "tsc"
 
 echo ""
 info "=== Hướng dẫn cài thủ công (KHÔNG tự động chạy) ==="
 echo ""
 
 [ "$ESLINT_OK" = false ] && {
-  info "eslint (lint):"
-  echo "    npm i -D eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin"
-  echo ""
+	info "eslint (lint):"
+	echo "    npm i -D eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin"
+	echo ""
 }
 
 [ "$PRETTIER_OK" = false ] && {
-  info "prettier (format):"
-  echo "    npm i -D prettier"
-  echo ""
+	info "prettier (format):"
+	echo "    npm i -D prettier"
+	echo ""
 }
 
 [ "$BIOME_OK" = false ] && {
-  info "biome (lint + format, nhanh hơn ESLint+Prettier):"
-  echo "    npm i -D @biomejs/biome"
-  echo "    # hoặc: cargo install biome"
-  echo ""
+	info "biome (lint + format, nhanh hơn ESLint+Prettier):"
+	echo "    npm i -D @biomejs/biome"
+	echo "    # hoặc: cargo install biome"
+	echo ""
 }
 
 [ "$KNIP_OK" = false ] && {
-  info "knip (dead code detection):"
-  echo "    npm i -D knip"
-  echo ""
+	info "knip (dead code detection):"
+	echo "    npm i -D knip"
+	echo ""
 }
 
 [ "$VITEST_OK" = false ] && {
-  info "vitest (test runner):"
-  echo "    npm i -D vitest @vitest/ui"
-  echo ""
+	info "vitest (test runner):"
+	echo "    npm i -D vitest @vitest/ui"
+	echo ""
 }
 
 [ "$TSC_OK" = false ] && {
-  info "tsc (typecheck):"
-  echo "    npm i -D typescript"
-  echo "    # hoặc global: npm i -g typescript"
-  echo ""
+	info "tsc (typecheck):"
+	echo "    npm i -D typescript"
+	echo "    # hoặc global: npm i -g typescript"
+	echo ""
 }
 
 # --- Generate report ---
-cat > "$REPORT_FILE" << EOF
+cat >"$REPORT_FILE" <<EOF
 # JS/TS Quality Tools Report
 
 - **Thời gian:** $(date '+%Y-%m-%d %H:%M:%S')

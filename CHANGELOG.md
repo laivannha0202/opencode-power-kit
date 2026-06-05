@@ -5,6 +5,85 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-06-05
+
+### Added
+
+- **`BMAD_METHOD_VERSION` pin** — mặc định `6.8.0`, override qua env
+  `BMAD_METHOD_VERSION=...` trước khi chạy `install.sh` / `install.ps1`
+  / `update-bmad.sh`. Reproducible, lockfile-friendly.
+- **Full log capture cho BMAD** — `install.sh` đổ output vào
+  `.opencode-power-bmad-install.log`; `update-bmad.sh` đổ vào
+  `.opencode-power-bmad-update.log`. Fail path in `tail -50` + đường
+  dẫn log rõ ràng.
+- **`LICENSE` (MIT)** + README badge `BMAD Method v6.8.0`.
+- **README section "Cấu hình BMAD"** — bảng env + ví dụ pin version +
+  vị trí log file.
+- **README section "Cài thủ công / Advanced"** — chuyển nội dung
+  "Dùng nhanh 30 giây" thành section riêng với bash + PowerShell
+  instructions; giữ 1-liner canonical ở đầu.
+- **Tree trong README** cập nhật: `bin/opk`, `bin/opk.cmd`, `bin/opk.ps1`,
+  `install.sh`, `install.ps1`, `bootstrap.sh`, `bootstrap.ps1`, `setup.ps1`,
+  `uninstall.ps1`, `update-bmad.sh`.
+
+### Changed
+
+- **`install.sh`** — thêm `BMAD_METHOD_VERSION` (default 6.8.0, env
+  override), full log vào `.opencode-power-bmad-install.log`, fail
+  message in `tail -50` + log path. Đồng bộ `is_bad_project_dir`
+  (HOME, kit, `/`, `/tmp`, `/var/tmp`, `/usr`, `/etc`) với
+  `bootstrap.sh` / `setup.sh`. Sửa `SC2129` (grouped here-doc append).
+- **`install.ps1`** — thêm `$BmadVersion` (default 6.8.0, env override),
+  full log capture, `$LASTEXITCODE` check + `tail -50` + fail message
+  với log path. Đồng bộ `Test-BadProjectDir` (HOME, kit, `C:\`,
+  `C:\Windows`, `C:\Program Files*`, `$env:TEMP`/`$env:TMP`) với
+  `bootstrap.ps1`. Cải thiện error reporting.
+- **`update-bmad.sh`** — thêm `BMAD_METHOD_VERSION` + log capture +
+  fail handling. Đồng bộ safety guard.
+- **CI strict** — `.github/workflows/ci.yml` bước `shellcheck` và
+  `shfmt -d` bỏ `|| echo "skip..."` / `|| true`. Bất kỳ warning nào
+  fail CI. Cài `shellcheck` qua `apt-get` (fail nếu không được).
+- **`shfmt -w` toàn bộ `.sh`** — conform canonical style (tab indent,
+  `name() {` single space, no space before `>>file`). 15 file đã format
+  lại. `git diff --check` clean.
+- **`README.md`** restructured: bootstrap 1-liner là canonical,
+  "Cài thủ công / Advanced" là section riêng, cập nhật cây thư mục,
+  document `BMAD_METHOD_VERSION=6.8.0`.
+- **`VERSION`** 1.3.0 → 1.3.1.
+
+### Fixed
+
+- **`shellcheck` cleanup**:
+  - `setup.sh` — bỏ biến `SCRIPTS_DIR` và `BAD_PROJECT_DIRS` dead
+    code (SC2034).
+  - `install-global.sh` — thêm `# shellcheck disable=SC2016,SC2088,SC2034`
+    (literal `$HOME`/`$PATH` trong marker payloads, display tildes,
+    `SAFE` flag).
+  - `doctor.sh` — disable SC2088 (display tildes).
+  - `scripts/install-fullstack-profile.sh` — bỏ `MARKER_END` dead.
+  - `uninstall.sh` — disable SC2043 (single-element for loop intentional).
+- **Bash canonical style** — `name() { ... }` (không phải `name()  { ... }`)
+  trên toàn bộ script.
+- **Shellcheck + shfmt** clean trên 100% `.sh` files (10 files).
+
+### Safety (giữ nguyên + mở rộng)
+
+- Không sudo, không `curl|sh` trong bất kỳ script nào (bash + PowerShell).
+- `install.sh` / `install.ps1` / `update-bmad.sh` đồng bộ safety
+  guard với `bootstrap.{sh,ps1}` và `setup.{sh,ps1}`: từ chối cài
+  trong HOME, kit, root drive, system dirs, temp dirs.
+- PowerShell: check `$LASTEXITCODE` của `npx`; fail rõ ràng thay vì
+  silent.
+- Bash: `npx ... >"$BMAD_LOG" 2>&1` — log đầy đủ vào file để debug
+  nếu cần.
+- License: MIT, copyright 2026.
+
+### Compatibility
+
+- Tương thích ngược 100% với v1.3.0. Mọi script / flag / lệnh cũ
+  vẫn chạy. Thay đổi chỉ là hardening (BMAD pin + log capture +
+  exit code check + safety sync + CI strict + shfmt style).
+
 ## [1.3.0] - 2026-06-04
 
 ### Added — Cross-platform (Linux / macOS / Windows PowerShell)

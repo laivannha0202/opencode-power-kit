@@ -14,14 +14,17 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-info()  { echo -e "${BLUE}[INFO]${NC} $*"; }
-ok()    { echo -e "${GREEN}[OK]${NC} $*"; }
-warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
-err()   { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
+info() { echo -e "${BLUE}[INFO]${NC} $*"; }
+ok() { echo -e "${GREEN}[OK]${NC} $*"; }
+warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
+err() {
+	echo -e "${RED}[ERROR]${NC} $*"
+	exit 1
+}
 
 # --- Safety ---
 if [ "$(id -u)" -eq 0 ]; then
-  err "Không chạy với sudo."
+	err "Không chạy với sudo."
 fi
 
 KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -41,62 +44,62 @@ RTK_PATH=""
 TOKSCALE_PATH=""
 
 if command -v rtk &>/dev/null; then
-  RTK_PATH="$(command -v rtk)"
-  RTK_OK=true
-  ok "rtk: tìm thấy tại $RTK_PATH"
+	RTK_PATH="$(command -v rtk)"
+	RTK_OK=true
+	ok "rtk: tìm thấy tại $RTK_PATH"
 else
-  warn "rtk: CHƯA CÓ"
+	warn "rtk: CHƯA CÓ"
 fi
 
 if command -v tokscale &>/dev/null; then
-  TOKSCALE_PATH="$(command -v tokscale)"
-  TOKSCALE_OK=true
-  ok "tokscale: tìm thấy tại $TOKSCALE_PATH"
+	TOKSCALE_PATH="$(command -v tokscale)"
+	TOKSCALE_OK=true
+	ok "tokscale: tìm thấy tại $TOKSCALE_PATH"
 else
-  warn "tokscale: CHƯA CÓ"
+	warn "tokscale: CHƯA CÓ"
 fi
 
 # --- Optional: ask before installing ---
 ASK_INSTALL=false
 if [ "$RTK_OK" = false ] || [ "$TOKSCALE_OK" = false ]; then
-  if [ -t 0 ]; then
-    # Interactive shell - ask
-    echo ""
-    read -r -p "Bạn có muốn xem hướng dẫn cài ngay bây giờ? [y/N] " REPLY
-    case "$REPLY" in
-      [yY]|[yY][eE][sS]) ASK_INSTALL=true ;;
-      *) warn "Bỏ qua. Xem TOKEN_TOOLS_REPORT.md để biết chi tiết." ;;
-    esac
-  fi
+	if [ -t 0 ]; then
+		# Interactive shell - ask
+		echo ""
+		read -r -p "Bạn có muốn xem hướng dẫn cài ngay bây giờ? [y/N] " REPLY
+		case "$REPLY" in
+		[yY] | [yY][eE][sS]) ASK_INSTALL=true ;;
+		*) warn "Bỏ qua. Xem TOKEN_TOOLS_REPORT.md để biết chi tiết." ;;
+		esac
+	fi
 fi
 
 # --- Print install hints (never auto-run curl|sh) ---
 print_hints() {
-  echo ""
-  info "=== Hướng dẫn cài thủ công (KHÔNG tự động chạy) ==="
-  echo ""
-  if [ "$RTK_OK" = false ]; then
-    info "rtk (Rust Token Killer - giảm 40-60% output token):"
-    echo "    cargo install rtk"
-    echo "    # hoặc xem: https://github.com/rtk-ai/rtk"
-    echo ""
-  fi
-  if [ "$TOKSCALE_OK" = false ]; then
-    info "tokscale (theo dõi token usage):"
-    echo "    cargo install tokscale"
-    echo "    # hoặc: npm i -g tokscale  (nếu có npm package)"
-    echo ""
-  fi
-  echo "  Power Kit KHÔNG tự chạy 'curl ... | sh'."
-  echo "  Hãy đọc script trước khi chạy."
+	echo ""
+	info "=== Hướng dẫn cài thủ công (KHÔNG tự động chạy) ==="
+	echo ""
+	if [ "$RTK_OK" = false ]; then
+		info "rtk (Rust Token Killer - giảm 40-60% output token):"
+		echo "    cargo install rtk"
+		echo "    # hoặc xem: https://github.com/rtk-ai/rtk"
+		echo ""
+	fi
+	if [ "$TOKSCALE_OK" = false ]; then
+		info "tokscale (theo dõi token usage):"
+		echo "    cargo install tokscale"
+		echo "    # hoặc: npm i -g tokscale  (nếu có npm package)"
+		echo ""
+	fi
+	echo "  Power Kit KHÔNG tự chạy 'curl ... | sh'."
+	echo "  Hãy đọc script trước khi chạy."
 }
 
 if [ "$ASK_INSTALL" = true ]; then
-  print_hints
+	print_hints
 fi
 
 # --- Generate report ---
-cat > "$REPORT_FILE" << EOF
+cat >"$REPORT_FILE" <<EOF
 # Token Tools Report
 
 - **Thời gian:** $(date '+%Y-%m-%d %H:%M:%S')
@@ -176,5 +179,5 @@ echo -e "==========================================${NC}"
 echo ""
 info "Report: $REPORT_FILE"
 if [ "$RTK_OK" = false ] || [ "$TOKSCALE_OK" = false ]; then
-  info "Đọc report để biết cách cài thủ công."
+	info "Đọc report để biết cách cài thủ công."
 fi

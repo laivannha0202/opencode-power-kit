@@ -1,7 +1,8 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/nguoikhongten02022005-cell/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/nguoikhongten02022005-cell/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-1.3.1-blue.svg)](./VERSION)
+[![BMAD](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](#cấu-hình-bmad)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#ghi-chu-quan-trong)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#an-toan)
 [![Cross-platform](https://img.shields.io/badge/cross--platform-Linux%20%7C%20macOS%20%7C%20Windows-blue.svg)](#cài-1-lệnh)
@@ -56,22 +57,42 @@ cd C:\path\to\your\project; opk.cmd install; opk.cmd fullstack
 
 > Bootstrap tự phát hiện shell: không sudo, không `curl|sh`, backup mọi file cũ, idempotent (chạy lại không duplicate PATH / marker / config). Từ chối cài project trong `$HOME`, kit dir, `/`, `/tmp`, `/var/tmp`, `/usr`, `/etc` (hoặc `C:\`, `C:\Windows`, `C:\Program Files*`, `$env:TEMP` trên Windows).
 
-## Dùng nhanh trong 30 giây
+## Cài thủ công / Advanced
+
+Khuyến nghị: dùng lệnh 1 dòng ở trên. Cách dưới đây dành cho ai muốn kiểm
+soát từng bước (review script trước khi chạy, dùng fork nội bộ, CI, v.v.).
+
+### Linux / macOS / Git Bash / WSL
 
 ```bash
-# 1) Clone kit
+# 1) Clone kit (một lần)
 git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git ~/opencode-power-kit
 
 # 2) Cài global (commands / skills / agents + opk CLI + ~/.bashrc)
 bash ~/opencode-power-kit/setup.sh --global
 
 # 3) Kích hoạt + mở OpenCode
-source ~/.bashrc
+source ~/.bashrc    # zsh thì: source ~/.zshrc
 opk help
 opencode
 ```
 
-Sau đó, với **mỗi project mới**, chỉ cần:
+### Windows PowerShell
+
+```powershell
+# 1) Clone kit
+git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git $HOME\opencode-power-kit
+
+# 2) Cài global
+powershell -ExecutionPolicy Bypass -File "$HOME\opencode-power-kit\setup.ps1" -Global -Yes
+
+# 3) Mở PowerShell mới, rồi:
+opk.cmd help
+opk.cmd path
+opencode
+```
+
+### Sau khi cài global — dùng với mọi project
 
 ```bash
 cd /path/to/your/project
@@ -80,13 +101,15 @@ opk fullstack         # (tùy chọn) cài profile Node/Nest/React/MySQL
 opk verify            # kiểm tra project đã sẵn sàng
 ```
 
-Hoặc dùng menu tương tác:
-
-```bash
-bash ~/opencode-power-kit/setup.sh
+```powershell
+# Windows
+cd C:\path\to\your\project
+opk.cmd install
+opk.cmd fullstack
+opk.cmd verify
 ```
 
-Cờ non-interactive đầy đủ:
+Cờ non-interactive đầy đủ (cả bash và PowerShell):
 
 ```bash
 bash setup.sh --global      # cài global
@@ -113,6 +136,56 @@ Sau khi cài global, lệnh `opk` có sẵn trong shell (PATH):
 | `opk doctor`   | Chẩn đoán (read-only)                                  |
 | `opk verify`   | Kiểm tra project hiện tại                              |
 | `opk tools`    | Detect / hướng dẫn cài `rtk`, `tokscale`               |
+
+## Có gì mới trong v1.3.1
+
+- **`BMAD_METHOD_VERSION` được pin** — mặc định `6.8.0`; override qua env
+  `BMAD_METHOD_VERSION=...` trước khi chạy `install.sh` / `install.ps1`
+  / `update-bmad.sh`. Lockfile-friendly, CI reproducible.
+- **Full log capture cho BMAD** — mọi output của `npx bmad-method ...` đổ
+  vào `.opencode-power-bmad-install.log` (install) hoặc
+  `.opencode-power-bmad-update.log` (update). Lỗi in `tail -50` + đường
+  dẫn log rõ ràng để user mở xem.
+- **PowerShell: check exit code** — `install.ps1` / `update-bmad.ps1`
+  kiểm tra `$LASTEXITCODE` của `npx`; fail thì in log + hướng dẫn sửa.
+- **Safety guard đồng bộ** — `install.sh` / `install.ps1` /
+  `update-bmad.sh` dùng chung `is_bad_project_dir` (Unix) /
+  `Test-BadProjectDir` (Windows) với `bootstrap.sh` / `bootstrap.ps1`.
+  Từ chối: HOME, kit dir, `/`, `/tmp`, `/var/tmp`, `/usr`, `/etc`
+  (Unix); HOME, kit, `C:\`, `C:\Windows`, `C:\Program Files*`,
+  `$env:TEMP` (Windows).
+- **CI strict** — `shellcheck` và `shfmt -d` fail thật (xóa `|| echo
+  "skip..."`); `bash -n`; `validate-opencode-pack`; JSON/YAML/secret
+  scan. Không còn fail-silent.
+- **`LICENSE` (MIT) + `VERSION` bump** — `1.3.0` → `1.3.1`.
+- **`shfmt -w` toàn bộ `.sh`** — conform canonical style (tab indent,
+  `} >>file` không space). `git diff --check` clean.
+- **README restructured** — giữ 1-liner canonical, chuyển
+  "Dùng nhanh 30 giây" thành "Manual / Advanced", cập nhật tree với
+  `bin/opk`, `bin/opk.cmd`, `bin/opk.ps1`, document `BMAD_METHOD_VERSION`.
+
+## Cấu hình BMAD
+
+| Biến                  | Mặc định | Mô tả                                      |
+|-----------------------|----------|--------------------------------------------|
+| `BMAD_METHOD_VERSION` | `6.8.0`  | Pin version BMAD Method (bmm module)       |
+
+```bash
+# Pin version khác (vd muốn thử 6.9.0-beta)
+export BMAD_METHOD_VERSION=6.9.0-beta
+bash ~/opencode-power-kit/install.sh
+```
+
+```powershell
+# Windows
+$env:BMAD_METHOD_VERSION = "6.9.0-beta"
+powershell -File "$HOME\opencode-power-kit\install.ps1"
+```
+
+Log BMAD:
+
+- Install: `<project>/.opencode-power-bmad-install.log`
+- Update:  `<project>/.opencode-power-bmad-update.log`
 
 ## Có gì mới trong v1.2.0
 
@@ -181,13 +254,21 @@ bash ~/opencode-power-kit/install.sh
 ├── README.md              # Tài liệu này
 ├── setup.sh               # v1.2.0: menu + flags non-interactive
 ├── bin/
-│   └── opk                # v1.2.0: CLI wrapper (gọi lại các script)
-├── install.sh             # Script cài per-project
+│   ├── opk                # v1.2.0: CLI wrapper (bash — Linux/macOS/WSL/Git Bash)
+│   ├── opk.cmd            # v1.3.0: CLI wrapper (Windows cmd)
+│   └── opk.ps1            # v1.3.0: CLI wrapper (Windows PowerShell)
+├── install.sh             # v1.3.1: cài per-project (BMAD pin + log + safety)
+├── install.ps1            # v1.3.1: cài per-project Windows
+├── bootstrap.sh           # v1.3.0: cài global qua curl|bash
+├── bootstrap.ps1          # v1.3.0: cài global Windows
+├── setup.sh               # v1.2.0: menu + flags non-interactive
+├── setup.ps1              # v1.3.0: setup Windows
 ├── install-global.sh      # v1.2.0: cài global + opk CLI + report động
 ├── verify.sh              # Script kiểm tra
 ├── doctor.sh              # Chẩn đoán (read-only)
 ├── uninstall.sh           # Gỡ cài (có confirm / --yes)
-├── update-bmad.sh         # Script cập nhật BMAD
+├── uninstall.ps1          # v1.3.0: gỡ cài Windows
+├── update-bmad.sh         # v1.3.1: cập nhật BMAD (BMAD pin + log + safety)
 ├── scripts/
 │   └── install-token-tools.sh  # Kiểm tra + hướng dẫn cài rtk/tokscale
 ├── opencode-global/       # Config global

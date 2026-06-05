@@ -2,6 +2,9 @@
 # OpenCode Power Kit - install.ps1
 # Per-project install cho Windows PowerShell. Mirror install.sh.
 # Copy templates, merge gitignore, optional BMAD via npx, generate report.
+#
+# Env overrides:
+#   $env:BMAD_METHOD_VERSION  Pin version BMAD (mặc định: 6.8.0)
 # ============================================================================
 [CmdletBinding()]
 param(
@@ -10,6 +13,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# --- BMAD Method version (env override, default 6.8.0) ---
+if (-not $env:BMAD_METHOD_VERSION -or [string]::IsNullOrWhiteSpace($env:BMAD_METHOD_VERSION)) {
+    $env:BMAD_METHOD_VERSION = '6.8.0'
+}
+$BmadVersion = $env:BMAD_METHOD_VERSION
+
 # --- Resolve paths ---
 $ScriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Path
 $KitDir     = (Resolve-Path $ScriptDir).Path
@@ -17,6 +26,7 @@ $TargetDir  = (Get-Location).Path
 $ReportFile = Join-Path $TargetDir 'opencode-power-install-report.md'
 $Timestamp  = Get-Date -Format 'yyyyMMddHHmmss'
 $BackupDir  = Join-Path $TargetDir ".opencode-power-kit-backup-$Timestamp"
+$BmadLog    = Join-Path $TargetDir '.opencode-power-bmad-install.log'
 
 # --- Helpers ---
 function Write-Info  { param($m) Write-Host "[INFO] $m" -ForegroundColor Cyan }
@@ -24,22 +34,77 @@ function Write-Ok    { param($m) Write-Host "[OK]   $m" -ForegroundColor Green }
 function Write-Warn  { param($m) Write-Host "[WARN] $m" -ForegroundColor Yellow }
 function Write-Err   { param($m) Write-Host "[ERROR] $m" -ForegroundColor Red; exit 1 }
 
-# --- Safety checks ---
-$HomeTrim = $Home.TrimEnd('\','/')
-$KitTrim  = $KitDir.TrimEnd('\','/')
-$TargetTrim = $TargetDir.TrimEnd('\','/')
-if ($TargetTrim -ieq $HomeTrim) {
-    Write-Err "Khong duoc chay install.ps1 trong thu muc HOME (~)."
+# --- Safety: Test-BadProjectDir (sync với bootstrap.ps1 / setup.ps1 / opk.ps1) ---
+$Home = if ($env:USERPROFILE) { $env:USERPROFILE } else { $env:HOME }
+function Test-BadProjectDir {
+    param([string]$Path)
+    if (-not $Path) { return $true }
+    $p = (Resolve-Path $Path -ErrorAction SilentlyContinue).Path
+    if (-not $p) { $p = $Path }
+    $p = $p.TrimEnd('\','/')
+
+    # HOME
+    $homeTrim = $Home.TrimEnd('\','/')
+    if ($p -ieq $homeTrim) { return $true }
+
+    # Kit itself
+    $kitTrim = $KitDir.TrimEnd('\','/')
+    if ($p -ieq $kitTrim) { return $true }
+    if ($p.StartsWith("$kitTrim\", [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+
+    # Root drive + system + temp
+    if ($p -ieq 'C:\') { return $true }
+    if ($p -ieq 'C:\Windows' -or $p.StartsWith('C:\Windows\', [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+    if ($p -ieq 'C:\Program Files' -or $p.StartsWith('C:\Program Files\', [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+    if ($p -ieq 'C:\Program Files (x86)' -or $p.StartsWith('C:\Program Files (x86)\', [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+
+    $temp = $env:TEMP
+    $tmp  = $env:TMP
+    if ($temp) {
+        $t = $temp.TrimEnd('\','/')
+        if ($p -ieq $t) { return $true }
+        if ($p.StartsWith("$t\", [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+    }
+    if ($tmp -and $tmp -ne $temp) {
+        $t = $tmp.TrimEnd('\','/')
+        if ($p -ieq $t) { return $true }
+        if ($p.StartsWith("$t\", [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+    }
+    return $false
 }
-if ($TargetTrim -ieq $KitTrim) {
-    Write-Err "Khong duoc chay install.ps1 trong thu muc opencode-power-kit."
+
+function Show-BlockedDir {
+    param([string]$Path)
+    Write-Host ""
+    Write-Host "x Tu choi cai vao: $Path" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Ly do: project install KHONG chay trong:"
+    Write-Host "  - `$HOME                    ($Home)"
+    Write-Host "  - chinh repo kit           ($KitDir)"
+    Write-Host "  - C:\, C:\Windows, C:\Program Files*"
+    Write-Host "  - `$env:TEMP, `$env:TMP"
+    Write-Host ""
+    Write-Host "Cach lam dung:"
+    Write-Host ""
+    Write-Host "  cd C:\path\to\your\project" -ForegroundColor Green
+    Write-Host "  opk install"               -ForegroundColor Green
+    Write-Host "  opk fullstack"             -ForegroundColor Green
+    Write-Host ""
 }
+
+# --- Run safety check ---
+if (Test-BadProjectDir $TargetDir) {
+    Show-BlockedDir $TargetDir
+    Write-Err "Khong chay install.ps1 trong $TargetDir."
+}
+
 if (-not (Test-Path (Join-Path $KitDir 'templates'))) {
     Write-Err "Khong tim thay thu muc templates/ trong $KitDir"
 }
 
 Write-Info "Target project: $TargetDir"
 Write-Info "Power Kit source: $KitDir"
+Write-Info "BMAD Method version: $BmadVersion"
 
 # --- Backup existing files ---
 $BackupNeeded = $false
@@ -67,9 +132,9 @@ if ($BackupNeeded) {
 Write-Info "Copy templates..."
 
 $templates = @{
-    'AGENTS.md'              = 'AGENTS.md'
-    'OPENCODE.md'            = 'OPENCODE.md'
-    'opencode.json'          = '.opencode\opencode.json'
+    'AGENTS.md'     = 'AGENTS.md'
+    'OPENCODE.md'   = 'OPENCODE.md'
+    'opencode.json' = '.opencode\opencode.json'
 }
 foreach ($src in $templates.Keys) {
     $dst = $templates[$src]
@@ -118,22 +183,48 @@ if (-not (Test-Path $lefthookDst)) {
 }
 
 # --- Install BMAD Method ---
-Write-Info "Cai dat BMAD Method (module bmm)..."
+Write-Info "Cai dat BMAD Method v$BmadVersion (module bmm)..."
+Write-Info "Full log: $BmadLog"
 $npx = Get-Command npx -ErrorAction SilentlyContinue
 if ($npx) {
-    try {
-        & npx --yes bmad-method install `
-            --modules bmm `
-            --tools opencode `
-            --user-name nha `
-            --communication-language Vietnamese `
-            --document-output-language Vietnamese `
-            --directory $TargetDir `
-            -y 2>&1 | Select-Object -Last 5
-        Write-Ok "BMAD Method da cai xong"
-    } catch {
-        Write-Warn "BMAD install that bai: $($_.Exception.Message). Bo qua."
+    $oldEap = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $output = & npx --yes "bmad-method@$BmadVersion" install `
+        --modules bmm `
+        --tools opencode `
+        --user-name nha `
+        --communication-language Vietnamese `
+        --document-output-language Vietnamese `
+        --directory $TargetDir `
+        -y 2>&1 | Out-String
+    $bmadExit = $LASTEXITCODE
+    $ErrorActionPreference = $oldEap
+
+    # Always capture full log
+    Set-Content -Path $BmadLog -Value $output -Encoding UTF8
+
+    if ($bmadExit -ne 0) {
+        Write-Host ""
+        Write-Host "x BMAD Method cai THAT BAI (exit code: $bmadExit)" -ForegroundColor Red
+        Write-Host ""
+        Write-Host "Full log: $BmadLog" -ForegroundColor Red
+        Write-Host "----- tail -50 cua log -----" -ForegroundColor Red
+        $logLines = $output -split "`n"
+        $tail = $logLines | Select-Object -Last 50
+        $tail | ForEach-Object { Write-Host $_ -ForegroundColor Red }
+        Write-Host "----------------------------" -ForegroundColor Red
+        Write-Err "Sua loi trong log roi chay lai: powershell -File `"$KitDir\update-bmad.ps1`" (hoac opk tools update-bmad)."
     }
+
+    Write-Ok "BMAD Method v$BmadVersion da cai xong"
+
+    # Always show tail -50 for visibility
+    Write-Host ""
+    Write-Info "----- tail -50 BMAD log ($BmadLog) -----"
+    $logLines = $output -split "`n"
+    $tail = $logLines | Select-Object -Last 50
+    $tail | ForEach-Object { Write-Host $_ }
+    Write-Host "-----------------------------------------"
 } else {
     Write-Warn "npx khong tim thay, bo qua BMAD install. Hay cai Node.js truoc."
 }
@@ -160,6 +251,7 @@ $reportBody = @"
 - **Thoi gian:** $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
 - **Project:** $TargetDir
 - **Power Kit:** $KitDir
+- **BMAD Method version:** $BmadVersion
 
 ## Files da cai dat
 
@@ -177,6 +269,8 @@ $reportBody = @"
 - Module: bmm
 - Tools: opencode
 - Language: Vietnamese
+- Version: $BmadVersion
+- Log: $BmadLog
 
 ## Backup
 

@@ -14,17 +14,17 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 info() {
-  echo -e "${BLUE}[INFO]${NC} $*"
+	echo -e "${BLUE}[INFO]${NC} $*"
 }
 ok() {
-  echo -e "${GREEN}[OK]${NC} $*"
+	echo -e "${GREEN}[OK]${NC} $*"
 }
 warn() {
-  echo -e "${YELLOW}[WARN]${NC} $*"
+	echo -e "${YELLOW}[WARN]${NC} $*"
 }
 err() {
-  echo -e "${RED}[FAIL]${NC} $*"
-  FAIL=1
+	echo -e "${RED}[FAIL]${NC} $*"
+	FAIL=1
 }
 
 FAIL=0
@@ -38,10 +38,10 @@ TMP_DIR="$(mktemp -d -t opencode-power-kit-int-XXXXXX)"
 info "Temp project: $TMP_DIR"
 
 cleanup() {
-  if [ -n "${TMP_DIR:-}" ] && [ -d "$TMP_DIR" ]; then
-    info "Cleanup: rm -rf $TMP_DIR"
-    rm -rf "$TMP_DIR"
-  fi
+	if [ -n "${TMP_DIR:-}" ] && [ -d "$TMP_DIR" ]; then
+		info "Cleanup: rm -rf $TMP_DIR"
+		rm -rf "$TMP_DIR"
+	fi
 }
 trap cleanup EXIT
 
@@ -51,7 +51,7 @@ git init -q -b main .
 git config user.email "ci@opencode-power-kit.local"
 git config user.name "ci-bot"
 
-cat > package.json <<'JSON'
+cat >package.json <<'JSON'
 {
   "name": "opencode-power-kit-integration",
   "version": "0.0.0",
@@ -66,8 +66,8 @@ ok "Seeded fake project at $TMP_DIR"
 # --- Run install.sh (kit -> project) ---
 info "Running install.sh from $KIT_DIR into $TMP_DIR ..."
 if [ ! -x "$KIT_DIR/install.sh" ]; then
-  err "install.sh not executable: $KIT_DIR/install.sh"
-  exit 1
+	err "install.sh not executable: $KIT_DIR/install.sh"
+	exit 1
 fi
 
 # install.sh uses `pwd` as TARGET_DIR and computes KIT_DIR from its own
@@ -79,26 +79,26 @@ install_rc=$?
 set -e
 
 if [ "$install_rc" -ne 0 ]; then
-  err "install.sh exited $install_rc"
-  echo "----- /tmp/install.log (tail) -----" >&2
-  tail -30 /tmp/install.log >&2
+	err "install.sh exited $install_rc"
+	echo "----- /tmp/install.log (tail) -----" >&2
+	tail -30 /tmp/install.log >&2
 else
-  ok "install.sh completed (rc=0)"
+	ok "install.sh completed (rc=0)"
 fi
 
 # --- Run verify.sh in the temp project ---
 info "Running verify.sh in $TMP_DIR ..."
 set +e
-( cd "$TMP_DIR" && bash "$KIT_DIR/verify.sh" ) >/tmp/verify.log 2>&1
+(cd "$TMP_DIR" && bash "$KIT_DIR/verify.sh") >/tmp/verify.log 2>&1
 verify_rc=$?
 set -e
 
 if [ "$verify_rc" -ne 0 ]; then
-  warn "verify.sh exited $verify_rc (may include optional warnings)"
-  echo "----- /tmp/verify.log (tail) -----" >&2
-  tail -30 /tmp/verify.log >&2
+	warn "verify.sh exited $verify_rc (may include optional warnings)"
+	echo "----- /tmp/verify.log (tail) -----" >&2
+	tail -30 /tmp/verify.log >&2
 else
-  ok "verify.sh completed (rc=0)"
+	ok "verify.sh completed (rc=0)"
 fi
 
 # --- Check expected files/dirs ---
@@ -106,96 +106,96 @@ echo ""
 info "Checking expected artifacts in $TMP_DIR ..."
 
 check_path() {
-  local rel="$1"
-  local must_be="$2"  # "file" or "dir"
-  if [ "$must_be" = "dir" ]; then
-    if [ -d "$TMP_DIR/$rel" ]; then
-      ok "$rel/"
-    else
-      err "$rel/ not found"
-    fi
-  else
-    if [ -f "$TMP_DIR/$rel" ]; then
-      ok "$rel"
-    else
-      err "$rel not found"
-    fi
-  fi
+	local rel="$1"
+	local must_be="$2" # "file" or "dir"
+	if [ "$must_be" = "dir" ]; then
+		if [ -d "$TMP_DIR/$rel" ]; then
+			ok "$rel/"
+		else
+			err "$rel/ not found"
+		fi
+	else
+		if [ -f "$TMP_DIR/$rel" ]; then
+			ok "$rel"
+		else
+			err "$rel not found"
+		fi
+	fi
 }
 
-check_path "AGENTS.md"                  "file"
-check_path "OPENCODE.md"                "file"
-check_path ".opencode/opencode.json"    "file"
-check_path ".gitignore"                 "file"
-check_path "knip.json"                  "file"
-check_path "lefthook.yml"               "file"
-check_path "_bmad"                      "dir"
-check_path ".agents/skills"             "dir"
-check_path ".opencode/commands"         "dir"
+check_path "AGENTS.md" "file"
+check_path "OPENCODE.md" "file"
+check_path ".opencode/opencode.json" "file"
+check_path ".gitignore" "file"
+check_path "knip.json" "file"
+check_path "lefthook.yml" "file"
+check_path "_bmad" "dir"
+check_path ".agents/skills" "dir"
+check_path ".opencode/commands" "dir"
 check_path "opencode-power-install-report.md" "file"
 
 # --- Test full-stack profile install ---
 if [ -x "$KIT_DIR/scripts/install-fullstack-profile.sh" ]; then
-  info "Running scripts/install-fullstack-profile.sh in $TMP_DIR ..."
-  set +e
-  ( cd "$TMP_DIR" && bash "$KIT_DIR/scripts/install-fullstack-profile.sh" ) >/tmp/profile.log 2>&1
-  profile_rc=$?
-  set -e
+	info "Running scripts/install-fullstack-profile.sh in $TMP_DIR ..."
+	set +e
+	(cd "$TMP_DIR" && bash "$KIT_DIR/scripts/install-fullstack-profile.sh") >/tmp/profile.log 2>&1
+	profile_rc=$?
+	set -e
 
-  if [ "$profile_rc" -ne 0 ]; then
-    err "install-fullstack-profile.sh exited $profile_rc"
-    echo "----- /tmp/profile.log (tail) -----" >&2
-    tail -30 /tmp/profile.log >&2
-  else
-    ok "install-fullstack-profile.sh completed (rc=0)"
-  fi
+	if [ "$profile_rc" -ne 0 ]; then
+		err "install-fullstack-profile.sh exited $profile_rc"
+		echo "----- /tmp/profile.log (tail) -----" >&2
+		tail -30 /tmp/profile.log >&2
+	else
+		ok "install-fullstack-profile.sh completed (rc=0)"
+	fi
 
-  # Verify profile artifacts
-  echo ""
-  info "Checking full-stack profile artifacts in $TMP_DIR ..."
+	# Verify profile artifacts
+	echo ""
+	info "Checking full-stack profile artifacts in $TMP_DIR ..."
 
-  # AGENTS.md must have fullstack marker after install
-  if [ -f "$TMP_DIR/AGENTS.md" ] && grep -qF "OPENCODE-POWER-KIT-MARKER: fullstack-profile-begin" "$TMP_DIR/AGENTS.md"; then
-    ok "AGENTS.md has fullstack marker"
-  else
-    err "AGENTS.md missing fullstack marker"
-  fi
+	# AGENTS.md must have fullstack marker after install
+	if [ -f "$TMP_DIR/AGENTS.md" ] && grep -qF "OPENCODE-POWER-KIT-MARKER: fullstack-profile-begin" "$TMP_DIR/AGENTS.md"; then
+		ok "AGENTS.md has fullstack marker"
+	else
+		err "AGENTS.md missing fullstack marker"
+	fi
 
-  if [ -f "$TMP_DIR/OPENCODE.md" ] && grep -qF "OPENCODE-POWER-KIT-MARKER: fullstack-profile-begin" "$TMP_DIR/OPENCODE.md"; then
-    ok "OPENCODE.md has fullstack marker"
-  else
-    err "OPENCODE.md missing fullstack marker"
-  fi
+	if [ -f "$TMP_DIR/OPENCODE.md" ] && grep -qF "OPENCODE-POWER-KIT-MARKER: fullstack-profile-begin" "$TMP_DIR/OPENCODE.md"; then
+		ok "OPENCODE.md has fullstack marker"
+	else
+		err "OPENCODE.md missing fullstack marker"
+	fi
 
-  if [ -d "$TMP_DIR/.opencode/commands/fullstack" ]; then
-    cmd_n=$(find "$TMP_DIR/.opencode/commands/fullstack" -maxdepth 1 -name "*.md" | wc -l)
-    if [ "$cmd_n" -gt 0 ]; then
-      ok ".opencode/commands/fullstack/ ($cmd_n files)"
-    else
-      err ".opencode/commands/fullstack/ empty"
-    fi
-  else
-    err ".opencode/commands/fullstack/ not found"
-  fi
+	if [ -d "$TMP_DIR/.opencode/commands/fullstack" ]; then
+		cmd_n=$(find "$TMP_DIR/.opencode/commands/fullstack" -maxdepth 1 -name "*.md" | wc -l)
+		if [ "$cmd_n" -gt 0 ]; then
+			ok ".opencode/commands/fullstack/ ($cmd_n files)"
+		else
+			err ".opencode/commands/fullstack/ empty"
+		fi
+	else
+		err ".opencode/commands/fullstack/ not found"
+	fi
 
-  if [ -d "$TMP_DIR/.agents/skills" ]; then
-    skill_n=$(find "$TMP_DIR/.agents/skills" -mindepth 1 -maxdepth 1 -type d | wc -l)
-    if [ "$skill_n" -gt 0 ]; then
-      ok ".agents/skills/ ($skill_n skills)"
-    else
-      err ".agents/skills/ empty"
-    fi
-  else
-    err ".agents/skills/ not found"
-  fi
+	if [ -d "$TMP_DIR/.agents/skills" ]; then
+		skill_n=$(find "$TMP_DIR/.agents/skills" -mindepth 1 -maxdepth 1 -type d | wc -l)
+		if [ "$skill_n" -gt 0 ]; then
+			ok ".agents/skills/ ($skill_n skills)"
+		else
+			err ".agents/skills/ empty"
+		fi
+	else
+		err ".agents/skills/ not found"
+	fi
 else
-  warn "install-fullstack-profile.sh not present - skipping profile test"
+	warn "install-fullstack-profile.sh not present - skipping profile test"
 fi
 
 # --- Final ---
 echo ""
 if [ "$FAIL" -ne 0 ]; then
-  err "Integration test FAILED"
-  exit 1
+	err "Integration test FAILED"
+	exit 1
 fi
 ok "Integration test PASSED"

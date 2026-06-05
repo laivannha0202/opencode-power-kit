@@ -16,25 +16,25 @@ FAIL=0
 WARN=0
 
 check() {
-  local desc="$1" path="$2"
-  if [ -e "$path" ]; then
-    echo -e "  ${GREEN}✅${NC} $desc"
-    ((++PASS))
-  else
-    echo -e "  ${RED}❌${NC} $desc — KHÔNG TÌM THẤY: $path"
-    ((++FAIL))
-  fi
+	local desc="$1" path="$2"
+	if [ -e "$path" ]; then
+		echo -e "  ${GREEN}✅${NC} $desc"
+		((++PASS))
+	else
+		echo -e "  ${RED}❌${NC} $desc — KHÔNG TÌM THẤY: $path"
+		((++FAIL))
+	fi
 }
 
 check_warn() {
-  local desc="$1" path="$2"
-  if [ -e "$path" ]; then
-    echo -e "  ${GREEN}✅${NC} $desc"
-    ((++PASS))
-  else
-    echo -e "  ${YELLOW}⚠️${NC} $desc — không bắt buộc: $path"
-    ((++WARN))
-  fi
+	local desc="$1" path="$2"
+	if [ -e "$path" ]; then
+		echo -e "  ${GREEN}✅${NC} $desc"
+		((++PASS))
+	else
+		echo -e "  ${YELLOW}⚠️${NC} $desc — không bắt buộc: $path"
+		((++WARN))
+	fi
 }
 
 echo ""
@@ -51,11 +51,11 @@ GLOBAL_DIR="$KIT_DIR/opencode-global"
 echo "🌍 Global config (opencode-global/):"
 check "OPENCODE_CONFIG_DIR env in ~/.bashrc" "$HOME/.bashrc"
 if grep -qF 'OPENCODE_CONFIG_DIR' "$HOME/.bashrc" 2>/dev/null; then
-  echo -e "  ${GREEN}✅${NC} OPENCODE_CONFIG_DIR đã set trong ~/.bashrc"
-  ((++PASS))
+	echo -e "  ${GREEN}✅${NC} OPENCODE_CONFIG_DIR đã set trong ~/.bashrc"
+	((++PASS))
 else
-  echo -e "  ${RED}❌${NC} OPENCODE_CONFIG_DIR chưa set trong ~/.bashrc"
-  ((++FAIL))
+	echo -e "  ${RED}❌${NC} OPENCODE_CONFIG_DIR chưa set trong ~/.bashrc"
+	((++FAIL))
 fi
 
 echo ""
@@ -107,25 +107,25 @@ check "install-token-tools.sh" "$KIT_DIR/scripts/install-token-tools.sh"
 echo ""
 echo "🔧 External tools:"
 for tool in repomix rg fd ast-grep serena; do
-  if command -v "$tool" &>/dev/null; then
-    echo -e "  ${GREEN}✅${NC} $tool"
-    ((++PASS))
-  else
-    echo -e "  ${YELLOW}⚠️${NC} $tool — không tìm thấy (không bắt buộc)"
-    ((++WARN))
-  fi
+	if command -v "$tool" &>/dev/null; then
+		echo -e "  ${GREEN}✅${NC} $tool"
+		((++PASS))
+	else
+		echo -e "  ${YELLOW}⚠️${NC} $tool — không tìm thấy (không bắt buộc)"
+		((++WARN))
+	fi
 done
 
 echo ""
 echo "🔧 Token optimization tools (không bắt buộc, không fail nếu thiếu):"
 for tool in rtk tokscale; do
-  if command -v "$tool" &>/dev/null; then
-    echo -e "  ${GREEN}✅${NC} $tool"
-    ((++PASS))
-  else
-    echo -e "  ${YELLOW}⚠️${NC} $tool — chưa cài. Chạy: bash scripts/install-token-tools.sh"
-    ((++WARN))
-  fi
+	if command -v "$tool" &>/dev/null; then
+		echo -e "  ${GREEN}✅${NC} $tool"
+		((++PASS))
+	else
+		echo -e "  ${YELLOW}⚠️${NC} $tool — chưa cài. Chạy: bash scripts/install-token-tools.sh"
+		((++WARN))
+	fi
 done
 
 # --- Per-project checks ---
@@ -148,35 +148,35 @@ check_warn "lefthook.yml" "lefthook.yml"
 echo ""
 echo "📁 Gitignore:"
 if [ -f ".gitignore" ]; then
-  if grep -qF "# >>> opencode-power-kit" .gitignore 2>/dev/null; then
-    echo -e "  ${GREEN}✅${NC} .gitignore có nội dung Power Kit"
-    ((++PASS))
-  else
-    echo -e "  ${YELLOW}⚠️${NC} .gitignore chưa có nội dung Power Kit"
-    ((++WARN))
-  fi
+	if grep -qF "# >>> opencode-power-kit" .gitignore 2>/dev/null; then
+		echo -e "  ${GREEN}✅${NC} .gitignore có nội dung Power Kit"
+		((++PASS))
+	else
+		echo -e "  ${YELLOW}⚠️${NC} .gitignore chưa có nội dung Power Kit"
+		((++WARN))
+	fi
 else
-  echo -e "  ${RED}❌${NC} .gitignore không tồn tại"
-  ((++FAIL))
+	echo -e "  ${RED}❌${NC} .gitignore không tồn tại"
+	((++FAIL))
 fi
 
 echo ""
 echo "📦 opencode.json content:"
 if [ -f ".opencode/opencode.json" ]; then
-  if grep -q "superpowers" .opencode/opencode.json 2>/dev/null; then
-    echo -e "  ${GREEN}✅${NC} Có superpowers plugin"
-    ((++PASS))
-  else
-    echo -e "  ${RED}❌${NC} Thiếu superpowers plugin"
-    ((++FAIL))
-  fi
-  if grep -q "AGENTS.md" .opencode/opencode.json 2>/dev/null; then
-    echo -e "  ${GREEN}✅${NC} Có AGENTS.md instruction"
-    ((++PASS))
-  else
-    echo -e "  ${RED}❌${NC} Thiếu AGENTS.md instruction"
-    ((++FAIL))
-  fi
+	if grep -q "superpowers" .opencode/opencode.json 2>/dev/null; then
+		echo -e "  ${GREEN}✅${NC} Có superpowers plugin"
+		((++PASS))
+	else
+		echo -e "  ${RED}❌${NC} Thiếu superpowers plugin"
+		((++FAIL))
+	fi
+	if grep -q "AGENTS.md" .opencode/opencode.json 2>/dev/null; then
+		echo -e "  ${GREEN}✅${NC} Có AGENTS.md instruction"
+		((++PASS))
+	else
+		echo -e "  ${RED}❌${NC} Thiếu AGENTS.md instruction"
+		((++FAIL))
+	fi
 fi
 
 echo ""
@@ -184,54 +184,54 @@ echo "🔐 Safety check:"
 SAFE=true
 
 for f in .env .env.local .env.production; do
-  if [ -f "$f" ]; then
-    echo -e "  ${RED}❌${NC} CẢNH BÁO: $f tồn tại — đừng commit!"
-    SAFE=false
-  fi
+	if [ -f "$f" ]; then
+		echo -e "  ${RED}❌${NC} CẢNH BÁO: $f tồn tại — đừng commit!"
+		SAFE=false
+	fi
 done
 
 if [ -f ".opencode/opencode.json" ]; then
-  if grep -qiE "(token|password|secret|api_key)" .opencode/opencode.json 2>/dev/null; then
-    echo -e "  ${RED}❌${NC} opencode.json có chứa token/password — KIỂM TRA LẠI!"
-    SAFE=false
-  fi
+	if grep -qiE "(token|password|secret|api_key)" .opencode/opencode.json 2>/dev/null; then
+		echo -e "  ${RED}❌${NC} opencode.json có chứa token/password — KIỂM TRA LẠI!"
+		SAFE=false
+	fi
 fi
 
 if [ "$SAFE" = true ]; then
-  echo -e "  ${GREEN}✅${NC} Không phát hiện secrets"
-  ((++PASS))
+	echo -e "  ${GREEN}✅${NC} Không phát hiện secrets"
+	((++PASS))
 fi
 
 # --- No-MCP guard ---
 # Power Kit v2 cam kết không copy MCP config vào repo.
 # Check opencode-global/ templates có chứa mcp section thật không.
 if grep -rE '^\s*"mcp"\s*:\s*\{' "$GLOBAL_DIR" 2>/dev/null; then
-  echo -e "  ${RED}❌${NC} opencode-global/ có chứa MCP config — KHÔNG ĐƯỢC copy vào repo!"
-  ((++FAIL))
+	echo -e "  ${RED}❌${NC} opencode-global/ có chứa MCP config — KHÔNG ĐƯỢC copy vào repo!"
+	((++FAIL))
 else
-  echo -e "  ${GREEN}✅${NC} opencode-global/ không có MCP config (đúng cam kết v2)"
-  ((++PASS))
+	echo -e "  ${GREEN}✅${NC} opencode-global/ không có MCP config (đúng cam kết v2)"
+	((++PASS))
 fi
 
 # --- Pack validation (frontmatter for commands/agents, skills structure) ---
 echo ""
 echo "📦 Pack validation (commands/agents/skills frontmatter):"
 if [ -x "$KIT_DIR/scripts/validate-opencode-pack.py" ] || [ -f "$KIT_DIR/scripts/validate-opencode-pack.py" ]; then
-  if command -v python3 >/dev/null 2>&1; then
-    if python3 "$KIT_DIR/scripts/validate-opencode-pack.py"; then
-      echo -e "  ${GREEN}✅${NC} Pack validation pass"
-      ((++PASS))
-    else
-      echo -e "  ${RED}❌${NC} Pack validation fail — xem output ở trên"
-      ((++FAIL))
-    fi
-  else
-    echo -e "  ${YELLOW}⚠️${NC} python3 không có — bỏ qua pack validation"
-    ((++WARN))
-  fi
+	if command -v python3 >/dev/null 2>&1; then
+		if python3 "$KIT_DIR/scripts/validate-opencode-pack.py"; then
+			echo -e "  ${GREEN}✅${NC} Pack validation pass"
+			((++PASS))
+		else
+			echo -e "  ${RED}❌${NC} Pack validation fail — xem output ở trên"
+			((++FAIL))
+		fi
+	else
+		echo -e "  ${YELLOW}⚠️${NC} python3 không có — bỏ qua pack validation"
+		((++WARN))
+	fi
 else
-  echo -e "  ${YELLOW}⚠️${NC} scripts/validate-opencode-pack.py không tồn tại"
-  ((++WARN))
+	echo -e "  ${YELLOW}⚠️${NC} scripts/validate-opencode-pack.py không tồn tại"
+	((++WARN))
 fi
 
 echo ""
@@ -240,10 +240,10 @@ echo "  Kết quả: ${GREEN}$PASS pass${NC} | ${RED}$FAIL fail${NC} | ${YELLOW}
 echo "=========================================="
 
 if [ "$FAIL" -gt 0 ]; then
-  echo ""
-  echo -e "${RED}❌ Có $FAIL lỗi. Hãy chạy lại install hoặc kiểm tra thủ công.${NC}"
-  exit 1
+	echo ""
+	echo -e "${RED}❌ Có $FAIL lỗi. Hãy chạy lại install hoặc kiểm tra thủ công.${NC}"
+	exit 1
 else
-  echo ""
-  echo -e "${GREEN}✅ Project đã sẵn sàng với OpenCode Power Kit!${NC}"
+	echo ""
+	echo -e "${GREEN}✅ Project đã sẵn sàng với OpenCode Power Kit!${NC}"
 fi

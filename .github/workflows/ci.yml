@@ -47,86 +47,78 @@ jobs:
           done
 
   # -----------------------------------------------------------------------
-  # 2) shellcheck (best effort - try apt first, then skip)
+  # 2) shellcheck — STRICT. Install from apt; fail on any warning.
   # -----------------------------------------------------------------------
   shellcheck:
-    name: shellcheck (if available)
+    name: shellcheck (strict)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install shellcheck (best effort)
+      - name: Install shellcheck
         run: |
-          set +e
-          if command -v shellcheck >/dev/null 2>&1; then
-            echo "shellcheck already present"
-            exit 0
-          fi
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq shellcheck && exit 0
-          echo "shellcheck not installable - skipping"
-          exit 0
-
-      - name: shellcheck on shell scripts (skip if missing)
-        run: |
+          set -e
           if ! command -v shellcheck >/dev/null 2>&1; then
-            echo "shellcheck not available - skipping"
-            exit 0
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq shellcheck
           fi
-          for f in install.sh verify.sh install-global.sh update-bmad.sh \
-                   scripts/install-token-tools.sh \
-                   scripts/install-fullstack-profile.sh \
-                   scripts/install-security-tools.sh \
-                   scripts/install-api-tools.sh \
-                   scripts/install-js-quality-tools.sh; do
-            shellcheck -x "$f" || {
-              echo "shellcheck warnings in $f (non-fatal at default level)"
-            }
+          shellcheck --version | head -1
+
+      - name: shellcheck on all .sh files (fail on warning)
+        run: |
+          set -e
+          # Discover all .sh files (skip .git). Fail CI on any shellcheck warning.
+          mapfile -t files < <(find . -name '*.sh' -not -path './.git/*' | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "no .sh files found"
+            exit 1
+          fi
+          for f in "${files[@]}"; do
+            shellcheck -x "$f"
+            echo "ok: $f"
           done
 
   # -----------------------------------------------------------------------
-  # 3) shfmt -d diff check (best effort - apt or go install)
+  # 3) shfmt -d diff check — STRICT. Any drift fails CI.
   # -----------------------------------------------------------------------
   shfmt:
-    name: shfmt -d (if available)
+    name: shfmt -d (strict)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install shfmt (best effort)
+      - name: Install shfmt
         run: |
-          set +e
-          if command -v shfmt >/dev/null 2>&1; then
-            echo "shfmt already present: $(shfmt -version 2>/dev/null || true)"
-            exit 0
-          fi
-          if command -v apt-get >/dev/null 2>&1; then
-            sudo apt-get update -qq
-            sudo apt-get install -y -qq shfmt && exit 0
-          fi
-          if command -v go >/dev/null 2>&1; then
-            go install mvdan.cc/sh/v3/cmd/shfmt@latest && exit 0
-          fi
-          echo "shfmt not installable - skipping"
-          exit 0
-
-      - name: shfmt -d (skip if missing)
-        run: |
+          set -e
           if ! command -v shfmt >/dev/null 2>&1; then
-            echo "shfmt not available - skipping"
-            exit 0
+            if command -v apt-get >/dev/null 2>&1; then
+              sudo apt-get update -qq
+              sudo apt-get install -y -qq shfmt
+            elif command -v go >/dev/null 2>&1; then
+              go install mvdan.cc/sh/v3/cmd/shfmt@latest
+            else
+              echo "FATAL: cannot install shfmt (need apt or go)" >&2
+              exit 1
+            fi
           fi
-          for f in install.sh verify.sh install-global.sh update-bmad.sh \
-                   scripts/install-token-tools.sh \
-                   scripts/install-fullstack-profile.sh \
-                   scripts/install-security-tools.sh \
-                   scripts/install-api-tools.sh \
-                   scripts/install-js-quality-tools.sh; do
-            shfmt -d "$f" || {
-              echo "shfmt drift in $f (review before merging)"
-            }
+          shfmt -version
+
+      - name: shfmt -d on all .sh files (fail on drift)
+        run: |
+          set -e
+          # Canonical shfmt style: tab indent, single space in `name() {`,
+          # no space between `>>` and target. `shfmt -d` exits non-zero on
+          # any drift — that is the contract.
+          mapfile -t files < <(find . -name '*.sh' -not -path './.git/*' | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "no .sh files found"
+            exit 1
+          fi
+          for f in "${files[@]}"; do
+            shfmt -d "$f"
+            echo "ok: $f"
           done
 
   # -----------------------------------------------------------------------
