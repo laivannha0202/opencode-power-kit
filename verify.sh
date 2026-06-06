@@ -128,6 +128,18 @@ for tool in rtk tokscale; do
 	fi
 done
 
+# --- Detect runtime context: kit repo itself vs downstream target project ---
+# When verify.sh runs from inside the kit repo (e.g. CI, pre-release sanity
+# check), the three target-project generated files (AGENTS.md, OPENCODE.md,
+# .opencode/opencode.json) are NOT committed here — they are produced by
+# the installer into downstream projects. Treat their absence as WARN so
+# the kit itself can ship clean (0 fail) without lying about a real
+# downstream install.
+IS_KIT_REPO=false
+if [ "$(pwd)" = "$KIT_DIR" ]; then
+	IS_KIT_REPO=true
+fi
+
 # --- Per-project checks ---
 echo ""
 echo "=========================================="
@@ -136,9 +148,22 @@ echo "=========================================="
 echo ""
 
 echo "📁 Files bắt buộc:"
-check "AGENTS.md" "AGENTS.md"
-check "OPENCODE.md" "OPENCODE.md"
-check ".opencode/opencode.json" ".opencode/opencode.json"
+if [ "$IS_KIT_REPO" = true ]; then
+	# Kit repo mode: target-project generated files are expected to be absent.
+	for f in "AGENTS.md" "OPENCODE.md" ".opencode/opencode.json"; do
+		if [ -e "$f" ]; then
+			echo -e "  ${GREEN}✅${NC} $f"
+			((++PASS))
+		else
+			echo -e "  ${YELLOW}⚠️${NC} $f — target-project file, generated bởi installer (kit repo: bỏ qua, không fail)"
+			((++WARN))
+		fi
+	done
+else
+	check "AGENTS.md" "AGENTS.md"
+	check "OPENCODE.md" "OPENCODE.md"
+	check ".opencode/opencode.json" ".opencode/opencode.json"
+fi
 
 echo ""
 echo "📁 Files tùy chọn:"
@@ -231,6 +256,45 @@ if [ -x "$KIT_DIR/scripts/validate-opencode-pack.py" ] || [ -f "$KIT_DIR/scripts
 	fi
 else
 	echo -e "  ${YELLOW}⚠️${NC} scripts/validate-opencode-pack.py không tồn tại"
+	((++WARN))
+fi
+
+echo ""
+echo "[v1.3.3] Safety workflows"
+check_warn "v1.3.3 /cleanup-safe command" "opencode-global/commands/cleanup-safe.md"
+check_warn "v1.3.3 /handoff-save command" "opencode-global/commands/handoff-save.md"
+check_warn "v1.3.3 /checkpoint command" "opencode-global/commands/checkpoint.md"
+check_warn "v1.3.3 cleanup-agent-artifacts.sh" "scripts/cleanup-agent-artifacts.sh"
+check_warn "v1.3.3 templates/AI_HANDOFF.md" "templates/AI_HANDOFF.md"
+if grep -F -q '.opk-trash/' .gitignore 2>/dev/null; then
+	echo -e "  ${GREEN}✅${NC} v1.3.3 .opk-trash/ in .gitignore"
+	((++PASS))
+else
+	echo -e "  ${RED}❌${NC} v1.3.3 .opk-trash/ missing from .gitignore"
+	((++FAIL))
+fi
+if grep -F -q '.opk-checkpoints/' .gitignore 2>/dev/null; then
+	echo -e "  ${GREEN}✅${NC} v1.3.3 .opk-checkpoints/ in .gitignore"
+	((++PASS))
+else
+	echo -e "  ${RED}❌${NC} v1.3.3 .opk-checkpoints/ missing from .gitignore"
+	((++FAIL))
+fi
+if grep -q "Natural Language Auto Router" "templates/AGENTS.md" 2>/dev/null &&
+	grep -q "Natural Language Auto Router" "templates/OPENCODE.md" 2>/dev/null; then
+	echo -e "  ${GREEN}✅${NC} v1.3.3 Natural Language Auto Router present in AGENTS.md + OPENCODE.md"
+	((++PASS))
+else
+	echo -e "  ${YELLOW}⚠️${NC} v1.3.3 Natural Language Auto Router missing in templates/"
+	((++WARN))
+fi
+expected_v="1.3.3"
+current_v="$(tr -d '[:space:]' <VERSION 2>/dev/null || echo unknown)"
+if [ "$current_v" = "$expected_v" ]; then
+	echo -e "  ${GREEN}✅${NC} v1.3.3 VERSION == $expected_v"
+	((++PASS))
+else
+	echo -e "  ${YELLOW}⚠️${NC} v1.3.3 VERSION is '$current_v', expected '$expected_v'"
 	((++WARN))
 fi
 

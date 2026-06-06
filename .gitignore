@@ -1,5 +1,8 @@
 .tmp/
 .test/
+.opk-trash/
+.opk-checkpoints/
+.opk-scratch/
 .opencode-power-*.log
 *.bak
 *.orig

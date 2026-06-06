@@ -5,6 +5,52 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.3] - 2026-06-06
+
+### Added
+
+- **`/cleanup-safe` command** (`opencode-global/commands/cleanup-safe.md`)
+  — dọn file tạm/debug/repro an toàn. Default dry-run; `--apply` chỉ
+  **MOVE** file vào `.opk-trash/YYYYMMDD-HHMMSS/`, không bao giờ xóa.
+  Không chạm tracked file, không chạm protected dirs
+  (`src/`, `app/`, `backend/`, `frontend/`, `prisma/`, `migrations/`,
+  `public/`, `docs/`, `.git/`, `.opencode/`, `.agents/`, `_bmad/`).
+- **`scripts/cleanup-agent-artifacts.sh`** — backing script cho
+  `/cleanup-safe`. `set -euo pipefail`, `--dry-run` / `--apply`,
+  refuses to run ngoài git work-tree.
+- **`/handoff-save` command** (`opencode-global/commands/handoff-save.md`)
+  — tạo / cập nhật `AI_HANDOFF.md` để làm project dài không đứt
+  context. Dùng `templates/AI_HANDOFF.md` làm template, **không ghi
+  đè** file user đã có.
+- **`templates/AI_HANDOFF.md`** — short, machine-friendly template
+  (goal, stack, current task, what changed, files changed, commands
+  run, tests/verification, known issues, next steps).
+- **`/checkpoint` command** (`opencode-global/commands/checkpoint.md`)
+  — snapshot working tree ra `.opk-checkpoints/<ts>.patch` +
+  `.summary.md` trước khi sửa lớn. Không commit, không reset,
+  không force push. Restore bằng `git apply`.
+- **Natural Language Auto Router** — đã thêm vào `templates/AGENTS.md`
+  và `templates/OPENCODE.md`. Map 5 casual request (Vietnamese +
+  English) sang safe workflow: bugfix, project health, feature,
+  token-smart, cleanup. Slash command luôn thắng auto-router.
+- **README quick-start** — 5 câu tự nhiên phổ biến ở đầu README;
+  advanced slash command list chuyển xuống dưới để dễ dùng hơn.
+
+### Improved
+
+- `.gitignore` thêm `.opk-trash/`, `.opk-checkpoints/`, `.opk-scratch/`
+  để các thư mục safety của v1.3.3 không bao giờ lọt vào commit.
+- `verify.sh` thêm 8 check cho v1.3.3 (3 new commands, 1 new script,
+  AI_HANDOFF template, Auto Router presence, VERSION pin).
+
+### Backward compatibility
+
+- **100% backward compatible.** Không command / file / folder nào
+  của v1.3.0 → v1.3.2 bị xóa, đổi tên, hay thay đổi behavior.
+- Mọi thay đổi đều additive. Existing `bootstrap.sh` /
+  `bootstrap.ps1` / `install.sh` / `verify.sh` vẫn chạy nguyên xi
+  với kit v1.3.3.
+
 ## [1.3.2] - 2026-06-06
 
 ### Added

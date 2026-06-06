@@ -49,3 +49,82 @@
 - Không dùng `rm -rf`.
 - Ưu tiên dùng `trash-put` thay vì `rm`.
 - Trước khi xóa untracked files phải chạy `git clean -nd` để xem trước.
+
+## Checkpoints
+
+- Trước khi sửa lớn, dùng `/checkpoint` để snapshot working tree ra
+  `.opk-checkpoints/<ts>.patch` + `.summary.md`.
+- Không `git reset --hard` để "undo" — restore từ patch bằng `git apply`.
+
+---
+
+## Natural Language Auto Router (v1.3.3)
+
+User có thể nói tự nhiên, không cần nhớ slash command. Khi user nói
+một câu casual (tiếng Việt / tiếng Anh), agent tự suy ra workflow
+và chạy an toàn. Slash command luôn thắng auto-router.
+
+### 1. Bugfix intent
+
+Triggers: "fix lỗi", "sửa bug", "nó lỗi", "chạy không được",
+"doesn't work", "it's broken", "fix this".
+
+- Reproduce hoặc inspect lỗi trước.
+- Đọc đúng file liên quan.
+- Tìm root cause trước khi sửa.
+- Sửa nhỏ nhất có thể.
+- Chạy test/build/typecheck liên quan.
+- Không xóa file trừ khi user yêu cầu rõ.
+- Báo cáo: file sửa, nguyên nhân, fix, verification.
+
+### 2. Project health intent
+
+Triggers: "kiểm tra project", "scan all", "xem ổn chưa",
+"check the project", "is this healthy".
+
+- Inspect repo structure.
+- Detect stack + scripts.
+- Check `git status`.
+- Check lint / test / build commands.
+- Báo risks + next actions cụ thể.
+
+### 3. Feature intent
+
+Triggers: "làm tính năng", "thêm chức năng", "code fullstack",
+"build a feature", "add this feature".
+
+- Spec-lite → plan-work → build-slice → test-proof.
+- Viết acceptance criteria ngắn.
+- Chia thành vertical slices nhỏ.
+- Sửa đúng file cần.
+- Frontend / backend / API / DB contract phải khớp.
+- Verify bằng test hoặc manual proof.
+
+### 4. Token-smart intent
+
+Triggers: "tiết kiệm token", "đừng đọc lan man",
+"làm dài không ngắt", "save tokens", "keep it short".
+
+- Build compact repo map trước.
+- Đọc đúng file cần.
+- Giữ running handoff summary.
+- Patch nhỏ.
+- Update `AI_HANDOFF.md` sau khi xong việc lớn.
+
+### 5. Cleanup intent
+
+Triggers: "dọn rác", "xóa file bug tự tạo", "cleanup",
+"clean up the temp files".
+
+- Chạy `git status` trước.
+- Chỉ chạm untracked temp/debug/repro files.
+- Không xóa tracked file.
+- Move vào `.opk-trash/` thay vì `rm`.
+- Sinh `CLEANUP_REPORT.md` nếu cần.
+
+### Default behavior
+
+- Mơ hồ → inspect trước, hành động thận trọng.
+- Cấm `git reset --hard`, `git clean -fd`, `rm -rf`, force push.
+- Cấm in secret hoặc sửa `.env` secret.
+- Slash command luôn thắng auto-router.

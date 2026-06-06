@@ -1,13 +1,38 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/nguoikhongten02022005-cell/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/nguoikhongten02022005-cell/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.3.2-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-1.3.3-blue.svg)](./VERSION)
 [![BMAD](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](#cấu-hình-bmad)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#ghi-chu-quan-trong)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#an-toan)
 [![Cross-platform](https://img.shields.io/badge/cross--platform-Linux%20%7C%20macOS%20%7C%20Windows-blue.svg)](#cài-1-lệnh)
 
 Toolkit dùng lại cho mọi project OpenCode — cài Superpowers + BMAD Method chỉ với 1 lệnh, hỗ trợ **Linux / macOS / Windows PowerShell** (Git Bash / WSL / native).
+
+## Dùng đơn giản không cần nhớ lệnh (mới từ v1.3.3)
+
+Bạn không cần nhớ slash command. Cứ nói tự nhiên (tiếng Việt / tiếng Anh), agent sẽ auto-route. 5 câu phổ biến nhất:
+
+| Bạn nói…                          | Agent sẽ làm gì                                   |
+| --------------------------------- | ------------------------------------------------- |
+| **fix lỗi hộ tôi**                | Reproduce lỗi, tìm root cause, sửa nhỏ nhất, verify |
+| **kiểm tra project ổn chưa**      | Smart-scan repo, check git/lint/test/build, báo rủi ro |
+| **làm tính năng này fullstack**   | Spec nhỏ → plan → slice nhỏ → code → verify        |
+| **tối ưu token cho task này**     | Repo map gọn, đọc đúng file, update handoff         |
+| **dọn file rác do agent tạo**     | Move untracked `.tmp/.bak/repro-*` vào `.opk-trash/`, không xóa file tracked |
+
+> Mặc định agent **không bao giờ** chạy `rm -rf`, `git reset --hard`,
+> `git clean -fd`, hay force push. Mọi thao tác hủy file đều đi qua
+> workflow an toàn có xác nhận trước.
+
+**Workflows mới trong v1.3.3** (slash command, cho advanced):
+
+- `/cleanup-safe` — dọn file tạm an toàn (default dry-run).
+- `/handoff-save` — cập nhật `AI_HANDOFF.md` để mai làm tiếp.
+- `/checkpoint` — snapshot working tree trước khi sửa lớn.
+
+Backing script: `scripts/cleanup-agent-artifacts.sh`. Auto Router chi tiết
+xem `templates/AGENTS.md` và `templates/OPENCODE.md`.
 
 ## Cài all-in-one bằng 1 lệnh (khuyến nghị)
 
