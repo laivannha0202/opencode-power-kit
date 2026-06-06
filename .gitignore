@@ -7,3 +7,5 @@
 *.bak
 *.orig
 *.tmp
+__pycache__/
+*.pyc

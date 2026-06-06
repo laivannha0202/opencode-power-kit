@@ -1,13 +1,32 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/nguoikhongten02022005-cell/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/nguoikhongten02022005-cell/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.3.3-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-1.3.4-blue.svg)](./VERSION)
 [![BMAD](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](#cấu-hình-bmad)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#ghi-chu-quan-trong)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#an-toan)
 [![Cross-platform](https://img.shields.io/badge/cross--platform-Linux%20%7C%20macOS%20%7C%20Windows-blue.svg)](#cài-1-lệnh)
 
 Toolkit dùng lại cho mọi project OpenCode — cài Superpowers + BMAD Method chỉ với 1 lệnh, hỗ trợ **Linux / macOS / Windows PowerShell** (Git Bash / WSL / native).
+
+## Có gì mới trong v1.3.4
+
+- **GSD Core opt-in integration** — `opk gsd` / `opk update-gsd` chuyển
+  tiếp sang official installer `npx @opengsd/gsd-core@latest`. Kit
+  **không vendor / copy** GSD source. Có cả `.sh` và `.ps1`.
+  Flags: `--dry-run` để xem plan, `--yes` để skip confirm.
+- **`opk update-all`** — `git pull --ff-only` (an toàn), refresh
+  bundled `_bmad/`, optional GSD update với `--with-gsd`.
+- **`THIRD_PARTY.md`** — bảng liệt kê rõ BMAD, Superpowers, GSD Core,
+  rtk/tokscale kèm quy tắc *kit không bao giờ auto-update trên shell start*.
+- **`.github/workflows/verify.yml`** — workflow CI mới tập trung cho
+  v1.3.4 kit self-check (bash -n, shellcheck, shfmt, pwsh parse,
+  verify.sh, verify.ps1, validate, integration test). Chạy song song
+  với `ci.yml` hiện có (không thay thế, không xóa job nào).
+- **`verify.sh` / `verify.ps1`** — đọc `${KIT_DIR}/VERSION` trực tiếp;
+  nếu file thiếu thì WARN (không crash) để các check khác vẫn chạy.
+- **Backward compatible 100%** — mọi subcommand / file / folder của
+  v1.3.0 → v1.3.3 vẫn hoạt động nguyên xi. Tất cả v1.3.4 đều additive.
 
 ## Dùng đơn giản không cần nhớ lệnh (mới từ v1.3.3)
 

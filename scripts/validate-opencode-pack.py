@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # ============================================================================
 # OpenCode Power Kit - Pack validator
+# opencode-power-kit v1.3.4
+#
 # Kiểm tra cấu trúc:
 #   - opencode-global/commands/*.md phải có frontmatter + description
 #   - opencode-global/agents/*.md phải có frontmatter + description + mode
@@ -8,6 +10,15 @@
 #   - profiles/*/commands/*.md phải có frontmatter + description
 #   - profiles/*/skills/*/SKILL.md phải có heading và nội dung
 #   - templates/openapi/*.example phải tồn tại (nếu openapi dir tồn tại)
+#
+# v1.3.4 bổ sung:
+#   - VERSION pin = "1.3.4"
+#   - THIRD_PARTY.md tồn tại và reference BMAD / Superpowers / GSD Core
+#   - CHANGELOG.md chứa các needle v1.3.3 / v1.3.4 / cleanup-safe /
+#     handoff-save / checkpoint / Auto Router / GSD Core
+#   - Natural Language Auto Router có mặt trong templates/AGENTS.md và
+#     templates/OPENCODE.md
+#
 # Exit code 0 nếu pass, 1 nếu fail.
 # ============================================================================
 from __future__ import annotations
@@ -21,6 +32,38 @@ KIT_ROOT = Path(__file__).resolve().parent.parent
 GLOBAL_DIR = KIT_ROOT / "opencode-global"
 PROFILES_DIR = KIT_ROOT / "profiles"
 TEMPLATES_DIR = KIT_ROOT / "templates"
+
+# ─── v1.3.4 compliance constants ────────────────────────────────────
+EXPECTED_VERSION = "1.3.4"
+
+AUTO_ROUTER_NEEDLES: tuple[tuple[str, str], ...] = (
+    ("templates/AGENTS.md", "Natural Language Auto Router"),
+    ("templates/OPENCODE.md", "Natural Language Auto Router"),
+)
+
+CHANGELOG_NEEDLES: tuple[str, ...] = (
+    "1.3.3",
+    "1.3.4",
+    "cleanup-safe",
+    "handoff-save",
+    "checkpoint",
+    "Natural Language Auto Router",
+    "Backward compatible",
+    "GSD Core",
+)
+
+THIRD_PARTY_NEEDLES: tuple[tuple[str, str], ...] = (
+    ("THIRD_PARTY.md", "BMAD"),
+    ("THIRD_PARTY.md", "Superpowers"),
+    ("THIRD_PARTY.md", "GSD Core"),
+)
+
+V134_HINT_FILES: tuple[str, ...] = (
+    "THIRD_PARTY.md",
+    "scripts/install-gsd-core.sh",
+    "scripts/install-gsd-core.ps1",
+    ".github/workflows/verify.yml",
+)
 
 
 def die(msg: str) -> "NoReturn":  # type: ignore[name-defined]
@@ -174,6 +217,74 @@ def validate_openapi_templates() -> list[str]:
     return errors
 
 
+# ─── v1.3.4 compliance section ──────────────────────────────────────
+def validate_v134() -> list[str]:
+    """v1.3.4 release invariants. Returns list of error messages."""
+    errors: list[str] = []
+
+    # VERSION file pin
+    print("[v1.3.4 VERSION]")
+    version_path = KIT_ROOT / "VERSION"
+    if version_path.is_file():
+        current = version_path.read_text(encoding="utf-8").strip()
+        if current == EXPECTED_VERSION:
+            ok(f"VERSION == {EXPECTED_VERSION}")
+        else:
+            errors.append(
+                f"VERSION is '{current}', expected '{EXPECTED_VERSION}'"
+            )
+    else:
+        errors.append(f"VERSION file missing at {version_path}")
+
+    # Optional v1.3.4 hint files (warn-only, do not fail on missing)
+    print("[v1.3.4 hint files (optional, warn-only)]")
+    for rel in V134_HINT_FILES:
+        p = KIT_ROOT / rel
+        if p.is_file():
+            ok(f"present: {rel}")
+        else:
+            print(f"  warn: missing optional v1.3.4 file: {rel}")
+
+    # Natural Language Auto Router presence
+    print("[v1.3.4 Natural Language Auto Router]")
+    for rel, needle in AUTO_ROUTER_NEEDLES:
+        p = KIT_ROOT / rel
+        if p.is_file() and needle in p.read_text(encoding="utf-8"):
+            ok(f"{rel} contains: {needle}")
+        else:
+            errors.append(f"{rel} missing needle: {needle}")
+
+    # CHANGELOG needles
+    print("[v1.3.4 CHANGELOG invariants]")
+    cl = KIT_ROOT / "CHANGELOG.md"
+    if cl.is_file():
+        text = cl.read_text(encoding="utf-8")
+        text_lower = text.lower()
+        for needle in CHANGELOG_NEEDLES:
+            if needle.lower() in text_lower:
+                ok(f"CHANGELOG.md contains: {needle}")
+            else:
+                errors.append(f"CHANGELOG.md missing needle: {needle}")
+    else:
+        errors.append("CHANGELOG.md missing")
+
+    # THIRD_PARTY.md needles
+    print("[v1.3.4 THIRD_PARTY.md invariants]")
+    tp = KIT_ROOT / "THIRD_PARTY.md"
+    if tp.is_file():
+        text = tp.read_text(encoding="utf-8")
+        text_lower = text.lower()
+        for rel, needle in THIRD_PARTY_NEEDLES:
+            if needle.lower() in text_lower:
+                ok(f"{rel} contains: {needle}")
+            else:
+                errors.append(f"{rel} missing needle: {needle}")
+    else:
+        errors.append("THIRD_PARTY.md missing")
+
+    return errors
+
+
 def main() -> int:
     if not GLOBAL_DIR.is_dir():
         die(f"opencode-global not found at {GLOBAL_DIR}")
@@ -195,6 +306,9 @@ def main() -> int:
 
     print("[templates/openapi]")
     errors += validate_openapi_templates()
+
+    # v1.3.4 release compliance (VERSION, THIRD_PARTY, Auto Router, CHANGELOG needles)
+    errors += validate_v134()
 
     if errors:
         print("\nPack validation FAILED:", file=sys.stderr)

@@ -5,6 +5,75 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.4] - 2026-06-06
+
+### Added
+
+- **GSD Core opt-in integration** — `opk gsd` and `opk update-gsd`
+  forward to the official GSD Core installer
+  (`npx @opengsd/gsd-core@latest`). The kit does NOT vendor or
+  copy GSD source. Supported via:
+  - `scripts/install-gsd-core.sh` (Linux / macOS / Git Bash / WSL)
+  - `scripts/install-gsd-core.ps1` (Windows PowerShell)
+  Both check `node`/`npm`/`npx`, print the planned command,
+  ask for confirmation, and forward to `npx`. Pass `--dry-run`
+  to plan, `--yes` to skip the prompt.
+- **`opk update-all`** — pulls kit updates via
+  `git pull --ff-only` (no reset, no force push), refreshes the
+  bundled `_bmad/` module pack, and optionally runs
+  `update-gsd` when `--with-gsd` is passed.
+- **`THIRD_PARTY.md`** — explicit list of every third-party
+  integration (BMAD, Superpowers, GSD Core, rtk/tokscale) with
+  the rule: the kit NEVER vendors third-party source, and
+  NEVER auto-updates on shell start.
+- **`.github/workflows/verify.yml`** — a focused v1.3.4 verify
+  workflow that runs `verify.sh`, `verify.ps1`, the python
+  validator, the integration test, plus `bash -n`,
+  `shellcheck`, and `shfmt` checks. Runs alongside the
+  existing comprehensive `ci.yml` (no behavior removed).
+- **`scripts/validate-opencode-pack.py`** — v1.3.4 compliance
+  section added: pins `EXPECTED_VERSION = "1.3.4"`, checks
+  `THIRD_PARTY.md` exists and references BMAD / Superpowers /
+  GSD Core, and checks `CHANGELOG.md` mentions v1.3.3 / v1.3.4
+  needles. The v1.3.3 structural validation (frontmatter on
+  commands/agents/skills, profiles, openapi templates) is
+  preserved.
+
+### Improved
+
+- **`verify.sh` VERSION read is now explicit** — reads
+  `${KIT_DIR}/VERSION` instead of relying on `<VERSION` from
+  the script's CWD. If `VERSION` is missing, the script WARNS
+  and continues with the rest of the checks instead of
+  crashing (this fixes a confusing failure mode on partial
+  syncs).
+- **`verify.ps1`** — same explicit read-from-`$KitDir\VERSION`
+  behavior, same graceful warning on missing file.
+- **Auto Router presence check** — both `verify.sh` and
+  `verify.ps1` now require the *Natural Language Auto Router*
+  to be present in `templates/AGENTS.md` and
+  `templates/OPENCODE.md`.
+
+### Backward compatibility
+
+- **100% backward compatible.** No v1.3.0 → v1.3.3 command,
+  file, or directory was renamed or removed.
+- All new subcommands are additive to `bin/opk` (`gsd`,
+  `update-gsd`, `update-all`); all existing subcommands
+  (`global`, `install`, `bootstrap`, `doctor`, `verify`,
+  `update-bmad`, etc.) still work.
+- Optional integration is **opt-in**; the kit still works
+  perfectly without ever invoking `opk gsd`.
+- Existing `ci.yml` workflow (10 jobs) is untouched and
+  still gates every PR.
+
+# Changelog
+
+All notable changes to OpenCode Power Kit are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
 ## [1.3.3] - 2026-06-06
 
 ### Added

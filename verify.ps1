@@ -1,128 +1,219 @@
-# ============================================================================
-# OpenCode Power Kit - verify.ps1
-# Kiem tra project Windows PowerShell da cai dat Power Kit.
-# Read-only (chi tao OPK_VERIFY_REPORT.md).
-# ============================================================================
+# ─────────────────────────────────────────────────────────────────
+# verify.ps1
+# opencode-power-kit v1.3.4
+#
+# PowerShell mirror of verify.sh. Read-only sanity check.
+#
+# Reads the expected version from $KitDir\VERSION. If VERSION is
+# missing, the script WARNS (does not crash) and continues with the
+# other checks.
+# ─────────────────────────────────────────────────────────────────
+
 [CmdletBinding()]
 param(
-    [switch]$Help
+    [switch]$NoPython,
+    [switch]$NoPwsh
 )
 
 $ErrorActionPreference = 'Stop'
 
+# ─── Resolve kit root ──────────────────────────────────────────────
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$KitDir    = (Resolve-Path $ScriptDir).Path
-$ProjectDir = (Get-Location).Path
-$ReportFile = Join-Path $ProjectDir 'OPK_VERIFY_REPORT.md'
+$KitDir = $ScriptDir
+Set-Location -LiteralPath $KitDir
 
-function Write-Info  { param($m) Write-Host "[INFO] $m" -ForegroundColor Cyan }
-function Write-Ok    { param($m) Write-Host "[OK]   $m" -ForegroundColor Green }
-function Write-Warn  { param($m) Write-Host "[WARN] $m" -ForegroundColor Yellow }
-function Write-Err   { param($m) Write-Host "[ERROR] $m" -ForegroundColor Red }
+$VersionFile = Join-Path $KitDir 'VERSION'
+$ExpectedVersion = ''
 
-if ($Help) {
-    Write-Host ""
-    Write-Host "OpenCode Power Kit - verify.ps1"
-    Write-Host ""
-    Write-Host "Kiem tra project da cai dat Power Kit."
-    Write-Host "Read-only (chi tao OPK_VERIFY_REPORT.md)."
-    Write-Host ""
-    exit 0
+$Pass = 0
+$Fail = 0
+$Warn = 0
+
+# ─── Helpers ──────────────────────────────────────────────────────
+function Ok($msg) {
+    Write-Host "  ok   $msg"
+    $script:Pass++
+}
+function Fail($msg) {
+    Write-Host "  FAIL $msg"
+    $script:Fail++
+}
+function Warn($msg) {
+    Write-Host "  warn $msg"
+    $script:Warn++
 }
 
-Write-Host ""
-Write-Host "============================================" -ForegroundColor Magenta
-Write-Host "  OpenCode Power Kit — verify"             -ForegroundColor Magenta
-Write-Host "  Project: $ProjectDir"
-Write-Host "============================================" -ForegroundColor Magenta
-Write-Host ""
-
-$ReportChecks = New-Object System.Collections.Generic.List[string]
-$Pass = 0; $Warn = 0; $Fail = 0
-
-function Add-Check {
-    param([string]$Name, [string]$Status, [string]$Detail)
-    $script:ReportChecks.Add("| $Name | $Status | $Detail |") | Out-Null
-    switch -Regex ($Status) {
-        '^OK'   { $script:Pass++ }
-        '^WARN' { $script:Warn++ }
-        '^FAIL' { $script:Fail++ }
-    }
-}
-
-# Required project files
-$requiredFiles = @(
-    'AGENTS.md',
-    'OPENCODE.md',
-    '.opencode\opencode.json',
-    '.agents\skills',
-    '.opencode\commands'
-)
-
-foreach ($rel in $requiredFiles) {
-    $full = Join-Path $ProjectDir $rel
-    if (Test-Path $full) {
-        Write-Ok "$rel OK"
-        Add-Check $rel 'OK' "ton tai"
+function Require-File($path) {
+    if (Test-Path -LiteralPath $path -PathType Leaf) {
+        Ok "file exists: $path"
     } else {
-        Write-Warn "$rel KHONG co. Chay: opk install"
-        Add-Check $rel 'WARN' 'khong co'
+        Fail "missing file: $path"
+    }
+}
+function Require-Dir($path) {
+    if (Test-Path -LiteralPath $path -PathType Container) {
+        Ok "dir exists:  $path"
+    } else {
+        Fail "missing dir:  $path"
+    }
+}
+function Require-Contains($path, $needle) {
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        Fail "$path missing:  $needle"
+        return
+    }
+    $content = Get-Content -LiteralPath $path -Raw -ErrorAction SilentlyContinue
+    if ($null -ne $content -and $content.ToLower().Contains($needle.ToLower())) {
+        Ok "$path contains: $needle"
+    } else {
+        Fail "$path missing:  $needle"
     }
 }
 
-# Secret pattern scan (read-only)
-$secretRe = '(?i)(token|password|secret|api_key|OPENAI_API_KEY|ANTHROPIC_API_KEY)\s*[:=]\s*[''"]?[^''"\s]+'
-$secretHits = 0
-$secretWhere = @()
-foreach ($f in @('AGENTS.md', 'OPENCODE.md', '.opencode\opencode.json')) {
-    $full = Join-Path $ProjectDir $f
-    if (Test-Path $full) {
-        $hits = Select-String -Path $full -Pattern $secretRe -ErrorAction SilentlyContinue
-        if ($hits) {
-            $secretHits += $hits.Count
-            $secretWhere += $f
+# ─── Header ───────────────────────────────────────────────────────
+Write-Host '=== opencode-power-kit verify (PowerShell) ==='
+Write-Host "Repo root: $KitDir"
+Write-Host ''
+
+# ─── VERSION ──────────────────────────────────────────────────────
+# Read $KitDir\VERSION explicitly. If missing, warn — do not crash.
+Write-Host '[VERSION]'
+if (Test-Path -LiteralPath $VersionFile -PathType Leaf) {
+    $raw = Get-Content -LiteralPath $VersionFile -Raw -ErrorAction SilentlyContinue
+    if ($null -ne $raw) {
+        $ExpectedVersion = ($raw -replace '\s', '').Trim()
+    }
+    if ([string]::IsNullOrEmpty($ExpectedVersion)) {
+        Warn "VERSION file is empty at $VersionFile"
+    } else {
+        Ok "VERSION file read from $VersionFile : $ExpectedVersion"
+    }
+} else {
+    Warn "VERSION file missing at $VersionFile (continuing without version check)"
+}
+Write-Host ''
+
+# ─── Required files ───────────────────────────────────────────────
+Write-Host '[required files]'
+Require-File 'VERSION'
+Require-File 'CHANGELOG.md'
+Require-File 'README.md'
+Require-File 'THIRD_PARTY.md'
+Require-File 'verify.sh'
+Require-File 'verify.ps1'
+Require-File 'opencode-global/commands/cleanup-safe.md'
+Require-File 'opencode-global/commands/handoff-save.md'
+Require-File 'opencode-global/commands/checkpoint.md'
+Require-File 'scripts/cleanup-agent-artifacts.sh'
+Require-File 'scripts/validate-opencode-pack.py'
+Require-File 'scripts/install-gsd-core.sh'
+Require-File 'scripts/install-gsd-core.ps1'
+Require-File 'bin/opk'
+Require-File 'templates/AGENTS.md'
+Require-File 'templates/OPENCODE.md'
+Require-File 'templates/AI_HANDOFF.md'
+Write-Host ''
+
+# ─── Required dirs ────────────────────────────────────────────────
+Write-Host '[required directories]'
+Require-Dir 'opencode-global'
+Require-Dir 'opencode-global/commands'
+Require-Dir 'scripts'
+Require-Dir 'templates'
+Require-Dir 'bin'
+Write-Host ''
+
+# ─── Auto Router presence ─────────────────────────────────────────
+Write-Host '[Natural Language Auto Router]'
+Require-Contains 'templates/AGENTS.md' 'Natural Language Auto Router'
+Require-Contains 'templates/OPENCODE.md' 'Natural Language Auto Router'
+Write-Host ''
+
+# ─── CHANGELOG mentions v1.3.3 / v1.3.4 ──────────────────────────
+Write-Host '[changelog invariants]'
+Require-Contains 'CHANGELOG.md' '1.3.3'
+Require-Contains 'CHANGELOG.md' '1.3.4'
+Require-Contains 'CHANGELOG.md' 'cleanup-safe'
+Require-Contains 'CHANGELOG.md' 'handoff-save'
+Require-Contains 'CHANGELOG.md' 'checkpoint'
+Require-Contains 'CHANGELOG.md' 'Natural Language Auto Router'
+Require-Contains 'CHANGELOG.md' 'Backward compatible'
+Require-Contains 'CHANGELOG.md' 'GSD Core'
+Require-Contains 'THIRD_PARTY.md' 'BMAD'
+Require-Contains 'THIRD_PARTY.md' 'GSD Core'
+Write-Host ''
+
+# ─── PowerShell parser self-check ─────────────────────────────────
+Write-Host '[powershell parser self-check]'
+try {
+    $errs = $null
+    $null = [System.Management.Automation.Language.Parser]::ParseFile(
+        (Join-Path $KitDir 'verify.ps1'),
+        [ref]$null,
+        [ref]$errs
+    )
+    if ($errs -and $errs.Count -gt 0) {
+        Fail "verify.ps1 has parse errors: $($errs[0].Message)"
+    } else {
+        Ok 'verify.ps1 parses cleanly'
+    }
+} catch {
+    Fail "verify.ps1 parse threw: $_"
+}
+
+$installPs1 = Join-Path $KitDir 'scripts/install-gsd-core.ps1'
+if (Test-Path -LiteralPath $installPs1) {
+    try {
+        $errs = $null
+        $null = [System.Management.Automation.Language.Parser]::ParseFile(
+            $installPs1,
+            [ref]$null,
+            [ref]$errs
+        )
+        if ($errs -and $errs.Count -gt 0) {
+            Fail "scripts/install-gsd-core.ps1 has parse errors: $($errs[0].Message)"
+        } else {
+            Ok 'scripts/install-gsd-core.ps1 parses cleanly'
         }
+    } catch {
+        Fail "scripts/install-gsd-core.ps1 parse threw: $_"
     }
-}
-if ($secretHits -eq 0) {
-    Write-Ok "Khong phat hien secret pattern trong AGENTS.md / OPENCODE.md / .opencode/opencode.json"
-    Add-Check 'Secret scan' 'OK' 'khong phat hien'
 } else {
-    Write-Warn "Phat hien $secretHits secret pattern trong: $($secretWhere -join ', ')"
-    Add-Check 'Secret scan' 'WARN' "$secretHits vi tri giong secret"
+    Warn 'skip pwsh parser: scripts/install-gsd-core.ps1 not found'
 }
+Write-Host ''
 
-# --- Summary ---
-Write-Host ""
-Write-Info "Tong ket: $Pass OK / $Warn WARN / $Fail FAIL"
+# ─── Python validator (run if present) ────────────────────────────
+Write-Host '[python validator]'
+$pyScript = Join-Path $KitDir 'scripts/validate-opencode-pack.py'
+if (Test-Path -LiteralPath $pyScript) {
+    if ($NoPython) {
+        Write-Host '  skip python validator (-NoPython)'
+    } elseif (Get-Command python3 -ErrorAction SilentlyContinue) {
+        $proc = Start-Process -FilePath 'python3' -ArgumentList @($pyScript) `
+            -NoNewWindow -Wait -PassThru
+        if ($proc.ExitCode -eq 0) {
+            Ok 'python3 validate-opencode-pack.py'
+        } else {
+            Fail "python3 validate-opencode-pack.py exit=$($proc.ExitCode)"
+        }
+    } else {
+        Write-Host '  skip python validator (python3 not installed)'
+    }
+} else {
+    Fail 'scripts/validate-opencode-pack.py missing'
+}
+Write-Host ''
 
-# --- Write report ---
-$dateStr = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-$reportLines = @()
-$reportLines += "# OpenCode Power Kit - Verify Report"
-$reportLines += ""
-$reportLines += "- **Thoi gian:** $dateStr"
-$reportLines += "- **Project:** $ProjectDir"
-$reportLines += "- **Power Kit:** $KitDir"
-$reportLines += "- **Tong ket:** $Pass OK / $Warn WARN / $Fail FAIL"
-$reportLines += ""
-$reportLines += "## Checks"
-$reportLines += ""
-$reportLines += "| File | Status | Detail |"
-$reportLines += "|------|--------|--------|"
-foreach ($line in $ReportChecks) { $reportLines += $line }
-$reportLines += ""
-$reportLines += "## Buoc tiep theo"
-$reportLines += ""
+# ─── Summary ──────────────────────────────────────────────────────
+Write-Host '=== summary ==='
+Write-Host "passed: $Pass"
+Write-Host "failed: $Fail"
+Write-Host "warned: $Warn"
+
 if ($Fail -gt 0) {
-    $reportLines += "- Co loi FAIL — chay ``opk install`` de sua."
-} elseif ($Warn -gt 0) {
-    $reportLines += "- Co WARN — xem chi tiet ben tren."
-} else {
-    $reportLines += "- Project san sang. Thu: ``opencode`` + ``/smart-scan``."
+    Write-Host 'RESULT: FAIL'
+    exit 1
 }
-$reportLines += "- Report: $ReportFile"
-
-Set-Content -Path $ReportFile -Value ($reportLines -join "`n") -Encoding UTF8
-Write-Ok "Tao report: $ReportFile"
-Write-Host ""
+Write-Host 'RESULT: PASS'
+exit 0
