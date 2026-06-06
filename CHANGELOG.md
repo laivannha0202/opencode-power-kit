@@ -5,6 +5,62 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2026-06-06
+
+### Added
+
+- **`opk one` / `opk go` — all-in-one shorthand** — chạy 1 lệnh duy nhất để
+  cài **global + project + fullstack + verify** trong project hiện tại.
+  Bash: `opk one` = `bootstrap.sh --all --project-dir "$(pwd)" --yes`.
+  PowerShell: `opk one` = `bootstrap.ps1 -All -ProjectDir $Pwd -Yes`.
+  Trùng behavior với all-in-one one-liner.
+- **4-step `--all` flow** — `bootstrap.sh` / `bootstrap.ps1` / `setup.sh` /
+  `setup.ps1` giờ log rõ `[1/4] global` → `[2/4] project` → `[3/4] fullstack`
+  → `[4/4] verify`. `verify.sh` chạy cuối để check mọi thứ đã sẵn sàng.
+  Idempotent, nếu pwd nguy hiểm thì skip `[2/4] + [3/4] + [4/4]` với cảnh báo
+  rõ hướng dẫn `cd` sang project.
+- **All-in-one one-liner** — README trình bày 1 dòng duy nhất cho cả bash
+  (Linux/macOS/WSL/Git Bash) và PowerShell (Windows) để cài all-in-one
+  từ project dir: tự clone/pull kit, chạy `bootstrap --all --project-dir`,
+  rồi `verify`, in `✅ OpenCode Power Kit all-in-one done. Run: opencode`.
+- **Final success banner** — `bootstrap.sh` / `bootstrap.ps1` cuối cùng
+  in `✅ OpenCode Power Kit all-in-one done. Run: opencode` thay vì
+  banner trống — người dùng thấy ngay bước tiếp theo.
+- **`opk all` chạy verify** — `bin/opk` (bash) và `bin/opk.ps1`
+  (PowerShell) giờ thêm `[4/4] verify.sh` ở cuối flow `[1/3]` →
+  `[1/4]`. Bad-dir guard thông báo skip cả 3 bước project+fullstack+verify.
+
+### Changed
+
+- **`bin/opk one` đổi semantics** — trước v1.3.2 là alias cho
+  `bootstrap.sh --global --yes` (chỉ cài global). Từ v1.3.2 là alias cho
+  `bootstrap.sh --all --project-dir "$(pwd)" --yes` (all-in-one).
+  Muốn cài global nhanh: dùng `opk quick` hoặc `opk global`.
+- **`bin/opk` help text** — bảng lệnh giờ có `opk one`, `opk go`,
+  `opk update-bmad`; thêm 2 ví dụ all-in-one one-liner (bash +
+  PowerShell) với one-command cd + clone + bootstrap --all + verify.
+- **`README.md` "Cài 1 lệnh" → "Cài all-in-one bằng 1 lệnh (khuyến
+  nghị)"** — top section giờ là all-in-one one-liner + `opk one` /
+  `opk go` workflow. Section "Cài thủ công / Advanced" giữ nguyên cho
+  ai muốn kiểm soát từng bước. Opk command table bổ sung `opk one`,
+  `opk go`, `opk update-bmad`.
+- **`bootstrap.sh` / `bootstrap.ps1` `do_all` log format** — đổi
+  `[1/N]...[2/N]...[3/N]` (N là số bước thật) thành `[1/4]...[2/4]...
+  [3/4]...[4/4]` cố định. Step nào skip sẽ in `[X/4 + Y/4] BỎ QUA`.
+- **`setup.sh` / `setup.ps1` `do_all` log format** — đổi `[1/3]`
+  thành `[1/4]`, thêm bước `[4/4] verify.sh`. Print plan cũng đổi.
+
+### Backward compatible
+
+- `--global`, `--project`, `--fullstack`, `--doctor`, `--dry-run`,
+  `--yes` không đổi.
+- `opk global`, `opk install`, `opk fullstack`, `opk all`, `opk doctor`,
+  `opk verify`, `opk tools`, `opk bootstrap`, `opk quick`, `opk init`
+  không đổi behavior.
+- `opk one` thay đổi semantics (global → all-in-one); ai phụ thuộc
+  behavior cũ dùng `opk quick` hoặc `opk global` thay thế.
+- `opk update-bmad` đã có ở v1.3.1, v1.3.2 chỉ nhắc lại trong help.
+
 ## [1.3.1] - 2026-06-05
 
 ### Added

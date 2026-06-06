@@ -15,7 +15,8 @@
 #   opk verify
 #   opk tools
 #   opk bootstrap
-#   opk one
+#   opk one         # alias: bootstrap.ps1 -All -ProjectDir (Get-Location) -Yes (all-in-one)
+#   opk go          # alias: opk one
 # ============================================================================
 [CmdletBinding()]
 param(
@@ -132,18 +133,19 @@ switch ($Command.ToLower()) {
         Write-Host "opk — OpenCode Power Kit CLI (v$Version)"
         Write-Host ""
         Write-Host "Cach dung nhanh:"
+        Write-Host "  opk one         Cai ALL-IN-ONE: global + project + fullstack + verify (khuyen nghi) (= opk go)"
         Write-Host "  opk global      Cai global (commands/skills/agents + opk CLI)"
         Write-Host "  opk install     Cai vao project hien tai (can cd vao project) (= opk init)"
         Write-Host "  opk update-bmad Cap nhat BMAD Method cho project hien tai"
         Write-Host "  opk fullstack   Cai full-stack profile (Nest/React/MySQL)"
-        Write-Host "  opk all         Cai tat ca: global + project + fullstack"
+        Write-Host "  opk all         Cai tat ca: global + project + fullstack (+ verify neu o project an toan)"
         Write-Host "  opk doctor      Chan doan cau hinh (read-only)"
         Write-Host "  opk verify      Kiem tra project hien tai"
         Write-Host "  opk tools       Detect / huong dan cai rtk + tokscale"
         Write-Host "  opk path        In duong dan kit"
         Write-Host "  opk version     In version"
         Write-Host "  opk bootstrap   Chay bootstrap.ps1 (cai 1 lenh)"
-        Write-Host "  opk one         Alias: bootstrap.ps1 -Global -Yes"
+        Write-Host "  opk go          Alias: opk one (all-in-one)"
         Write-Host "  opk quick       Alias: opk global"
         Write-Host "  opk init        Alias: opk install"
         Write-Host ""
@@ -152,20 +154,17 @@ switch ($Command.ToLower()) {
         Write-Host "  -Help  in tro giup cua sub-script"
         Write-Host ""
         Write-Host "Vi du:"
-        Write-Host "  opk global"
-        Write-Host "  opk install -Yes"
-        Write-Host "  opk fullstack"
-        Write-Host "  opk doctor"
+        Write-Host "  opk one                # ← khuyen nghi: cai all-in-one (cd vao project truoc)"
+        Write-Host "  opk go                 # tuong tu opk one"
+        Write-Host "  opk global             # chi cai global"
+        Write-Host "  opk install -Yes       # chi cai vao project hien tai"
+        Write-Host "  opk fullstack          # chi cai full-stack profile"
+        Write-Host "  opk doctor             # chan doan"
         Write-Host "  opk version"
+        Write-Host "  opk bootstrap -All -Yes"
         Write-Host ""
-        Write-Host "Linux/macOS one-command:"
-        Write-Host "  bash -c 'KIT=`$HOME/opencode-power-kit; if [ -d \"`$KIT/.git\" ]; then git -C \"`$KIT\" pull --ff-only; else git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git \"`$KIT\"; fi; bash \"`$KIT/bootstrap.sh\" --global'"
-        Write-Host ""
-        Write-Host "Windows PowerShell one-command:"
-        Write-Host "  powershell -ExecutionPolicy Bypass -File `$HOME\opencode-power-kit\bootstrap.ps1 -Global"
-        Write-Host ""
-        Write-Host "Project one-command (Linux/macOS):"
-        Write-Host "  cd /path/to/project && opk install"
+        Write-Host "All-in-one one-command (Windows PowerShell) — tu clone/pull kit roi cai:"
+        Write-Host "  powershell -ExecutionPolicy Bypass -Command `"`$Project=(Get-Location).Path; `$KIT=Join-Path `$HOME 'opencode-power-kit'; if (Test-Path (Join-Path `$KIT '.git')) { & git -C `$KIT pull --ff-only } else { & git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git `$KIT }; & (Join-Path `$KIT 'bootstrap.ps1') -All -ProjectDir `$Project -Yes; & (Join-Path `$KIT 'verify.ps1')`""
         Write-Host ""
         Write-Host "Project one-command (Windows):"
         Write-Host "  cd C:\path\to\project; opk install"
@@ -209,17 +208,20 @@ switch ($Command.ToLower()) {
         Require-File (Join-Path $KitDir 'install-global.ps1')
         Require-File (Join-Path $KitDir 'install.ps1')
         Require-File (Join-Path $KitDir 'scripts\install-fullstack-profile.ps1')
-        Write-Host "opk: [1/3] install-global.ps1"
+        Require-File (Join-Path $KitDir 'verify.ps1')
+        Write-Host "opk: [1/4] install-global.ps1"
         & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'install-global.ps1') -Yes
         if (Test-BadProjectDir $PwdNow) {
-            Write-Host "opk: BO QUA install.ps1 + fullstack (pwd = $PwdNow la root nguy hiem)." -ForegroundColor Yellow
+            Write-Host "opk: BO QUA install.ps1 + fullstack + verify (pwd = $PwdNow la root nguy hiem)." -ForegroundColor Yellow
             Write-Host "opk:   HOME / kit / C:\ / C:\Windows / C:\Program Files* / TEMP / TMP deu bi tu choi." -ForegroundColor Yellow
-            Write-Host "opk:   cd vao project that, roi chay: opk install && opk fullstack" -ForegroundColor Yellow
+            Write-Host "opk:   cd vao project that, roi chay: opk install && opk fullstack && opk verify" -ForegroundColor Yellow
         } else {
-            Write-Host "opk: [2/3] install.ps1 trong $PwdNow"
+            Write-Host "opk: [2/4] install.ps1 trong $PwdNow"
             & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'install.ps1') -Yes
-            Write-Host "opk: [3/3] install-fullstack-profile.ps1 trong $PwdNow"
+            Write-Host "opk: [3/4] install-fullstack-profile.ps1 trong $PwdNow"
             & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'scripts\install-fullstack-profile.ps1') -Yes
+            Write-Host "opk: [4/4] verify.ps1 trong $PwdNow"
+            & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'verify.ps1')
         }
     }
 
@@ -249,7 +251,14 @@ switch ($Command.ToLower()) {
 
     'one' {
         Require-File (Join-Path $KitDir 'bootstrap.ps1')
-        & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'bootstrap.ps1') -Global -Yes
+        $oneProjectDir = if ($env:OPK_PROJECT_DIR) { $env:OPK_PROJECT_DIR } else { (Get-Location).Path }
+        & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'bootstrap.ps1') -All -ProjectDir $oneProjectDir -Yes @Args
+    }
+
+    'go' {
+        Require-File (Join-Path $KitDir 'bootstrap.ps1')
+        $oneProjectDir = if ($env:OPK_PROJECT_DIR) { $env:OPK_PROJECT_DIR } else { (Get-Location).Path }
+        & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'bootstrap.ps1') -All -ProjectDir $oneProjectDir -Yes @Args
     }
 
     'quick' {

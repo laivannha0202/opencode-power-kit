@@ -169,12 +169,13 @@ function Show-Plan {
         'project'   { Write-Host "  - powershell install.ps1   (yeu cau project dir)" }
         'fullstack' { Write-Host "  - powershell scripts\install-fullstack-profile.ps1 (yeu cau project dir)" }
         'all' {
-            Write-Host "  - powershell install-global.ps1 -Yes"
+            Write-Host "  - [1/4] powershell install-global.ps1 -Yes"
             if (Test-BadProjectDir $PwdNow) {
-                Write-Host "  - SKIP project + fullstack (pwd khong phai project dir an toan)"
+                Write-Host "  - [2/4 + 3/4 + 4/4] SKIP (pwd khong phai project dir an toan)"
             } else {
-                Write-Host "  - powershell install.ps1"
-                Write-Host "  - powershell scripts\install-fullstack-profile.ps1"
+                Write-Host "  - [2/4] powershell install.ps1"
+                Write-Host "  - [3/4] powershell scripts\install-fullstack-profile.ps1"
+                Write-Host "  - [4/4] powershell verify.ps1"
             }
         }
         'doctor' { Write-Host "  - powershell doctor.ps1" }
@@ -212,17 +213,19 @@ function Do-Fullstack {
 }
 
 function Do-All {
-    Write-Info "[1/3] install-global.ps1..."
+    Write-Info "[1/4] install-global.ps1..."
     & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'install-global.ps1') -Yes
     if (Test-BadProjectDir $PwdNow) {
-        Write-Warn "[2/3 + 3/3] BO QUA: pwd=$PwdNow khong phai project dir an toan (HOME / kit / C:\ / C:\Windows / C:\Program Files* / TEMP / TMP)."
+        Write-Warn "[2/4 + 3/4 + 4/4] BO QUA: pwd=$PwdNow khong phai project dir an toan (HOME / kit / C:\ / C:\Windows / C:\Program Files* / TEMP / TMP)."
         Write-Warn "Sau khi 'cd' vao project, chay: powershell setup.ps1 -Project -Fullstack"
         Show-NextSteps $true
     } else {
-        Write-Info "[2/3] install.ps1 trong $PwdNow ..."
+        Write-Info "[2/4] install.ps1 trong $PwdNow ..."
         & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'install.ps1') -Yes
-        Write-Info "[3/3] install-fullstack-profile.ps1 trong $PwdNow ..."
+        Write-Info "[3/4] install-fullstack-profile.ps1 trong $PwdNow ..."
         & powershell -ExecutionPolicy Bypass -File (Join-Path $ScriptsDir 'install-fullstack-profile.ps1') -Yes
+        Write-Info "[4/4] verify.ps1 trong $PwdNow ..."
+        & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'verify.ps1')
         Write-Ok "All-in-one xong."
         Show-NextSteps $true
     }

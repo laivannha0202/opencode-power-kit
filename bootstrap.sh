@@ -117,11 +117,13 @@ print_plan() {
 	project) echo "  - bash $KIT_DIR/setup.sh --project --yes   (cwd: $PWD_NOW)" ;;
 	fullstack) echo "  - bash $KIT_DIR/setup.sh --fullstack --yes (cwd: $PWD_NOW)" ;;
 	all)
-		echo "  - bash $KIT_DIR/setup.sh --global --yes"
+		echo "  - [1/4] bash $KIT_DIR/setup.sh --global --yes"
 		if is_bad_project_dir "$PWD_NOW"; then
-			echo "  - SKIP project + fullstack (cwd không phải project dir an toàn)"
+			echo "  - [2/4 + 3/4 + 4/4] SKIP (cwd không phải project dir an toàn)"
 		else
-			echo "  - bash $KIT_DIR/setup.sh --project --fullstack --yes"
+			echo "  - [2/4] bash $KIT_DIR/setup.sh --project --yes   (cwd: $PWD_NOW)"
+			echo "  - [3/4] bash $KIT_DIR/setup.sh --fullstack --yes (cwd: $PWD_NOW)"
+			echo "  - [4/4] bash $KIT_DIR/verify.sh                 (cwd: $PWD_NOW)"
 		fi
 		;;
 	doctor) echo "  - bash $KIT_DIR/setup.sh --doctor" ;;
@@ -168,23 +170,29 @@ do_fullstack() {
 }
 
 do_all() {
-	info "[1/N] Cài global..."
+	info "[1/4] Cài global..."
 	bash "$KIT_DIR/setup.sh" --global --yes
 	export PATH="$HOME/.local/bin:$PATH"
 	local target="${PROJECT_DIR:-$PWD_NOW}"
 	if is_bad_project_dir "$target"; then
-		warn "[2/N + 3/N] BỎ QUA project + fullstack: $target không phải project dir an toàn."
+		warn "[2/4 + 3/4 + 4/4] BỎ QUA project + fullstack + verify: $target không phải project dir an toàn."
 		warn "         (HOME / kit / / /tmp / /var/tmp / /usr / /etc đều bị từ chối.)"
 		echo ""
 		info "Sau khi 'cd' vào project thật, chạy:"
 		echo -e "  ${GREEN}opk install${NC}"
 		echo -e "  ${GREEN}opk fullstack${NC}"
+		echo -e "  ${GREEN}opk verify${NC}"
+		echo ""
+		info "Hoặc dùng 1 lệnh all-in-one:"
+		echo -e "  ${GREEN}opk one   # hoặc: opk go${NC}"
 		return 0
 	fi
-	info "[2/N] Cài project vào: $target"
+	info "[2/4] Cài project vào: $target"
 	(cd "$target" && bash "$KIT_DIR/setup.sh" --project --yes)
-	info "[3/N] Cài fullstack profile vào: $target"
+	info "[3/4] Cài fullstack profile vào: $target"
 	(cd "$target" && bash "$KIT_DIR/setup.sh" --fullstack --yes)
+	info "[4/4] Verify project tại: $target"
+	(cd "$target" && bash "$KIT_DIR/verify.sh")
 	ok "All-in-one xong tại $target."
 }
 
@@ -328,7 +336,7 @@ confirm_default_yes() {
 
 echo ""
 header
-echo -e "  ${GREEN}✅ bootstrap hoàn tất${NC}"
+echo -e "  ${GREEN}✅ OpenCode Power Kit all-in-one done. Run: opencode${NC}"
 header
 echo ""
 info "Bước tiếp theo:"

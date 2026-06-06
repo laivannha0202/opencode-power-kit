@@ -17,7 +17,8 @@
 #   opk verify        # kiểm tra project
 #   opk tools         # install-token-tools (rtk/tokscale)
 #   opk bootstrap     # gọi bootstrap.sh
-#   opk one           # alias: bootstrap.sh --global --yes
+#   opk one           # alias: bootstrap.sh --all --project-dir "$(pwd)" --yes (all-in-one)
+#   opk go            # alias: opk one
 # ============================================================================
 set -euo pipefail
 
@@ -112,19 +113,20 @@ case "$cmd" in
     cat <<EOF
 opk — OpenCode Power Kit CLI (v$VERSION)
 
-Cách dùng nhanh:
+  Cách dùng nhanh:
+  opk one         Cài ALL-IN-ONE: global + project + fullstack + verify (khuyến nghị) (= opk go)
   opk global      Cài global (commands/skills/agents + opk CLI)
   opk install     Cài vào project hiện tại (cần cd vào project) (= opk init)
   opk update-bmad Cập nhật BMAD Method cho project hiện tại
   opk init        Alias: opk install
   opk quick       Alias: opk global (cài global nhanh)
   opk fullstack   Cài full-stack profile (Nest/React/MySQL)
-  opk all         Cài tất cả: global + project + fullstack
+  opk all         Cài tất cả: global + project + fullstack (+ verify nếu ở project an toàn)
   opk doctor      Chẩn đoán cấu hình (read-only)
   opk verify      Kiểm tra project hiện tại
   opk tools       Detect / hướng dẫn cài rtk + tokscale
   opk bootstrap   Chạy bootstrap.sh (cài 1 lệnh, tự detect shell)
-  opk one         Alias: bootstrap.sh --global --yes
+  opk go          Alias: opk one (all-in-one)
   opk path        In đường dẫn kit
   opk version     In version
 
@@ -133,19 +135,20 @@ Flags chung (forward cho sub-script):
   --help  in trợ giúp của sub-script
 
 Ví dụ:
-  opk global
-  opk install --yes
-  opk fullstack
-  opk doctor
+  opk one                # ← khuyến nghị: cài all-in-one (cd vào project trước)
+  opk go                 # tương tự opk one
+  opk global             # chỉ cài global
+  opk install --yes      # chỉ cài vào project hiện tại
+  opk fullstack          # chỉ cài full-stack profile
+  opk doctor             # chẩn đoán
   opk version
-  opk one
   opk bootstrap --all --yes
 
-Linux/macOS one-command (cài global không cần git clone trước):
-  bash -c 'KIT="\$HOME/opencode-power-kit"; if [ -d "\$KIT/.git" ]; then git -C "\$KIT" pull --ff-only; else git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git "\$KIT"; fi; bash "\$KIT/bootstrap.sh" --global'
+All-in-one one-command (Linux / macOS / Git Bash / WSL) — tự clone/pull kit rồi cài:
+  bash -c 'PROJECT="\$PWD"; KIT="\$HOME/opencode-power-kit"; if [ -d "\$KIT/.git" ]; then git -C "\$KIT" pull --ff-only; else git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git "\$KIT"; fi; bash "\$KIT/bootstrap.sh" --all --project-dir "\$PROJECT"; cd "\$PROJECT"; bash "\$KIT/verify.sh"'
 
-Windows PowerShell one-command:
-  powershell -ExecutionPolicy Bypass -File \$HOME\\opencode-power-kit\\bootstrap.ps1 -Global
+All-in-one one-command (Windows PowerShell) — tự clone/pull kit rồi cài:
+  powershell -ExecutionPolicy Bypass -Command "\$Project=(Get-Location).Path; \$KIT=Join-Path \$HOME 'opencode-power-kit'; if (Test-Path (Join-Path \$KIT '.git')) { & git -C \$KIT pull --ff-only } else { & git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git \$KIT }; & (Join-Path \$KIT 'bootstrap.ps1') -All -ProjectDir \$Project -Yes; & (Join-Path \$KIT 'verify.ps1')"
 
 Project one-command (sau khi đã cài global):
   cd /path/to/project && opk install
@@ -189,20 +192,23 @@ EOF
     require_file "$KIT_DIR/install-global.sh"
     require_file "$KIT_DIR/install.sh"
     require_file "$KIT_DIR/scripts/install-fullstack-profile.sh"
-    echo "opk: [1/3] install-global.sh"
+    require_file "$KIT_DIR/verify.sh"
+    echo "opk: [1/4] install-global.sh"
     bash "$KIT_DIR/install-global.sh"
     pwd_now="$(pwd)"
     if is_bad_project_dir; then
       {
-        echo "opk: BỎ QUA install.sh + fullstack (pwd = $pwd_now là root nguy hiểm)."
-        echo "opk:   HOME / kit / / /tmp / /var/tmp / /usr / /etc đều bị từ chối."
-        echo "opk:   cd vào project thật, rồi chạy: opk install && opk fullstack"
-      } >&2
+        echo "opk: BỎ QUA install.sh + fullstack + verify (pwd = $pwd_now là root nguy hiểm)." >&2
+        echo "opk:   HOME / kit / / /tmp / /var/tmp / /usr / /etc đều bị từ chối." >&2
+        echo "opk:   cd vào project thật, rồi chạy: opk install && opk fullstack && opk verify" >&2
+      }
     else
-      echo "opk: [2/3] install.sh trong $pwd_now"
+      echo "opk: [2/4] install.sh trong $pwd_now"
       bash "$KIT_DIR/install.sh"
-      echo "opk: [3/3] install-fullstack-profile.sh trong $pwd_now"
+      echo "opk: [3/4] install-fullstack-profile.sh trong $pwd_now"
       bash "$KIT_DIR/scripts/install-fullstack-profile.sh"
+      echo "opk: [4/4] verify.sh trong $pwd_now"
+      bash "$KIT_DIR/verify.sh"
     fi
     ;;
 
@@ -228,7 +234,12 @@ EOF
 
   one)
     require_file "$KIT_DIR/bootstrap.sh"
-    exec bash "$KIT_DIR/bootstrap.sh" --global --yes "$@"
+    exec bash "$KIT_DIR/bootstrap.sh" --all --project-dir "$(pwd)" --yes "$@"
+    ;;
+
+  go)
+    require_file "$KIT_DIR/bootstrap.sh"
+    exec bash "$KIT_DIR/bootstrap.sh" --all --project-dir "$(pwd)" --yes "$@"
     ;;
 
   quick)

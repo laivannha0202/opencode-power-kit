@@ -138,11 +138,13 @@ function Show-Plan {
         'project'   { Write-Host "  - powershell setup.ps1 -Project -Yes   (cwd: $PwdNow)" }
         'fullstack' { Write-Host "  - powershell setup.ps1 -Fullstack -Yes (cwd: $PwdNow)" }
         'all' {
-            Write-Host "  - powershell setup.ps1 -Global -Yes"
+            Write-Host "  - [1/4] powershell setup.ps1 -Global -Yes"
             if (Test-BadProjectDir $PwdNow) {
-                Write-Host "  - SKIP project + fullstack (cwd khong phai project dir an toan)"
+                Write-Host "  - [2/4 + 3/4 + 4/4] SKIP (cwd khong phai project dir an toan)"
             } else {
-                Write-Host "  - powershell setup.ps1 -Project -Fullstack -Yes"
+                Write-Host "  - [2/4] powershell setup.ps1 -Project -Yes   (cwd: $PwdNow)"
+                Write-Host "  - [3/4] powershell setup.ps1 -Fullstack -Yes (cwd: $PwdNow)"
+                Write-Host "  - [4/4] powershell verify.ps1                 (cwd: $PwdNow)"
             }
         }
         'doctor' { Write-Host "  - powershell setup.ps1 -Doctor" }
@@ -244,7 +246,7 @@ function Do-Fullstack {
 }
 
 function Do-All {
-    Write-Info "[1/N] Cai global..."
+    Write-Info "[1/4] Cai global..."
     & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'setup.ps1') -Global -Yes
     # Update PATH for current session
     $opkBin = Join-Path $Home '.opencode-power-kit\bin'
@@ -255,20 +257,26 @@ function Do-All {
     }
     $target = if ($ProjectDir) { $ProjectDir } else { $PwdNow }
     if (Test-BadProjectDir $target) {
-        Write-Warn "[2/N + 3/N] BO QUA project + fullstack: $target khong phai project dir an toan."
+        Write-Warn "[2/4 + 3/4 + 4/4] BO QUA project + fullstack + verify: $target khong phai project dir an toan."
         Write-Warn "         (HOME / kit / C:\ / C:\Windows / C:\Program Files* / TEMP / TMP deu bi tu choi.)"
         Write-Host ""
         Write-Info "Sau khi 'cd' vao project that, chay:"
         Write-Host "  opk install"   -ForegroundColor Green
         Write-Host "  opk fullstack" -ForegroundColor Green
+        Write-Host "  opk verify"     -ForegroundColor Green
+        Write-Host ""
+        Write-Info "Hoac dung 1 lenh all-in-one:"
+        Write-Host "  opk one   # hoac: opk go" -ForegroundColor Green
         return
     }
-    Write-Info "[2/N] Cai project vao: $target"
+    Write-Info "[2/4] Cai project vao: $target"
     Push-Location $target
     try {
         & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'setup.ps1') -Project -Yes
-        Write-Info "[3/N] Cai fullstack profile vao: $target"
+        Write-Info "[3/4] Cai fullstack profile vao: $target"
         & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'setup.ps1') -Fullstack -Yes
+        Write-Info "[4/4] Verify project tai: $target"
+        & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'verify.ps1')
     } finally {
         Pop-Location
     }
@@ -331,7 +339,7 @@ if ($Doctor)    { Do-Doctor }
 
 Write-Host ""
 Write-Hdr
-Write-Host "  bootstap hoan tat" -ForegroundColor Green
+Write-Host "  OpenCode Power Kit all-in-one done. Run: opencode" -ForegroundColor Green
 Write-Hdr
 Write-Host ""
 Write-Info "Buoc tiep theo:"

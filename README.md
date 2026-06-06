@@ -1,7 +1,7 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/nguoikhongten02022005-cell/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/nguoikhongten02022005-cell/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.3.1-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-1.3.2-blue.svg)](./VERSION)
 [![BMAD](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](#cấu-hình-bmad)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#ghi-chu-quan-trong)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#an-toan)
@@ -9,53 +9,54 @@
 
 Toolkit dùng lại cho mọi project OpenCode — cài Superpowers + BMAD Method chỉ với 1 lệnh, hỗ trợ **Linux / macOS / Windows PowerShell** (Git Bash / WSL / native).
 
-## Cài 1 lệnh
+## Cài all-in-one bằng 1 lệnh (khuyến nghị)
 
-Không cần `git clone` trước — kit tự clone (hoặc `pull` nếu đã có) rồi bootstrap.
+**`cd` vào project** rồi paste 1 dòng dưới đây — kit tự clone (hoặc `pull` nếu đã có) → cài **global + project + fullstack + verify** xong in `Run: opencode`.
 
 ### Linux / macOS / Git Bash / WSL
 
 ```bash
-bash -c 'KIT="$HOME/opencode-power-kit"; if [ -d "$KIT/.git" ]; then git -C "$KIT" pull --ff-only; else git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git "$KIT"; fi; bash "$KIT/bootstrap.sh" --global'
+bash -c 'PROJECT="$PWD"; KIT="$HOME/opencode-power-kit"; if [ -d "$KIT/.git" ]; then git -C "$KIT" pull --ff-only; else git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git "$KIT"; fi; bash "$KIT/bootstrap.sh" --all --project-dir "$PROJECT"; cd "$PROJECT"; bash "$KIT/verify.sh"; echo "✅ OpenCode Power Kit all-in-one done. Run: opencode"'
 ```
 
 Sau khi xong:
 
 ```bash
 source ~/.bashrc    # zsh thì: source ~/.zshrc
-opk help
+opk one             # ← chính là all-in-one, dùng lại bất kỳ lúc nào
 opencode
 ```
 
 ### Windows PowerShell
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "$KIT = Join-Path $HOME 'opencode-power-kit'; if (Test-Path (Join-Path $KIT '.git')) { & git -C $KIT pull --ff-only } else { & git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git $KIT }; & (Join-Path $KIT 'bootstrap.ps1') -Global -Yes"
+powershell -ExecutionPolicy Bypass -Command "$Project=(Get-Location).Path; $KIT=Join-Path $HOME 'opencode-power-kit'; if (Test-Path (Join-Path $KIT '.git')) { & git -C $KIT pull --ff-only } else { & git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git $KIT }; & (Join-Path $KIT 'bootstrap.ps1') -All -ProjectDir $Project -Yes; & (Join-Path $KIT 'verify.ps1'); Write-Host '✅ OpenCode Power Kit all-in-one done. Run: opencode'"
 ```
 
 Sau khi xong: **mở PowerShell mới** (để load User PATH), rồi:
 
 ```powershell
-opk.cmd help
+opk one             # ← chính là all-in-one, dùng lại bất kỳ lúc nào
 opk.cmd path
 opencode
 ```
 
-### Project one-command
-
-Sau khi đã cài global ở trên, mỗi project mới chỉ cần 1 lệnh:
+### `opk one` / `opk go` — all-in-one shorthand (sau khi đã cài global lần đầu)
 
 ```bash
 # Linux / macOS / Git Bash / WSL
-cd /path/to/your/project && opk install && opk fullstack
+cd /path/to/your/project
+opk one            # = opk go  = bootstrap.sh --all --project-dir "$(pwd)" --yes
+# = [1/4] global + [2/4] project + [3/4] fullstack + [4/4] verify
 ```
 
 ```powershell
 # Windows PowerShell
-cd C:\path\to\your\project; opk.cmd install; opk.cmd fullstack
+cd C:\path\to\your\project
+opk one            # = opk go
 ```
 
-> Bootstrap tự phát hiện shell: không sudo, không `curl|sh`, backup mọi file cũ, idempotent (chạy lại không duplicate PATH / marker / config). Từ chối cài project trong `$HOME`, kit dir, `/`, `/tmp`, `/var/tmp`, `/usr`, `/etc` (hoặc `C:\`, `C:\Windows`, `C:\Program Files*`, `$env:TEMP` trên Windows).
+> Bootstrap tự phát hiện shell: không sudo, không `curl|sh`, backup mọi file cũ, idempotent (chạy lại không duplicate PATH / marker / config). Từ chối cài project trong `$HOME`, kit dir, `/`, `/tmp`, `/var/tmp`, `/usr`, `/etc` (hoặc `C:\`, `C:\Windows`, `C:\Program Files*`, `$env:TEMP` trên Windows). Nếu pwd không an toàn, `--all` vẫn chạy global + in cảnh báo hướng dẫn `cd` sang project.
 
 ## Cài thủ công / Advanced
 
@@ -124,18 +125,46 @@ bash setup.sh --help        # in hướng dẫn
 
 Sau khi cài global, lệnh `opk` có sẵn trong shell (PATH):
 
-| `opk ...`      | Tác dụng                                              |
-|----------------|--------------------------------------------------------|
-| `opk help`     | In trợ giúp đầy đủ                                    |
-| `opk version`  | In version kit                                         |
-| `opk path`     | In đường dẫn kit hiện tại                              |
-| `opk global`   | Cài global (commands / skills / agents + opk CLI)     |
-| `opk install`  | Cài vào project hiện tại                               |
-| `opk fullstack`| Cài full-stack profile                                 |
-| `opk all`      | Cài tất cả                                             |
-| `opk doctor`   | Chẩn đoán (read-only)                                  |
-| `opk verify`   | Kiểm tra project hiện tại                              |
-| `opk tools`    | Detect / hướng dẫn cài `rtk`, `tokscale`               |
+| `opk ...`        | Tác dụng                                                                  |
+|------------------|----------------------------------------------------------------------------|
+| `opk one`        | **All-in-one**: global + project + fullstack + verify (khuyến nghị)        |
+| `opk go`         | Alias: `opk one`                                                          |
+| `opk help`       | In trợ giúp đầy đủ                                                        |
+| `opk version`    | In version kit                                                             |
+| `opk path`       | In đường dẫn kit hiện tại                                                  |
+| `opk global`     | Cài global (commands / skills / agents + opk CLI)                         |
+| `opk install`    | Cài vào project hiện tại (= `opk init`)                                    |
+| `opk fullstack`  | Cài full-stack profile                                                     |
+| `opk all`        | Cài tất cả: global + project + fullstack + verify                          |
+| `opk doctor`     | Chẩn đoán (read-only)                                                      |
+| `opk verify`     | Kiểm tra project hiện tại                                                  |
+| `opk tools`      | Detect / hướng dẫn cài `rtk`, `tokscale`                                   |
+| `opk update-bmad`| Cập nhật BMAD Method cho project hiện tại                                 |
+
+## Có gì mới trong v1.3.2
+
+- **`opk one` / `opk go` — all-in-one shorthand** — chạy 1 lệnh duy nhất
+  để cài **global + project + fullstack + verify** trong project hiện tại.
+  `opk one` = `bootstrap.sh --all --project-dir "$(pwd)" --yes` (bash) /
+  `bootstrap.ps1 -All -ProjectDir (Get-Location).Path -Yes` (PowerShell).
+- **4-step `--all` flow** — `bootstrap.sh` / `bootstrap.ps1` / `setup.sh`
+  / `setup.ps1` giờ log rõ `[1/4] global` → `[2/4] project` →
+  `[3/4] fullstack` → `[4/4] verify`. Idempotent, nếu pwd nguy hiểm thì
+  skip `[2/4] + [3/4] + [4/4]` với cảnh báo rõ hướng dẫn `cd` sang
+  project.
+- **All-in-one one-liner** — top section README trình bày 1 dòng duy
+  nhất cho cả bash và PowerShell: tự clone/pull kit → bootstrap --all
+  → verify → in `✅ OpenCode Power Kit all-in-one done. Run: opencode`.
+- **Final success banner** — `bootstrap.sh` / `bootstrap.ps1` cuối cùng
+  in `✅ OpenCode Power Kit all-in-one done. Run: opencode` thay vì
+  banner trống.
+- **`bin/opk` help text** bổ sung `opk one`, `opk go`, `opk update-bmad`
+  + 2 ví dụ all-in-one one-liner (bash + PowerShell).
+- **Backward compatible** — `--global`, `--project`, `--fullstack`,
+  `--doctor`, `--yes`, `opk global`, `opk install`, `opk fullstack`,
+  `opk all`, `opk doctor`, `opk verify`, `opk tools`, `opk bootstrap`,
+  `opk quick`, `opk init` không đổi. `opk one` đổi semantics (global
+  → all-in-one); ai cần behavior cũ dùng `opk quick`.
 
 ## Có gì mới trong v1.3.1
 

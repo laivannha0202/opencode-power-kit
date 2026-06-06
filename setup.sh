@@ -170,12 +170,13 @@ print_plan() {
 		echo "  - bash $KIT_DIR/scripts/install-fullstack-profile.sh   (yêu cầu project dir)"
 		;;
 	all)
-		echo "  - bash $KIT_DIR/install-global.sh"
+		echo "  - [1/4] bash $KIT_DIR/install-global.sh"
 		if is_safe_project_dir; then
-			echo "  - bash $KIT_DIR/install.sh"
-			echo "  - bash $KIT_DIR/scripts/install-fullstack-profile.sh"
+			echo "  - [2/4] bash $KIT_DIR/install.sh"
+			echo "  - [3/4] bash $KIT_DIR/scripts/install-fullstack-profile.sh"
+			echo "  - [4/4] bash $KIT_DIR/verify.sh"
 		else
-			echo "  - SKIP install.sh + fullstack (pwd không phải project dir an toàn)"
+			echo "  - [2/4 + 3/4 + 4/4] SKIP (pwd không phải project dir an toàn)"
 		fi
 		;;
 	doctor)
@@ -215,17 +216,19 @@ do_fullstack() {
 }
 
 do_all() {
-	info "[1/3] install-global.sh..."
+	info "[1/4] install-global.sh..."
 	bash "$KIT_DIR/install-global.sh"
 	if is_safe_project_dir; then
-		info "[2/3] install.sh trong $PWD_NOW ..."
+		info "[2/4] install.sh trong $PWD_NOW ..."
 		bash "$KIT_DIR/install.sh"
-		info "[3/3] install-fullstack-profile.sh trong $PWD_NOW ..."
+		info "[3/4] install-fullstack-profile.sh trong $PWD_NOW ..."
 		bash "$KIT_DIR/scripts/install-fullstack-profile.sh"
+		info "[4/4] verify.sh trong $PWD_NOW ..."
+		bash "$KIT_DIR/verify.sh"
 		ok "All-in-one xong."
 		print_next_steps true
 	else
-		warn "[2/3 + 3/3] BỎ QUA: pwd=$PWD_NOW không phải project dir an toàn (HOME / kit / /tmp / /var/tmp / /usr / /etc)."
+		warn "[2/4 + 3/4 + 4/4] BỎ QUA: pwd=$PWD_NOW không phải project dir an toàn (HOME / kit / /tmp / /var/tmp / /usr / /etc)."
 		warn "Sau khi 'cd' vào project, chạy: bash $KIT_DIR/setup.sh --project --fullstack"
 		print_next_steps true
 	fi
