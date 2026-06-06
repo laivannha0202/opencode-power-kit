@@ -35,6 +35,10 @@ err() {
 TARGET_DIR="$(pwd)"
 BMAD_LOG="$TARGET_DIR/.opencode-power-bmad-update.log"
 
+# --- User name (env > git config > $USER > "User") ---
+OPK_USER_NAME="${OPK_USER_NAME:-$(git config user.name 2>/dev/null || true)}"
+OPK_USER_NAME="${OPK_USER_NAME:-${USER:-User}}"
+
 # --- Safety: detect bad project-dir (sync với bootstrap.sh / setup.sh / opk) ---
 KIT_DIR="$(cd "$(dirname "$0")" && pwd)"
 HOME_DIR="${HOME:-/root}"
@@ -43,7 +47,12 @@ is_bad_project_dir() {
 	local p_real
 	p_real="$(cd "$p" 2>/dev/null && pwd -P 2>/dev/null || echo "$p")"
 	case "$p_real" in "$HOME_DIR" | "$HOME_DIR/" | /) return 0 ;; esac
-	case "$p_real" in "$KIT_DIR" | "$KIT_DIR/" | "$KIT_DIR"/*) return 0 ;; esac
+	case "$p_real" in "$KIT_DIR" | "$KIT_DIR/" | "$KIT_DIR"/*)
+		case "$p_real" in "$KIT_DIR"/.tmp | "$KIT_DIR"/.tmp/*) return 1 ;; esac
+		case "$p_real" in "$KIT_DIR"/.test | "$KIT_DIR"/.test/*) return 1 ;; esac
+		return 0
+		;;
+	esac
 	case "$p_real" in /tmp | /tmp/*) return 0 ;; esac
 	case "$p_real" in /var/tmp | /var/tmp/*) return 0 ;; esac
 	case "$p_real" in /usr | /usr/*) return 0 ;; esac
@@ -63,6 +72,7 @@ if [ ! -f "$TARGET_DIR/.opencode/opencode.json" ]; then
 fi
 
 info "Cập nhật BMAD Method v${BMAD_METHOD_VERSION} cho: $TARGET_DIR"
+info "Cập nhật BMAD Method v${BMAD_METHOD_VERSION} (user: $OPK_USER_NAME)"
 info "Log đầy đủ: $BMAD_LOG"
 
 # Run BMAD install: full log goes to file, only tail -50 to stdout.
@@ -70,7 +80,7 @@ info "Log đầy đủ: $BMAD_LOG"
 if npx --yes "bmad-method@${BMAD_METHOD_VERSION}" install \
 	--modules bmm \
 	--tools opencode \
-	--user-name nha \
+	--user-name "$OPK_USER_NAME" \
 	--communication-language Vietnamese \
 	--document-output-language Vietnamese \
 	--directory "$TARGET_DIR" \

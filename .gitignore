@@ -1,0 +1,6 @@
+.tmp/
+.test/
+.opencode-power-*.log
+*.bak
+*.orig
+*.tmp

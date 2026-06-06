@@ -20,3 +20,8 @@ pnpm-debug.log*
 .nuxt/
 .cache/
 *.tsbuildinfo
+
+# OpenCode Power Kit - test/CI scratch dirs (inside the kit repo)
+.tmp/
+.test/
+.opencode-power-*.log

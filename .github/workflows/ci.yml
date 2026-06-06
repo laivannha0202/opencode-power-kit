@@ -30,20 +30,87 @@ jobs:
       - name: bash -n on shell scripts
         run: |
           set -e
-          for f in install.sh verify.sh install-global.sh update-bmad.sh \
-                   scripts/install-token-tools.sh \
-                   scripts/install-fullstack-profile.sh \
-                   scripts/install-security-tools.sh \
-                   scripts/install-api-tools.sh \
-                   scripts/install-js-quality-tools.sh \
-                   scripts/integration-test.sh \
-                   doctor.sh uninstall.sh; do
+          # Discover ALL .sh files plus the .sh-less bin/opk entrypoint
+          mapfile -t files < <(
+            {
+              find . -type f -name '*.sh' -not -path './.git/*' -not -path './.tmp/*' -not -path './.test/*'
+              echo "./bin/opk"
+              echo "./bootstrap.sh"
+              echo "./setup.sh"
+            } | sort -u
+          )
+          for f in "${files[@]}"; do
             if [ -f "$f" ]; then
               bash -n "$f"
               echo "ok: $f"
-            else
-              echo "skip (not present): $f"
             fi
+          done
+
+  # -----------------------------------------------------------------------
+  # 1b) pwsh syntax check on every PowerShell script (best-effort install)
+  # -----------------------------------------------------------------------
+  pwsh-syntax:
+    name: pwsh Parser.ParseFile (syntax check)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install PowerShell
+        run: |
+          set -e
+          if command -v pwsh >/dev/null 2>&1; then
+            echo "pwsh already installed: $(pwsh --version)"
+            exit 0
+          fi
+          # Try snap first, then apt (Microsoft repo)
+          if command -v snap >/dev/null 2>&1; then
+            sudo snap install powershell --classic
+          else
+            # Microsoft repo (Ubuntu 22.04+)
+            . /etc/os-release
+            if [ "${ID}" = "ubuntu" ]; then
+              sudo apt-get update -qq
+              sudo apt-get install -y -qq wget apt-transport-https software-properties-common
+              wget -q "https://packages.microsoft.com/config/ubuntu/${VERSION_ID}/packages-microsoft-prod.deb" -O /tmp/ms-prod.deb
+              sudo dpkg -i /tmp/ms-prod.deb
+              sudo apt-get update -qq
+              sudo apt-get install -y -qq powershell
+            else
+              echo "WARN: cannot install pwsh on ${ID} ${VERSION_ID}; skipping pwsh-syntax job"
+              exit 0
+            fi
+          fi
+          pwsh --version || echo "WARN: pwsh install failed; skipping"
+
+      - name: pwsh Parser.ParseFile on all .ps1
+        run: |
+          set -e
+          if ! command -v pwsh >/dev/null 2>&1; then
+            echo "pwsh not available; skipping"
+            exit 0
+          fi
+          mapfile -t files < <(find . -type f -name '*.ps1' -not -path './.git/*' -not -path './.tmp/*' -not -path './.test/*' | sort -u)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "no .ps1 files found"
+            exit 0
+          fi
+          for f in "${files[@]}"; do
+            echo "checking: $f"
+            pwsh -NoProfile -Command '
+              param([string]$Path)
+              $errors = $null
+              $tokens = $null
+              [System.Management.Automation.Language.Parser]::ParseFile($Path, [ref]$tokens, [ref]$errors) | Out-Null
+              if ($errors.Count -gt 0) {
+                Write-Host "FAIL: $Path"
+                foreach ($e in $errors) { Write-Host ("  " + $e.Message + " at " + $e.Extent.StartLineNumber + ":" + $e.Extent.StartColumnNumber) }
+                exit 1
+              }
+              Write-Host "ok: $Path"
+            ' -Args "$f"
           done
 
   # -----------------------------------------------------------------------

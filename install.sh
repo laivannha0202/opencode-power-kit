@@ -41,6 +41,11 @@ REPORT_FILE="$TARGET_DIR/opencode-power-install-report.md"
 BACKUP_DIR="$TARGET_DIR/.opencode-power-kit-backup-$(date +%Y%m%d%H%M%S)"
 BMAD_LOG="$TARGET_DIR/.opencode-power-bmad-install.log"
 
+# --- User name (env > git config > $USER > "User") ---
+# Để BMAD output ghi đúng tên người dùng. Không hardcode.
+OPK_USER_NAME="${OPK_USER_NAME:-$(git config user.name 2>/dev/null || true)}"
+OPK_USER_NAME="${OPK_USER_NAME:-${USER:-User}}"
+
 # --- Safety: detect bad project-dir (sync với bootstrap.sh / setup.sh / opk) ---
 HOME_DIR="${HOME:-/root}"
 is_bad_project_dir() {
@@ -49,8 +54,13 @@ is_bad_project_dir() {
 	p_real="$(cd "$p" 2>/dev/null && pwd -P 2>/dev/null || echo "$p")"
 	# HOME
 	case "$p_real" in "$HOME_DIR" | "$HOME_DIR/" | /) return 0 ;; esac
-	# Kit itself
-	case "$p_real" in "$KIT_DIR" | "$KIT_DIR/" | "$KIT_DIR"/*) return 0 ;; esac
+	# Kit itself (and all normal subdirs) - with explicit allowlist for .tmp / .test scratch
+	case "$p_real" in "$KIT_DIR" | "$KIT_DIR/" | "$KIT_DIR"/*)
+		case "$p_real" in "$KIT_DIR"/.tmp | "$KIT_DIR"/.tmp/*) return 1 ;; esac
+		case "$p_real" in "$KIT_DIR"/.test | "$KIT_DIR"/.test/*) return 1 ;; esac
+		return 0
+		;;
+	esac
 	# Temp / system roots
 	case "$p_real" in /tmp | /tmp/*) return 0 ;; esac
 	case "$p_real" in /var/tmp | /var/tmp/*) return 0 ;; esac
@@ -156,14 +166,14 @@ if [ ! -f "$TARGET_DIR/lefthook.yml" ]; then
 fi
 
 # --- Install BMAD Method ---
-info "Cài đặt BMAD Method v${BMAD_METHOD_VERSION} (module bmm)..."
+info "Cài đặt BMAD Method v${BMAD_METHOD_VERSION} (module bmm, user: $OPK_USER_NAME)..."
 if command -v npx &>/dev/null; then
 	# Capture full output to log, only show tail -50 to keep stdout readable.
 	# shellcheck disable=SC2317  # errexit is set; this block can be invoked via && fallback
 	if npx --yes "bmad-method@${BMAD_METHOD_VERSION}" install \
 		--modules bmm \
 		--tools opencode \
-		--user-name nha \
+		--user-name "$OPK_USER_NAME" \
 		--communication-language Vietnamese \
 		--document-output-language Vietnamese \
 		--directory "$TARGET_DIR" \
@@ -202,6 +212,7 @@ cat >"$REPORT_FILE" <<EOF
 - **Project:** $TARGET_DIR
 - **Power Kit:** $KIT_DIR
 - **BMAD Method version:** $BMAD_METHOD_VERSION
+- **User name (OPK_USER_NAME):** $OPK_USER_NAME
 
 ## Files đã cài đặt
 

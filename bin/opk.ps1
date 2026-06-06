@@ -71,7 +71,12 @@ function Test-BadProjectDir {
 
     $kitTrim = $KitDir.TrimEnd('\','/')
     if ($p -ieq $kitTrim) { return $true }
-    if ($p.StartsWith("$kitTrim\", [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+    if ($p.StartsWith("$kitTrim\", [System.StringComparison]::OrdinalIgnoreCase)) {
+        # Whitelist: .tmp / .test inside kit are scratch dirs (integration-test)
+        if ($p -ieq "$kitTrim\.tmp" -or $p.StartsWith("$kitTrim\.tmp\", [System.StringComparison]::OrdinalIgnoreCase)) { return $false }
+        if ($p -ieq "$kitTrim\.test" -or $p.StartsWith("$kitTrim\.test\", [System.StringComparison]::OrdinalIgnoreCase)) { return $false }
+        return $true
+    }
 
     if ($p -ieq 'C:\') { return $true }
     if ($p -ieq 'C:\Windows' -or $p.StartsWith('C:\Windows\', [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
@@ -129,6 +134,7 @@ switch ($Command.ToLower()) {
         Write-Host "Cach dung nhanh:"
         Write-Host "  opk global      Cai global (commands/skills/agents + opk CLI)"
         Write-Host "  opk install     Cai vao project hien tai (can cd vao project) (= opk init)"
+        Write-Host "  opk update-bmad Cap nhat BMAD Method cho project hien tai"
         Write-Host "  opk fullstack   Cai full-stack profile (Nest/React/MySQL)"
         Write-Host "  opk all         Cai tat ca: global + project + fullstack"
         Write-Host "  opk doctor      Chan doan cau hinh (read-only)"
@@ -185,6 +191,12 @@ switch ($Command.ToLower()) {
         Refuse-If-BadProjectDir
         Require-File (Join-Path $KitDir 'install.ps1')
         & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'install.ps1') @Args
+    }
+
+    'update-bmad' {
+        Refuse-If-BadProjectDir
+        Require-File (Join-Path $KitDir 'update-bmad.ps1')
+        & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'update-bmad.ps1') @Args
     }
 
     'fullstack' {

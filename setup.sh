@@ -76,8 +76,13 @@ is_bad_project_dir() {
 	pwd_real="$(cd "$PWD_NOW" 2>/dev/null && pwd -P 2>/dev/null || echo "$PWD_NOW")"
 	# HOME
 	case "$pwd_real" in "$HOME_DIR" | "$HOME_DIR/" | /) return 0 ;; esac
-	# Kit itself (self-edit risk)
-	case "$pwd_real" in "$KIT_DIR" | "$KIT_DIR/" | "$KIT_DIR"/*) return 0 ;; esac
+	# Kit itself (self-edit risk; allowlist .tmp/.test for test/CI scratch)
+	case "$pwd_real" in "$KIT_DIR" | "$KIT_DIR/" | "$KIT_DIR"/*)
+		case "$pwd_real" in "$KIT_DIR"/.tmp | "$KIT_DIR"/.tmp/*) return 1 ;; esac
+		case "$pwd_real" in "$KIT_DIR"/.test | "$KIT_DIR"/.test/*) return 1 ;; esac
+		return 0
+		;;
+	esac
 	# System / temp roots
 	case "$pwd_real" in /tmp | /tmp/*) return 0 ;; esac
 	case "$pwd_real" in /var/tmp | /var/tmp/*) return 0 ;; esac

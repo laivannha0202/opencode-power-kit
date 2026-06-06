@@ -28,6 +28,18 @@ $Timestamp  = Get-Date -Format 'yyyyMMddHHmmss'
 $BackupDir  = Join-Path $TargetDir ".opencode-power-kit-backup-$Timestamp"
 $BmadLog    = Join-Path $TargetDir '.opencode-power-bmad-install.log'
 
+# --- User name (env > git config > USERNAME > "User") ---
+# Khong hardcode ten ca nhan trong installer.
+$OpkUserName = $env:OPK_USER_NAME
+if ([string]::IsNullOrWhiteSpace($OpkUserName)) {
+    try {
+        $gitName = (& git config user.name 2>$null) | Select-Object -First 1
+        if ($gitName) { $OpkUserName = $gitName.Trim() }
+    } catch { }
+}
+if ([string]::IsNullOrWhiteSpace($OpkUserName)) { $OpkUserName = $env:USERNAME }
+if ([string]::IsNullOrWhiteSpace($OpkUserName)) { $OpkUserName = 'User' }
+
 # --- Helpers ---
 function Write-Info  { param($m) Write-Host "[INFO] $m" -ForegroundColor Cyan }
 function Write-Ok    { param($m) Write-Host "[OK]   $m" -ForegroundColor Green }
@@ -47,10 +59,15 @@ function Test-BadProjectDir {
     $homeTrim = $Home.TrimEnd('\','/')
     if ($p -ieq $homeTrim) { return $true }
 
-    # Kit itself
+    # Kit itself (with explicit allowlist for test/CI scratch)
     $kitTrim = $KitDir.TrimEnd('\','/')
     if ($p -ieq $kitTrim) { return $true }
-    if ($p.StartsWith("$kitTrim\", [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+    if ($p.StartsWith("$kitTrim\", [System.StringComparison]::OrdinalIgnoreCase)) {
+        # Whitelist: .tmp / .test inside kit are scratch dirs (integration-test)
+        if ($p -ieq "$kitTrim\.tmp" -or $p.StartsWith("$kitTrim\.tmp\", [System.StringComparison]::OrdinalIgnoreCase)) { return $false }
+        if ($p -ieq "$kitTrim\.test" -or $p.StartsWith("$kitTrim\.test\", [System.StringComparison]::OrdinalIgnoreCase)) { return $false }
+        return $true
+    }
 
     # Root drive + system + temp
     if ($p -ieq 'C:\') { return $true }
@@ -183,7 +200,7 @@ if (-not (Test-Path $lefthookDst)) {
 }
 
 # --- Install BMAD Method ---
-Write-Info "Cai dat BMAD Method v$BmadVersion (module bmm)..."
+Write-Info "Cai dat BMAD Method v$BmadVersion (module bmm, user: $OpkUserName)..."
 Write-Info "Full log: $BmadLog"
 $npx = Get-Command npx -ErrorAction SilentlyContinue
 if ($npx) {
@@ -192,7 +209,7 @@ if ($npx) {
     $output = & npx --yes "bmad-method@$BmadVersion" install `
         --modules bmm `
         --tools opencode `
-        --user-name nha `
+        --user-name $OpkUserName `
         --communication-language Vietnamese `
         --document-output-language Vietnamese `
         --directory $TargetDir `
@@ -252,6 +269,7 @@ $reportBody = @"
 - **Project:** $TargetDir
 - **Power Kit:** $KitDir
 - **BMAD Method version:** $BmadVersion
+- **User name (OPK_USER_NAME):** $OpkUserName
 
 ## Files da cai dat
 

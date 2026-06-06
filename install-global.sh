@@ -116,40 +116,94 @@ if [ -f "$HOME/.zshrc" ]; then
 	USE_ZSH=true
 fi
 
-# --- Helper: append marker block to a rc file (idempotent) ---
+# --- Helper: append marker block to a rc file (idempotent + safe update) ---
+# Nếu marker đã tồn tại với content cũ, REPLACE block (không duplicate).
+# Nếu chưa có, APPEND block mới.
 add_rc_marker() {
 	local rcfile="$1"
 	local marker="$2"
 	local content="$3"
+	local end_marker="# <<< ${marker#\# >>> }"
 	if [ ! -f "$rcfile" ]; then
 		# Tạo mới nếu chưa có (ví dụ: user mới cài zsh chưa có ~/.zshrc)
 		: >"$rcfile"
 	fi
 	if grep -qF "$marker" "$rcfile" 2>/dev/null; then
-		warn "$rcfile đã có marker '$marker'. Bỏ qua."
+		# Marker đã có: kiểm tra content có đúng không
+		# Tách block từ marker đến end_marker (nếu có), so sánh với content mới
+		local current_block
+		current_block="$(awk -v m="$marker" -v e="$end_marker" '
+			$0 == m { in_block = 1; print; next }
+			in_block && $0 == e { print; in_block = 0; exit }
+			in_block { print }
+		' "$rcfile")"
+		local new_block
+		new_block="$(printf '%s\n%s\n%s\n' "$marker" "$content" "$end_marker")"
+		if [ "$current_block" = "$new_block" ]; then
+			ok "$rcfile marker '$marker' đã đúng — không sửa."
+		else
+			# Replace cũ bằng mới (dùng python để in-place edit an toàn)
+			python3 - "$rcfile" "$marker" "$end_marker" "$new_block" <<'PYEOF'
+import sys, pathlib
+path, marker, end_marker, new_block = sys.argv[1:5]
+p = pathlib.Path(path)
+text = p.read_text()
+lines = text.splitlines(keepends=True)
+out = []
+in_block = False
+replaced = False
+for line in lines:
+    stripped = line.rstrip("\n")
+    if not in_block and stripped == marker:
+        out.append(new_block if new_block.endswith("\n") else new_block + "\n")
+        in_block = True
+        replaced = True
+        continue
+    if in_block and stripped == end_marker:
+        in_block = False
+        continue
+    if not in_block:
+        out.append(line)
+if not replaced:
+    # Marker không tìm thấy ở line-level (hiếm); append ở cuối
+    if out and not out[-1].endswith("\n"):
+        out[-1] += "\n"
+    out.append(new_block if new_block.endswith("\n") else new_block + "\n")
+p.write_text("".join(out))
+PYEOF
+			ok "$rcfile marker '$marker' đã update (nội dung cũ → mới)."
+		fi
 		return 0
 	fi
 	{
 		echo ""
 		echo "$marker"
 		echo "$content"
-		echo "# <<< ${marker#\# >>> }"
+		echo "$end_marker"
 	} >>"$rcfile"
 	ok "Đã thêm marker vào $rcfile"
 }
 
 # --- Add OPENCODE_CONFIG_DIR + PATH markers ---
+# Dùng OPK_KIT_DIR (do KIT_REAL resolve) thay vì hardcode $HOME/opencode-power-kit/...
+# → idempotent và an toàn nếu user clone kit vào path khác.
 MARKER="# >>> opencode-power-kit-global"
 PATH_MARKER="# >>> opencode-power-kit-path"
 
+# Mỗi marker = 1 block. Ghép các export liên quan vào cùng 1 block
+# để add_rc_marker replace đúng nội dung (không phải 2 block cùng marker).
+GLOBAL_BLOCK="export OPK_KIT_DIR=\"$KIT_REAL\"
+export OPENCODE_CONFIG_DIR=\"\$OPK_KIT_DIR/opencode-global\""
+PATH_BLOCK='export PATH="$HOME/.local/bin:$PATH"'
+
 # Luôn cập nhật ~/.bashrc (Linux/WSL/Git Bash)
-add_rc_marker "$HOME/.bashrc" "$MARKER" 'export OPENCODE_CONFIG_DIR="$HOME/opencode-power-kit/opencode-global"'
-add_rc_marker "$HOME/.bashrc" "$PATH_MARKER" 'export PATH="$HOME/.local/bin:$PATH"'
+add_rc_marker "$HOME/.bashrc" "$MARKER" "$GLOBAL_BLOCK"
+add_rc_marker "$HOME/.bashrc" "$PATH_MARKER" "$PATH_BLOCK"
 
 # Nếu là môi trường zsh, cập nhật thêm ~/.zshrc
 if [ "$USE_ZSH" = true ]; then
-	add_rc_marker "$HOME/.zshrc" "$MARKER" 'export OPENCODE_CONFIG_DIR="$HOME/opencode-power-kit/opencode-global"'
-	add_rc_marker "$HOME/.zshrc" "$PATH_MARKER" 'export PATH="$HOME/.local/bin:$PATH"'
+	add_rc_marker "$HOME/.zshrc" "$MARKER" "$GLOBAL_BLOCK"
+	add_rc_marker "$HOME/.zshrc" "$PATH_MARKER" "$PATH_BLOCK"
 	ok "Đã cập nhật cả ~/.zshrc (môi trường zsh: $SHELL)"
 fi
 

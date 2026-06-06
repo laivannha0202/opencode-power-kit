@@ -38,6 +38,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   với log path. Đồng bộ `Test-BadProjectDir` (HOME, kit, `C:\`,
   `C:\Windows`, `C:\Program Files*`, `$env:TEMP`/`$env:TMP`) với
   `bootstrap.ps1`. Cải thiện error reporting.
+
+### Round 2 - hardened identity & install paths
+
+### Added
+
+- **`OPK_USER_NAME` / `$OpkUserName` chain** — user-name cho BMAD
+  Method install giờ lấy theo thứ tự: `OPK_USER_NAME` env →
+  `git config user.name` → `${USER:-User}` (bash) /
+  `${env:USERNAME}` → `'User'` (PowerShell). Không còn hardcode
+  `--user-name nha` ở bất kỳ đâu trong installer. Override được.
+- **`update-bmad.ps1`** — Windows parity với `update-bmad.sh`:
+  `$BmadVersion` env, `$OpkUserName` chain, `Test-BadProjectDir`
+  đồng bộ kit allowlist, `$LASTEXITCODE` check, full log
+  `.opencode-power-bmad-update.log`, `tail -50` trên fail, hiển thị
+  `.bmad` modules khi xong.
+- **`opk update-bmad`** — thêm subcommand vào `bin/opk` (bash) và
+  `bin/opk.ps1`. Forward flags xuống `update-bmad.{sh,ps1}`. Trùng
+  pattern với `opk install` (refuse nếu pwd nguy hiểm).
+- **Test/CI scratch allowlist** — `is_bad_project_dir` /
+  `Test-BadProjectDir` ở `install.sh`, `install.ps1`,
+  `update-bmad.sh`, `update-bmad.ps1`, `bootstrap.sh`,
+  `bootstrap.ps1`, `setup.sh`, `setup.ps1`, `bin/opk`,
+  `bin/opk.ps1`, `scripts/install-fullstack-profile.sh` cho phép
+  `$KIT_DIR/.tmp` và `$KIT_DIR/.test` (test scratch only). Mọi
+  project install thật vẫn bị từ chối đúng như cũ.
+- **CI `pwsh-syntax` job** — syntax-check mọi `*.ps1` qua
+  `[System.Management.Automation.Language.Parser]::ParseFile` (cài
+  `pwsh` qua snap hoặc Microsoft apt repo, fail-soft nếu OS không
+  hỗ trợ).
+- **CI `bash-syntax` mở rộng** — `bash -n` giờ scan toàn bộ
+  `*.sh` trong repo + `bin/opk` + `bootstrap.sh` + `setup.sh`
+  qua `find`, không cần duy trì allowlist thủ công.
+- **`.gitignore`** ở kit root + `templates/gitignore-extra.txt`
+  ignore `.tmp/`, `.test/`, `.opencode-power-*.log` để scratch
+  dirs và log files không bị commit nhầm.
+
+### Changed
+
+- **`install.sh` / `update-bmad.sh` / `install.ps1`** — bỏ
+  `--user-name nha` hardcode; dùng `$OPK_USER_NAME` / `$OpkUserName`
+  (xem chain ở phần Added). Info line + install report hiển thị
+  user name thật đang dùng.
+- **`install-global.sh`** — RC marker giờ là single block gồm
+  `OPK_KIT_DIR="$KIT_REAL"` + `OPENCODE_CONFIG_DIR="$OPK_KIT_DIR/
+  opencode-global"`; idempotent (không duplicate), safe REPLACE
+  bằng `python3` in-place edit khi block đã tồn tại mà khác nội
+  dung. `PATH_MARKER` cho `~/.local/bin` cũng idempotent. Không
+  còn hardcode `$HOME/opencode-power-kit/opencode-global` ở bất
+  kỳ đâu trong file.
+- **`integration-test.sh`** viết lại hoàn toàn:
+  - Scratch dir = `$KIT_DIR/.tmp/opk-integration-XXXXXX` (KHÔNG
+    dùng `/tmp`; `install.sh` block `/tmp`).
+  - `trap cleanup EXIT` để cleanup kể cả khi fail.
+  - Stub `npx` ở PATH giả: log mọi invocation ra file, mock
+    BMAD install để tạo `_bmad/`, `.agents/skills/`,
+    `.opencode/commands/`, `.opencode/agents/` (chỉ tạo khi
+    chưa có — không overwrite file install.sh đã copy từ
+    template).
+  - **Regression guards**:
+    - Grep `--user-name nha` trong `*.sh`/`*.ps1`/`*.cmd` (trừ
+      `.tmp`/`.test`/`.bak`/`.orig`) → phải rỗng.
+    - Grep `$HOME/opencode-power-kit/opencode-global` trong
+      `install-global.sh` → phải rỗng.
+  - **NPX call assertions**: stub log phải có
+    `bmad-method@<semver>`, `--modules bmm`, `--tools opencode`,
+    `--user-name <fallback>` (không phải `nha`).
+  - Chạy offline hoàn toàn (stub npx không gọi mạng).
 - **`update-bmad.sh`** — thêm `BMAD_METHOD_VERSION` + log capture +
   fail handling. Đồng bộ safety guard.
 - **CI strict** — `.github/workflows/ci.yml` bước `shellcheck` và

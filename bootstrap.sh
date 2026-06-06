@@ -60,8 +60,13 @@ is_bad_project_dir() {
 	p_real="$(cd "$p" 2>/dev/null && pwd -P 2>/dev/null || echo "$p")"
 	# HOME
 	case "$p_real" in "$HOME_DIR" | "$HOME_DIR/") return 0 ;; esac
-	# Kit itself
-	case "$p_real" in "$KIT_DIR" | "$KIT_DIR/" | "$KIT_DIR"/*) return 0 ;; esac
+	# Kit itself (with explicit allowlist for test/CI scratch)
+	case "$p_real" in "$KIT_DIR" | "$KIT_DIR/" | "$KIT_DIR"/*)
+		case "$p_real" in "$KIT_DIR"/.tmp | "$KIT_DIR"/.tmp/*) return 1 ;; esac
+		case "$p_real" in "$KIT_DIR"/.test | "$KIT_DIR"/.test/*) return 1 ;; esac
+		return 0
+		;;
+	esac
 	# Root + system + temp
 	case "$p_real" in /) return 0 ;; esac
 	case "$p_real" in /tmp | /tmp/*) return 0 ;; esac

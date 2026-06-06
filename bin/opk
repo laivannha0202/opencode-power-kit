@@ -58,7 +58,12 @@ is_bad_project_dir() {
   local pwd_real
   pwd_real="$(pwd -P 2>/dev/null || pwd)"
   case "$pwd_real" in "$HOME_DIR"|"$HOME_DIR/"|/) return 0 ;; esac
-  case "$pwd_real" in "$KIT_DIR"|"$KIT_DIR/"|"$KIT_DIR"/*) return 0 ;; esac
+  case "$pwd_real" in "$KIT_DIR"|"$KIT_DIR/"|"$KIT_DIR"/*)
+    case "$pwd_real" in "$KIT_DIR"/.tmp|"$KIT_DIR"/.tmp/*) return 1 ;; esac
+    case "$pwd_real" in "$KIT_DIR"/.test|"$KIT_DIR"/.test/*) return 1 ;; esac
+    return 0
+    ;;
+  esac
   case "$pwd_real" in /tmp|/tmp/*) return 0 ;; esac
   case "$pwd_real" in /var/tmp|/var/tmp/*) return 0 ;; esac
   case "$pwd_real" in /usr|/usr/*) return 0 ;; esac
@@ -110,6 +115,7 @@ opk — OpenCode Power Kit CLI (v$VERSION)
 Cách dùng nhanh:
   opk global      Cài global (commands/skills/agents + opk CLI)
   opk install     Cài vào project hiện tại (cần cd vào project) (= opk init)
+  opk update-bmad Cập nhật BMAD Method cho project hiện tại
   opk init        Alias: opk install
   opk quick       Alias: opk global (cài global nhanh)
   opk fullstack   Cài full-stack profile (Nest/React/MySQL)
@@ -165,6 +171,12 @@ EOF
     refuse_if_bad_project_dir
     require_file "$KIT_DIR/install.sh"
     exec bash "$KIT_DIR/install.sh" "$@"
+    ;;
+
+  update-bmad)
+    refuse_if_bad_project_dir
+    require_file "$KIT_DIR/update-bmad.sh"
+    exec bash "$KIT_DIR/update-bmad.sh" "$@"
     ;;
 
   fullstack)

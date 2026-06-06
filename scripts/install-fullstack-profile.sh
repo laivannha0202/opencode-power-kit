@@ -47,7 +47,14 @@ case "$PROJECT_DIR" in
 	err "Không chạy script trong HOME ($HOME_DIR). Vào project rồi chạy lại."
 	;;
 "$KIT_DIR" | "$KIT_DIR/" | "$KIT_DIR"/*)
-	err "Không chạy script trong chính opencode-power-kit ($KIT_DIR). Vào project khác rồi chạy lại."
+	case "$PROJECT_DIR" in
+	"$KIT_DIR"/.tmp | "$KIT_DIR"/.tmp/*)
+		# explicit allowlist: test/CI scratch
+		;;
+	*)
+		err "Không chạy script trong chính opencode-power-kit ($KIT_DIR). Vào project khác rồi chạy lại."
+		;;
+	esac
 	;;
 esac
 

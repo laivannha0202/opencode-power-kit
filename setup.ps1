@@ -74,10 +74,15 @@ function Test-BadProjectDir {
     $homeTrim = $Home.TrimEnd('\','/')
     if ($p -ieq $homeTrim) { return $true }
 
-    # Kit itself
+    # Kit itself (with explicit allowlist for test/CI scratch)
     $kitTrim = $KitDir.TrimEnd('\','/')
     if ($p -ieq $kitTrim) { return $true }
-    if ($p.StartsWith("$kitTrim\", [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+    if ($p.StartsWith("$kitTrim\", [System.StringComparison]::OrdinalIgnoreCase)) {
+        # Whitelist: .tmp / .test inside kit are scratch dirs (integration-test)
+        if ($p -ieq "$kitTrim\.tmp" -or $p.StartsWith("$kitTrim\.tmp\", [System.StringComparison]::OrdinalIgnoreCase)) { return $false }
+        if ($p -ieq "$kitTrim\.test" -or $p.StartsWith("$kitTrim\.test\", [System.StringComparison]::OrdinalIgnoreCase)) { return $false }
+        return $true
+    }
 
     # Root drive + system + temp
     if ($p -ieq 'C:\') { return $true }
