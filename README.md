@@ -1,6 +1,6 @@
 # OpenCode Power Kit
 
-[![CI](https://github.com/nguoikhongten02022005-cell/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/nguoikhongten02022005-cell/opencode-power-kit/actions/workflows/ci.yml)
+[![CI](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](./VERSION)
 [![BMAD](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](#cấu-hình-bmad)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#ghi-chu-quan-trong)
@@ -8,6 +8,8 @@
 [![Cross-platform](https://img.shields.io/badge/cross--platform-Linux%20%7C%20macOS%20%7C%20Windows-blue.svg)](#cài-1-lệnh)
 
 Toolkit dùng lại cho mọi project OpenCode — cài Superpowers + BMAD Method chỉ với 1 lệnh, hỗ trợ **Linux / macOS / Windows PowerShell** (Git Bash / WSL / native).
+
+> **Note:** Các section bên dưới ghi lại lịch sử phiên bản (version history) của kit. GitHub Releases thật được publish riêng trên tab [Releases](https://github.com/laivannha0202/opencode-power-kit/releases) của repository — mỗi release bao gồm Git tag + release notes + tarball.
 
 ## Có gì mới trong v1.5.0 — Power Mode
 
@@ -184,7 +186,7 @@ xem `templates/AGENTS.md` và `templates/OPENCODE.md`.
 ### Linux / macOS / Git Bash / WSL
 
 ```bash
-bash -c 'PROJECT="$PWD"; KIT="$HOME/opencode-power-kit"; if [ -d "$KIT/.git" ]; then git -C "$KIT" pull --ff-only; else git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git "$KIT"; fi; bash "$KIT/bootstrap.sh" --all --project-dir "$PROJECT"; cd "$PROJECT"; bash "$KIT/verify.sh"; echo "✅ OpenCode Power Kit all-in-one done. Run: opencode"'
+bash -c 'PROJECT="$PWD"; KIT="$HOME/opencode-power-kit"; if [ -d "$KIT/.git" ]; then git -C "$KIT" pull --ff-only; else git clone https://github.com/laivannha0202/opencode-power-kit.git "$KIT"; fi; bash "$KIT/bootstrap.sh" --all --project-dir "$PROJECT"; cd "$PROJECT"; bash "$KIT/verify.sh"; echo "✅ OpenCode Power Kit all-in-one done. Run: opencode"'
 ```
 
 Sau khi xong:
@@ -198,7 +200,7 @@ opencode
 ### Windows PowerShell
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "$Project=(Get-Location).Path; $KIT=Join-Path $HOME 'opencode-power-kit'; if (Test-Path (Join-Path $KIT '.git')) { & git -C $KIT pull --ff-only } else { & git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git $KIT }; & (Join-Path $KIT 'bootstrap.ps1') -All -ProjectDir $Project -Yes; & (Join-Path $KIT 'verify.ps1'); Write-Host '✅ OpenCode Power Kit all-in-one done. Run: opencode'"
+powershell -ExecutionPolicy Bypass -Command "$Project=(Get-Location).Path; $KIT=Join-Path $HOME 'opencode-power-kit'; if (Test-Path (Join-Path $KIT '.git')) { & git -C $KIT pull --ff-only } else { & git clone https://github.com/laivannha0202/opencode-power-kit.git $KIT }; & (Join-Path $KIT 'bootstrap.ps1') -All -ProjectDir $Project -Yes; & (Join-Path $KIT 'verify.ps1'); Write-Host '✅ OpenCode Power Kit all-in-one done. Run: opencode'"
 ```
 
 Sau khi xong: **mở PowerShell mới** (để load User PATH), rồi:
@@ -235,7 +237,7 @@ soát từng bước (review script trước khi chạy, dùng fork nội bộ, 
 
 ```bash
 # 1) Clone kit (một lần)
-git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git ~/opencode-power-kit
+git clone https://github.com/laivannha0202/opencode-power-kit.git ~/opencode-power-kit
 
 # 2) Cài global (commands / skills / agents + opk CLI + ~/.bashrc)
 bash ~/opencode-power-kit/setup.sh --global
@@ -250,7 +252,7 @@ opencode
 
 ```powershell
 # 1) Clone kit
-git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git $HOME\opencode-power-kit
+git clone https://github.com/laivannha0202/opencode-power-kit.git $HOME\opencode-power-kit
 
 # 2) Cài global
 powershell -ExecutionPolicy Bypass -File "$HOME\opencode-power-kit\setup.ps1" -Global -Yes
@@ -433,7 +435,7 @@ Và các command nâng cấp v2 (lifecycle + review + token):
 
 ```bash
 # Clone (lần đầu)
-git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git ~/opencode-power-kit
+git clone https://github.com/laivannha0202/opencode-power-kit.git ~/opencode-power-kit
 
 # Vào project cần cài
 cd /path/to/your/project

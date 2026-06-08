@@ -666,4 +666,6 @@ First production-grade release. Bumped from 9.4/10 → 10/10.
 - **Badges** in `README.md`: CI status, version, no-MCP policy,
   safe/no-secrets policy
 
-[1.0.0]: https://github.com/nguoikhongten02022005-cell/opencode-power-kit/releases/tag/v1.0.0
+[1.5.0]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.5.0
+[1.4.0]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.4.0
+[1.0.0]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.0.0
