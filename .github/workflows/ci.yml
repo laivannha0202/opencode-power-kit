@@ -1,5 +1,7 @@
 name: ci
 
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+# Force re-index: touch comment to flush stale Actions cache.
 on:
   push:
     branches: [main]
