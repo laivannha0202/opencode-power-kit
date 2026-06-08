@@ -1,85 +1,85 @@
-# Skills Reference
+# Danh sách Skills
 
 ## Architecture / ADR
 
-| Skill | Purpose |
-|-------|---------|
-| `adr-architecture-decision` | Document architecture decisions (ADRs) with context and consequences |
+| Skill | Mục đích |
+|-------|----------|
+| `adr-architecture-decision` | Ghi lại quyết định kiến trúc (ADR) kèm ngữ cảnh và hệ quả |
 
 ## API Contract / OpenAPI
 
-| Skill | Purpose |
-|-------|---------|
-| `api-contract` | Review API contract alignment between FE and BE |
-| `openapi-contract` | Validate OpenAPI spec for completeness and correctness |
+| Skill | Mục đích |
+|-------|----------|
+| `api-contract` | Kiểm tra sự khớp nhau của API contract giữa FE và BE |
+| `openapi-contract` | Xác thực OpenAPI spec đầy đủ và chính xác |
 
 ## DB Migration
 
-| Skill | Purpose |
-|-------|---------|
-| `database-migration-safe` | Verify migration safety before running on production |
+| Skill | Mục đích |
+|-------|----------|
+| `database-migration-safe` | Kiểm tra migration an toàn trước khi chạy production |
 
 ## Docker / Environment
 
-| Skill | Purpose |
-|-------|---------|
-| `docker-compose-safe` | Review docker-compose setup for security and best practices |
-| `env-config-safe` | Validate environment configuration safety |
+| Skill | Mục đích |
+|-------|----------|
+| `docker-compose-safe` | Review docker-compose setup về bảo mật và best practices |
+| `env-config-safe` | Kiểm tra an toàn cấu hình môi trường |
 
 ## Frontend
 
-| Skill | Purpose |
-|-------|---------|
-| `frontend-ui-review` | UI/UX review with accessibility and responsive checks |
+| Skill | Mục đích |
+|-------|----------|
+| `frontend-ui-review` | UI/UX review với kiểm tra accessibility và responsive |
 
 ## Full-stack Testing
 
-| Skill | Purpose |
-|-------|---------|
-| `fullstack-test-strategy` | Design testing strategy across full stack |
-| `test-strategy` | General test strategy for projects |
+| Skill | Mục đích |
+|-------|----------|
+| `fullstack-test-strategy` | Thiết kế chiến lược testing cho toàn bộ stack |
+| `test-strategy` | Chiến lược test tổng quát cho project |
 
 ## JS/TS Quality
 
-| Skill | Purpose |
-|-------|---------|
-| `js-ts-project` | Detect and run JS/TS project tooling (eslint, prettier, etc.) |
-| `js-ts-quality` | JS/TS code quality checks |
+| Skill | Mục đích |
+|-------|----------|
+| `js-ts-project` | Phát hiện và chạy công cụ JS/TS project (eslint, prettier, ...) |
+| `js-ts-quality` | Kiểm tra chất lượng code JS/TS |
 
 ## Security
 
-| Skill | Purpose |
-|-------|---------|
+| Skill | Mục đích |
+|-------|----------|
 | `security-review` | Security review: secrets, auth, input validation, OWASP |
-| `secure-fullstack` | Security review for full-stack (FE + BE + DB) |
+| `secure-fullstack` | Security review cho full-stack (FE + BE + DB) |
 
 ## Token / Repo Map
 
-| Skill | Purpose |
-|-------|---------|
-| `rtk-token-optimizer` | RTK token optimization guidance |
-| `repo-map` | Generate comprehensive repo map |
+| Skill | Mục đích |
+|-------|----------|
+| `rtk-token-optimizer` | Hướng dẫn tối ưu token RTK |
+| `repo-map` | Tạo repo map toàn diện |
 
 ## Safe Edit
 
-| Skill | Purpose |
-|-------|---------|
-| `safe-edit` | Safe file editing with backup and validation |
+| Skill | Mục đích |
+|-------|----------|
+| `safe-edit` | Chỉnh sửa file an toàn với backup và validation |
 
 ## Serena
 
-| Skill | Purpose |
-|-------|---------|
-| `serena-first` | Use Serena code intelligence for refactoring and navigation |
+| Skill | Mục đích |
+|-------|----------|
+| `serena-first` | Dùng Serena code intelligence để refactor và navigation |
 
 ## Dependency
 
-| Skill | Purpose |
-|-------|---------|
-| `dependency-maintenance` | Review and update dependency health |
+| Skill | Mục đích |
+|-------|----------|
+| `dependency-maintenance` | Review và cập nhật dependency health |
 
 ## Full-stack Profile
 
-| Skill | Purpose |
-|-------|---------|
-| `nest-react-mysql` | NestJS + React + MySQL full-stack project patterns |
+| Skill | Mục đích |
+|-------|----------|
+| `nest-react-mysql` | Pattern project full-stack NestJS + React + MySQL |

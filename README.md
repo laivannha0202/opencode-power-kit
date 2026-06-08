@@ -7,9 +7,7 @@
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#safety-model)
 [![Cross-platform](https://img.shields.io/badge/cross--platform-Linux%20%7C%20macOS%20%7C%20Windows-blue.svg)](#quick-start)
 
-> Reusable OpenCode full-stack power kit: agents, commands, skills, safety workflows, full-stack profile, release tooling.
-
-> **Note:** Các section bên dưới ghi lại lịch sử phiên bản (version history) của kit. GitHub Releases thật được publish riêng trên tab [Releases](https://github.com/laivannha0202/opencode-power-kit/releases) của repository — mỗi release bao gồm Git tag + release notes + tarball.
+> Bộ công cụ OpenCode full-stack có thể tái sử dụng: agents, commands, skills, quy trình an toàn, full-stack profile, công cụ release.
 
 ---
 
@@ -74,14 +72,14 @@ opencode
 
 ## Power Mode v1.5.0
 
-- **13 core agents** — each specialized for one domain (architecture, debug, QA, security, DB, API, UI/UX, DevOps, release, plus fullstack autopilot, 3 lite agents)
-- **34 commands** — organized into power workflow, safety, build lifecycle, review, DB/API, QA/E2E, DevOps, quality/security, token/tooling
-- **`scripts/opk-command-guard.sh`** — safety guard: warns/blocks dangerous shell commands (`rm -rf`, `git reset --hard`, force push, `DROP TABLE`, ...)
-- **`build-strong` Agent Delegation** — automatically spawns specialized subagents based on context
-- **`/power-build`** — end-to-end workflow: spec → architecture → implementation → QA → security → release
-- **`/agent-router`** — natural language task routing to the right agent
-- **`/tooling-doctor`** — detect third-party tooling (rtk, repomix, semgrep, gitleaks, ...)
-- **100% backward compatible** — everything from previous versions works unchanged
+- **13 core agents** — mỗi agent chuyên sâu một lĩnh vực (architecture, debug, QA, security, DB, API, UI/UX, DevOps, release, fullstack autopilot, 3 lite agents)
+- **34 commands** — phân loại theo power workflow, safety, build lifecycle, review, DB/API, QA/E2E, DevOps, quality/security, token/tooling
+- **`scripts/opk-command-guard.sh`** — lớp bảo vệ: cảnh báo/chặn lệnh shell nguy hiểm (`rm -rf`, `git reset --hard`, force push, `DROP TABLE`, ...)
+- **`build-strong` Agent Delegation** — tự động triệu hồi subagent chuyên biệt dựa trên ngữ cảnh
+- **`/power-build`** — quy trình đầu cuối: spec → architecture → implementation → QA → security → release
+- **`/agent-router`** — định tuyến tác vụ bằng ngôn ngữ tự nhiên tới đúng agent
+- **`/tooling-doctor`** — phát hiện công cụ bên thứ ba (rtk, repomix, semgrep, gitleaks, ...)
+- **100% backward compatible** — mọi thứ từ phiên bản trước vẫn hoạt động không thay đổi
 
 ---
 
@@ -105,10 +103,10 @@ opencode
 | `review-lite` | Review | Token-efficient code/diff review | Quick code review |
 | `debug-lite` | Debug | Token-efficient debugging | Simple bugs |
 
-**Recommended workflow:**
+**Quy trình khuyến nghị:**
 ```
 /agent-router "add Google login feature"
-# Or manually: @architect-strong → @db-strong → @build-strong → @qa-strong → @security-strong → @release-strong
+# Hoặc thủ công: @architect-strong → @db-strong → @build-strong → @qa-strong → @security-strong → @release-strong
 ```
 
 ---
@@ -258,7 +256,7 @@ opk.cmd path
 opencode
 ```
 
-### After global install — use with any project
+### Sau cài global — dùng với bất kỳ project nào
 
 ```bash
 cd /path/to/your/project
@@ -309,13 +307,13 @@ bash ~/opencode-power-kit/scripts/install-fullstack-profile.sh
 bash ~/opencode-power-kit/scripts/install-fullstack-profile.sh
 ```
 
-Includes:
+Bao gồm:
 - 5 profile-specific commands: `api-e2e-flow`, `docker-dev-doctor`, `env-doctor`, `fullstack-scan`, `seed-data-safe`
 - 5 profile-specific skills: `nestjs-backend`, `react-vite-frontend`, `mysql-schema-safe`, `auth-rbac-review`, `fullstack-test-strategy`
 - 9 global full-stack commands: `fullstack-scan`, `openapi-check`, `secret-scan`, `sast-check`, `e2e-plan`, `test-matrix`, `js-quality-check`, `env-doctor`, `docker-dev-doctor`
 - 8 global full-stack skills: `openapi-contract`, `secure-fullstack`, `dependency-maintenance`, `fullstack-test-strategy`, `js-ts-quality`, `env-config-safe`, `docker-compose-safe`, `nest-react-mysql`
 
-Best for projects using: NestJS backend, React/Vite frontend, MySQL database, JWT + RBAC auth.
+Phù hợp nhất cho project dùng: NestJS backend, React/Vite frontend, MySQL database, JWT + RBAC auth.
 
 ---
 
@@ -337,30 +335,29 @@ Best for projects using: NestJS backend, React/Vite frontend, MySQL database, JW
 
 ---
 
-## Releases
+## Lịch sử phiên bản
 
-| Version | Tag | Theme | Highlights |
-|---------|-----|-------|------------|
-| v1.5.0 | `v1.5.0` | Power Mode | 13 agents, 34 commands, safety guard, agent delegation, power-build |
-| v1.4.0 | `v1.4.0` | Fullstack Autopilot | build-strong fullstack-autopilot, 12 hard rules |
-| v1.3.4 | — | GSD Core Opt-in | GSD integration, update-all, verify.yml |
-| v1.3.3 | `v1.3.3` | Safety Workflows | cleanup-safe, checkpoint, handoff-save, auto-router |
-| v1.3.2 | `v1.3.2` | One-command All-in-one | opk one/go, 4-step flow, batch bootstrap |
-| v1.3.1 | — | Hardening + CI | BMAD pin, full log capture, CI strict, shfmt |
-| v1.3.0 | `v1.3.0` | Cross-platform | Windows PowerShell, bootstrap.ps1, opk.cmd |
-| v1.2.0 | `v1.2.0` | opk CLI / Setup | setup.sh, opk CLI, install-global.sh |
-| v1.1.0 | `v1.1.0` | Full-stack Profile | Node/Nest/React/MySQL profile |
-| v1.0.0 | `v1.0.0` | Production Release | Initial production release |
+Repo này dùng GitHub Releases để ghi chi tiết từng phiên bản.
 
-Full release notes: [docs/RELEASES.md](./docs/RELEASES.md)
+- Xem bản mới nhất: [GitHub Releases](https://github.com/laivannha0202/opencode-power-kit/releases)
+- Release notes chi tiết trong repo: [`docs/RELEASES.md`](docs/RELEASES.md)
+- Release notes từng bản: [`docs/releases/`](docs/releases/)
+
+Các bản chính:
+- `v1.5.0` — Power Mode
+- `v1.4.0` — Fullstack Autopilot
+- `v1.3.x` — Safety workflows, GSD opt-in, one-command install
+- `v1.2.x` — `opk` CLI / setup
+- `v1.1.x` — Full-stack profile
+- `v1.0.0` — Production release
 
 ---
 
-## Troubleshooting
+## Xử lý sự cố
 
-- **GitHub Actions failing?** Verify your GitHub billing is active. The Actions runner may fail due to billing/policy issues unrelated to code quality.
-- **Local verify passes but Actions fail?** Check billing status, rerun failed jobs. If the issue persists, open an issue.
-- **Need help?** Run `opk doctor` for a read-only diagnostic, or check [docs/](./docs/) for detailed references.
+- **GitHub Actions bị lỗi?** Kiểm tra billing GitHub của bạn còn hoạt động không. Runner có thể fail do vấn đề billing/policy không liên quan đến code.
+- **Verify local pass nhưng Actions fail?** Kiểm tra billing status, chạy lại jobs. Nếu vẫn lỗi, hãy tạo issue.
+- **Cần giúp đỡ?** Chạy `opk doctor` để chẩn đoán, hoặc xem [docs/](./docs/) để biết thêm chi tiết.
 
 ---
 

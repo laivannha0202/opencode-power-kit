@@ -1,6 +1,6 @@
-# Releases
+# Lịch sử phiên bản
 
-See per-version release notes in [docs/releases/](./releases/).
+Xem release notes chi tiết theo từng phiên bản tại [docs/releases/](./releases/).
 
 ## Release History
 

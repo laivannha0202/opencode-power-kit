@@ -1,18 +1,18 @@
-# Scripts Reference
+# Danh sách Scripts
 
-| Script | Purpose |
-|--------|---------|
-| `bootstrap.sh` | Linux/macOS bootstrap — installs agents, commands, skills globally |
-| `bootstrap.ps1` | Windows PowerShell bootstrap equivalent |
-| `verify.sh` | Linux/macOS verification of kit installation |
-| `verify.ps1` | Windows PowerShell verification equivalent |
-| `setup.sh` | Linux/macOS full setup script |
-| `setup.ps1` | Windows PowerShell full setup script |
-| `install-global.sh` | Install global components (agents/commands/skills) |
-| `install-project.sh` | Install project components |
-| `install-fullstack-profile.sh` | Install full-stack profile (Node/Nest/React/MySQL) |
-| `opk-command-guard.sh` | Safety guard: warns/blocks dangerous shell commands |
-| `cleanup-agent-artifacts.sh` | Safely clean up agent artifacts |
-| `doctor.sh` | Read-only diagnostic check |
+| Script | Mục đích |
+|--------|----------|
+| `bootstrap.sh` | Bootstrap Linux/macOS — cài agents, commands, skills toàn cục |
+| `bootstrap.ps1` | Windows PowerShell tương đương |
+| `verify.sh` | Kiểm tra cài đặt kit (Linux/macOS) |
+| `verify.ps1` | Kiểm tra cài đặt kit (Windows PowerShell) |
+| `setup.sh` | Script setup đầy đủ (Linux/macOS) |
+| `setup.ps1` | Script setup đầy đủ (Windows PowerShell) |
+| `install-global.sh` | Cài thành phần toàn cục (agents/commands/skills) |
+| `install-project.sh` | Cài thành phần cho project |
+| `install-fullstack-profile.sh` | Cài full-stack profile (Node/Nest/React/MySQL) |
+| `opk-command-guard.sh` | Lớp bảo vệ: cảnh báo/chặn lệnh shell nguy hiểm |
+| `cleanup-agent-artifacts.sh` | Dọn dẹp artifact an toàn |
+| `doctor.sh` | Kiểm tra chẩn đoán (read-only) |
 
-All scripts are idempotent — safe to run multiple times.
+Tất cả scripts đều idempotent — an toàn khi chạy nhiều lần.

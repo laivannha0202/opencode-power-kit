@@ -1,31 +1,31 @@
-# Release Process
+# Quy trình Release
 
-## Prerequisites
+## Yêu cầu trước khi release
 
-- Clean working tree (`git status` shows no uncommitted changes)
-- All tests pass (`opk verify` or `verify.sh`/`verify.ps1`)
-- Local tags match `VERSION` file
-- `CHANGELOG.md` updated for current version
+- Working tree sạch (`git status` không có thay đổi chưa commit)
+- Tất cả tests pass (`opk verify` hoặc `verify.sh`/`verify.ps1`)
+- Local tags khớp với file `VERSION`
+- `CHANGELOG.md` đã cập nhật cho phiên bản hiện tại
 
-## Steps
+## Các bước thực hiện
 
-### 1. Update VERSION
+### 1. Cập nhật VERSION
 
 ```bash
 echo "1.x.x" > VERSION
 git add VERSION && git commit -m "chore: bump version to 1.x.x"
 ```
 
-### 2. Update CHANGELOG.md
+### 2. Cập nhật CHANGELOG.md
 
-- Add entry for the new version under `# Changelog`
-- Follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format
+- Thêm mục cho phiên bản mới dưới `# Changelog`
+- Theo format [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
-### 3. Create Release Notes
+### 3. Tạo Release Notes
 
 ```bash
 cp docs/releases/v1.x.x.md docs/releases/v1.x.x.md
-# Edit to reflect changes
+# Chỉnh sửa nội dung
 ```
 
 ### 4. Tag
@@ -35,20 +35,20 @@ git tag v1.x.x
 git push origin v1.x.x
 ```
 
-### 5. Create GitHub Release
+### 5. Tạo GitHub Release
 
 ```bash
 gh release create v1.x.x --title "v1.x.x — Release Name" --notes-file docs/releases/v1.x.x.md
 ```
 
-### 6. Verify
+### 6. Kiểm tra
 
-- Confirm GitHub Release exists
-- Confirm tag is pushed
-- Confirm CI passes on the tag
+- Xác nhận GitHub Release đã tồn tại
+- Xác nhận tag đã được push
+- Xác nhận CI pass trên tag
 
-## Versioning Scheme
+## Sơ đồ phiên bản
 
-- **Major (x.0.0):** Breaking changes, full rewrites, major architecture shifts
-- **Minor (1.x.0):** New features, backward-compatible enhancements
-- **Patch (1.0.x):** Bug fixes, documentation, non-breaking improvements
+- **Major (x.0.0):** Thay đổi phá vỡ tương thích, viết lại lớn, thay đổi kiến trúc
+- **Minor (1.x.0):** Tính năng mới, cải tiến tương thích ngược
+- **Patch (1.0.x):** Sửa lỗi, tài liệu, cải tiến không phá vỡ tương thích

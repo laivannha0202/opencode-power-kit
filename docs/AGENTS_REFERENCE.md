@@ -1,4 +1,4 @@
-# Agent Reference
+# Danh sách Agent
 
 ## Core Power Agents
 
@@ -14,16 +14,16 @@
 | `devops-strong` | DevOps | Docker, CI/CD, deploy, infrastructure | 1 | plan-lite, build-strong (subagents) |
 | `release-strong` | Release | Version bump, CHANGELOG, tag, publish | 1 | plan-lite, review-lite (subagents) |
 
-## Lite Agents
+## Lite Agents (tiết kiệm token)
 
 | Agent | Type | Purpose |
 |-------|------|---------|
-| `plan-lite` | Planning | Token-efficient planning for small tasks |
-| `review-lite` | Review | Token-efficient code/diff review |
-| `debug-lite` | Debug | Token-efficient debugging for simple bugs |
+| `plan-lite` | Planning | Lập kế hoạch tiết kiệm token cho tác vụ nhỏ |
+| `review-lite` | Review | Review code/diff tiết kiệm token |
+| `debug-lite` | Debug | Debug tiết kiệm token cho bug đơn giản |
 
 ## Autopilot Agent
 
 | Agent | Type | Purpose | How it works |
 |-------|------|---------|-------------|
-| `build-strong` | Fullstack | Full-stack autopilot: spec → plan → build slice → verify | Given goal/instructions, generates spec (architect mode), plans (planner mode), builds slice-by-slice (builder mode), verifies after each slice |
+| `build-strong` | Fullstack | Full-stack autopilot: spec → plan → build slice → verify | Nhận goal/instructions, tạo spec, lên kế hoạch, build slice-by-slice, verify sau mỗi slice |
