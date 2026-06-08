@@ -164,7 +164,7 @@ switch ($Command.ToLower()) {
         Write-Host "  opk bootstrap -All -Yes"
         Write-Host ""
         Write-Host "All-in-one one-command (Windows PowerShell) — tu clone/pull kit roi cai:"
-        Write-Host "  powershell -ExecutionPolicy Bypass -Command `"`$Project=(Get-Location).Path; `$KIT=Join-Path `$HOME 'opencode-power-kit'; if (Test-Path (Join-Path `$KIT '.git')) { & git -C `$KIT pull --ff-only } else { & git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git `$KIT }; & (Join-Path `$KIT 'bootstrap.ps1') -All -ProjectDir `$Project -Yes; & (Join-Path `$KIT 'verify.ps1')`""
+        Write-Host "  powershell -ExecutionPolicy Bypass -Command `"`$Project=(Get-Location).Path; `$KIT=Join-Path `$HOME 'opencode-power-kit'; if (Test-Path (Join-Path `$KIT '.git')) { & git -C `$KIT pull --ff-only } else { & git clone https://github.com/laivannha0202/opencode-power-kit.git `$KIT }; & (Join-Path `$KIT 'bootstrap.ps1') -All -ProjectDir `$Project -Yes; & (Join-Path `$KIT 'verify.ps1')`""
         Write-Host ""
         Write-Host "Project one-command (Windows):"
         Write-Host "  cd C:\path\to\project; opk install"

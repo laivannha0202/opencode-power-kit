@@ -151,10 +151,10 @@ Ví dụ:
   opk bootstrap --all --yes
 
 All-in-one one-command (Linux / macOS / Git Bash / WSL) — tự clone/pull kit rồi cài:
-  bash -c 'PROJECT="\$PWD"; KIT="\$HOME/opencode-power-kit"; if [ -d "\$KIT/.git" ]; then git -C "\$KIT" pull --ff-only; else git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git "\$KIT"; fi; bash "\$KIT/bootstrap.sh" --all --project-dir "\$PROJECT"; cd "\$PROJECT"; bash "\$KIT/verify.sh"'
+  bash -c 'PROJECT="\$PWD"; KIT="\$HOME/opencode-power-kit"; if [ -d "\$KIT/.git" ]; then git -C "\$KIT" pull --ff-only; else git clone https://github.com/laivannha0202/opencode-power-kit.git "\$KIT"; fi; bash "\$KIT/bootstrap.sh" --all --project-dir "\$PROJECT"; cd "\$PROJECT"; bash "\$KIT/verify.sh"'
 
 All-in-one one-command (Windows PowerShell) — tự clone/pull kit rồi cài:
-  powershell -ExecutionPolicy Bypass -Command "\$Project=(Get-Location).Path; \$KIT=Join-Path \$HOME 'opencode-power-kit'; if (Test-Path (Join-Path \$KIT '.git')) { & git -C \$KIT pull --ff-only } else { & git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git \$KIT }; & (Join-Path \$KIT 'bootstrap.ps1') -All -ProjectDir \$Project -Yes; & (Join-Path \$KIT 'verify.ps1')"
+  powershell -ExecutionPolicy Bypass -Command "\$Project=(Get-Location).Path; \$KIT=Join-Path \$HOME 'opencode-power-kit'; if (Test-Path (Join-Path \$KIT '.git')) { & git -C \$KIT pull --ff-only } else { & git clone https://github.com/laivannha0202/opencode-power-kit.git \$KIT }; & (Join-Path \$KIT 'bootstrap.ps1') -All -ProjectDir \$Project -Yes; & (Join-Path \$KIT 'verify.ps1')"
 
 Project one-command (sau khi đã cài global):
   cd /path/to/project && opk install

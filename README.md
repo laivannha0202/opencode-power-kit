@@ -2,216 +2,224 @@
 
 [![CI](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](./VERSION)
-[![BMAD](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](#cấu-hình-bmad)
-[![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#ghi-chu-quan-trong)
-[![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#an-toan)
-[![Cross-platform](https://img.shields.io/badge/cross--platform-Linux%20%7C%20macOS%20%7C%20Windows-blue.svg)](#cài-1-lệnh)
+[![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
+[![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#safety-model)
+[![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#safety-model)
+[![Cross-platform](https://img.shields.io/badge/cross--platform-Linux%20%7C%20macOS%20%7C%20Windows-blue.svg)](#quick-start)
 
-Toolkit dùng lại cho mọi project OpenCode — cài Superpowers + BMAD Method chỉ với 1 lệnh, hỗ trợ **Linux / macOS / Windows PowerShell** (Git Bash / WSL / native).
+> Reusable OpenCode full-stack power kit: agents, commands, skills, safety workflows, full-stack profile, release tooling.
 
 > **Note:** Các section bên dưới ghi lại lịch sử phiên bản (version history) của kit. GitHub Releases thật được publish riêng trên tab [Releases](https://github.com/laivannha0202/opencode-power-kit/releases) của repository — mỗi release bao gồm Git tag + release notes + tarball.
 
-## Có gì mới trong v1.5.0 — Power Mode
+---
 
-- **9 new agents** (tổng cộng 13 agents) — mỗi agent chuyên sâu một lĩnh vực:
-  - `architect-strong` — system architecture, ADR, design decisions
-  - `debug-strong` — deep debug với scientific method, checkpoint
-  - `qa-strong` — QA/testing, coverage analysis, regression testing
-  - `security-strong` — SAST, secret scan, threat model, dependency audit
-  - `db-strong` — schema design, migration safety, query optimization
-  - `api-strong` — API contract, OpenAPI spec, FE/BE sync, type generation
-  - `ui-ux-strong` — UI/UX review, accessibility, responsive design
-  - `devops-strong` — Docker, CI/CD, deploy, infrastructure
-  - `release-strong` — version bump, CHANGELOG, tag, publish
-- **7 new commands** (34 commands total) — `/agent-router`, `/ci-fix`,
-  `/e2e-flow`, `/release-check`, `/kit-audit`, `/power-build`, `/tooling-doctor`
-- **`scripts/opk-command-guard.sh`** — safety guard: warning/block nguy hiểm
-  commands (`rm -rf`, `git reset --hard`, force push, DROP TABLE...)
-- **build-strong Agent Delegation** — tự động spawn agent chuyên môn theo nhu cầu
-- **Power Mode** — `/power-build` workflow: spec → architecture → implementation
-  → QA → security → release, chỉ 1 câu lệnh duy nhất
-- **Backward compatible 100%** — mọi thứ cũ vẫn hoạt động nguyên xi
-
-Xem section [Power Mode — dùng 13 agents chuyên môn](#power-mode--dùng-13-agents-chuyên-môn).
-
-## Có gì mới trong v1.4.0
-
-- **`build-strong` → fullstack-autopilot** — agent `build-strong` được nâng
-  cấp thành fullstack-autopilot mạnh mẽ hơn nhưng vẫn an toàn. Tự động xử
-  lý task full-stack theo flow chuẩn:
-   1. `git status` → detect stack/backend/frontend/database → đọc package scripts
-   2. Checkpoint trước sửa lớn (`/checkpoint`)
-   3. Spec ngắn + acceptance criteria + API contract
-   4. Plan-work chia vertical slice nhỏ
-   5. Build từng slice — đảm bảo FE/BE/API/DB contract khớp
-   6. Chạy lint/typecheck/test/build; nếu không có test → manual proof bảng
-   7. Cleanup file tạm (`/cleanup-safe`)
-   8. Handoff nếu task lớn (`/handoff-save`)
-   9. Báo cáo cuối: file sửa, lý do, verify result, git status
-- **Guard an toàn nghiêm ngặt** — hard rules: không `rm -rf`, không
-  `git reset --hard`, không `git clean -fd`, không force push, không sửa
-  `.env`, không DROP/TRUNCATE/DELETE không hỏi trước.
-- **Backward compatible 100%** — agent vẫn tên `build-strong`, mode `all`,
-  không thay đổi frontmatter hay permission. Phiên bản cũ vẫn dùng được.
-- Xem cách dùng chi tiết ở section [Dùng build-strong cho fullstack-auto](#dùng-build-strong-cho-fullstack-auto).
-
-## Power Mode — dùng 13 agents chuyên môn
-
-Bắt đầu từ v1.5.0, kit có 13 agents chuyên sâu. Dùng `/agent-router` để
-tự động route task hoặc spawn trực tiếp:
-
-| Agent | Chuyên môn | Dùng khi |
-|-------|-----------|----------|
-| `build-strong` | Fullstack autopilot | Task fullstack chính |
-| `architect-strong` | System architecture, ADR | Task > 5 files, cross-module |
-| `debug-strong` | Deep debug | Bug phức tạp, không tìm ra root cause |
-| `qa-strong` | QA/testing, coverage | Trước ship, cần test suite |
-| `security-strong` | Security audit, SAST | Pre-release, code có auth/input mới |
-| `db-strong` | Database, migration, query | Schema thay đổi, migration, optimize |
-| `api-strong` | API contract, OpenAPI | Thay đổi endpoint, FE/BE sync |
-| `ui-ux-strong` | UI/UX review, a11y | Review giao diện, responsive |
-| `devops-strong` | Docker, CI/CD, deploy | Setup/review infrastructure |
-| `release-strong` | Version bump, CHANGELOG | Cuối cùng, trước release |
-| `plan-lite` | Kế hoạch tiết kiệm token | Task nhỏ, cần plan nhanh |
-| `review-lite` | Review code/diff | Code review nhanh |
-| `debug-lite` | Debug nhanh | Bug đơn giản |
-
-**Workflow khuyến nghị:**
-
-```bash
-# Full workflow tự động
-/agent-router "thêm tính năng đăng nhập bằng Google"
-
-# Hoặc spawn thủ công từng bước
-# 1. @architect-strong thiết kế giải pháp
-# 2. @db-strong thiết kế schema
-# 3. @build-strong implement
-# 4. @qa-strong viết test
-# 5. @security-strong audit
-# 6. @release-strong release
-```
-
-## Dùng build-strong cho fullstack-auto
-
-Agent `build-strong` (mặc định trong kit) đã được nâng cấp thành
-**fullstack-autopilot**. Để dùng:
-
-```bash
-# Mở OpenCode, trong project của bạn, nói tự nhiên:
-# "làm tính năng X fullstack"
-# "thêm API Y"
-# "fix lỗi Z"
-
-# Hoặc gọi agent trực tiếp:
-# @build-strong làm tính năng đăng nhập
-```
-
-Agent sẽ tự động chạy full workflow: spec → plan → build slice → verify.
-
-### Ví dụ
-
-| Bạn nói | Agent làm |
-|---------|-----------|
-| `@build-strong thêm API CRUD user` | Spec ngắn → plan slice (DB → BE → FE) → build → verify |
-| `@build-strong sửa lỗi login không redirect` | git status → detect stack → debug → fix nhỏ → verify |
-| `@build-strong thêm validation cho form đăng ký` | Check contract FE/BE → thêm validation 2 phía → test |
-
-### Workflow chi tiết
-
-Agent tuân thủ 8 bước:
-
-```
-git status → detect stack → /checkpoint (nếu lớn)
-→ spec + AC → plan → build slice → verify → báo cáo
-```
-
-- Kiểm soát contract FE/BE/DB ở mỗi slice.
-- Không tự push, không tự migration nguy hiểm.
-- Dùng `/checkpoint` và `/cleanup-safe` tích hợp sẵn.
-- Báo cáo cuối: file sửa, lý do, test result, diff.
-
-### Backward compat
-
-Agent vẫn tên `build-strong`, mode `all`. Mọi script gọi `@build-strong`
-trong code cũ vẫn hoạt động. Không cần thay đổi config.
-
-## Có gì mới trong v1.3.4
-
-- **GSD Core opt-in integration** — `opk gsd` / `opk update-gsd` chuyển
-  tiếp sang official installer `npx @opengsd/gsd-core@latest`. Kit
-  **không vendor / copy** GSD source. Có cả `.sh` và `.ps1`.
-  Flags: `--dry-run` để xem plan, `--yes` để skip confirm.
-- **`opk update-all`** — `git pull --ff-only` (an toàn), refresh
-  bundled `_bmad/`, optional GSD update với `--with-gsd`.
-- **`THIRD_PARTY.md`** — bảng liệt kê rõ BMAD, Superpowers, GSD Core,
-  rtk/tokscale kèm quy tắc *kit không bao giờ auto-update trên shell start*.
-- **`.github/workflows/verify.yml`** — workflow CI mới tập trung cho
-  v1.3.4 kit self-check (bash -n, shellcheck, shfmt, pwsh parse,
-  verify.sh, verify.ps1, validate, integration test). Chạy song song
-  với `ci.yml` hiện có (không thay thế, không xóa job nào).
-- **`verify.sh` / `verify.ps1`** — đọc `${KIT_DIR}/VERSION` trực tiếp;
-  nếu file thiếu thì WARN (không crash) để các check khác vẫn chạy.
-- **Backward compatible 100%** — mọi subcommand / file / folder của
-  v1.3.0 → v1.3.3 vẫn hoạt động nguyên xi. Tất cả v1.3.4 đều additive.
-
-## Dùng đơn giản không cần nhớ lệnh (mới từ v1.3.3)
-
-Bạn không cần nhớ slash command. Cứ nói tự nhiên (tiếng Việt / tiếng Anh), agent sẽ auto-route. 5 câu phổ biến nhất:
-
-| Bạn nói…                          | Agent sẽ làm gì                                   |
-| --------------------------------- | ------------------------------------------------- |
-| **fix lỗi hộ tôi**                | Reproduce lỗi, tìm root cause, sửa nhỏ nhất, verify |
-| **kiểm tra project ổn chưa**      | Smart-scan repo, check git/lint/test/build, báo rủi ro |
-| **làm tính năng này fullstack**   | Spec nhỏ → plan → slice nhỏ → code → verify        |
-| **tối ưu token cho task này**     | Repo map gọn, đọc đúng file, update handoff         |
-| **dọn file rác do agent tạo**     | Move untracked `.tmp/.bak/repro-*` vào `.opk-trash/`, không xóa file tracked |
-
-> Mặc định agent **không bao giờ** chạy `rm -rf`, `git reset --hard`,
-> `git clean -fd`, hay force push. Mọi thao tác hủy file đều đi qua
-> workflow an toàn có xác nhận trước.
-
-**Workflows mới trong v1.3.3** (slash command, cho advanced):
-
-- `/cleanup-safe` — dọn file tạm an toàn (default dry-run).
-- `/handoff-save` — cập nhật `AI_HANDOFF.md` để mai làm tiếp.
-- `/checkpoint` — snapshot working tree trước khi sửa lớn.
-
-Backing script: `scripts/cleanup-agent-artifacts.sh`. Auto Router chi tiết
-xem `templates/AGENTS.md` và `templates/OPENCODE.md`.
-
-## Cài all-in-one bằng 1 lệnh (khuyến nghị)
-
-**`cd` vào project** rồi paste 1 dòng dưới đây — kit tự clone (hoặc `pull` nếu đã có) → cài **global + project + fullstack + verify** xong in `Run: opencode`.
+## Quick Start
 
 ### Linux / macOS / Git Bash / WSL
 
 ```bash
-bash -c 'PROJECT="$PWD"; KIT="$HOME/opencode-power-kit"; if [ -d "$KIT/.git" ]; then git -C "$KIT" pull --ff-only; else git clone https://github.com/laivannha0202/opencode-power-kit.git "$KIT"; fi; bash "$KIT/bootstrap.sh" --all --project-dir "$PROJECT"; cd "$PROJECT"; bash "$KIT/verify.sh"; echo "✅ OpenCode Power Kit all-in-one done. Run: opencode"'
+bash -c 'PROJECT="$PWD"; KIT="$HOME/opencode-power-kit"; if [ -d "$KIT/.git" ]; then git -C "$KIT" pull --ff-only; else git clone https://github.com/laivannha0202/opencode-power-kit.git "$KIT"; fi; bash "$KIT/bootstrap.sh" --all --project-dir "$PROJECT"; cd "$PROJECT"; bash "$KIT/verify.sh"; echo "Done. Run: opencode"'
 ```
 
-Sau khi xong:
-
+Then reload and verify:
 ```bash
-source ~/.bashrc    # zsh thì: source ~/.zshrc
-opk one             # ← chính là all-in-one, dùng lại bất kỳ lúc nào
+source ~/.bashrc    # or source ~/.zshrc
+opk one             # re-run all-in-one anytime
+opk doctor          # check everything
 opencode
 ```
 
 ### Windows PowerShell
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "$Project=(Get-Location).Path; $KIT=Join-Path $HOME 'opencode-power-kit'; if (Test-Path (Join-Path $KIT '.git')) { & git -C $KIT pull --ff-only } else { & git clone https://github.com/laivannha0202/opencode-power-kit.git $KIT }; & (Join-Path $KIT 'bootstrap.ps1') -All -ProjectDir $Project -Yes; & (Join-Path $KIT 'verify.ps1'); Write-Host '✅ OpenCode Power Kit all-in-one done. Run: opencode'"
+powershell -ExecutionPolicy Bypass -Command "$Project=(Get-Location).Path; $KIT=Join-Path $HOME 'opencode-power-kit'; if (Test-Path (Join-Path $KIT '.git')) { & git -C $KIT pull --ff-only } else { & git clone https://github.com/laivannha0202/opencode-power-kit.git $KIT }; & (Join-Path $KIT 'bootstrap.ps1') -All -ProjectDir $Project -Yes; & (Join-Path $KIT 'verify.ps1'); Write-Host 'Done. Run: opencode'"
 ```
 
-Sau khi xong: **mở PowerShell mới** (để load User PATH), rồi:
-
+Open a **new PowerShell** window, then:
 ```powershell
-opk one             # ← chính là all-in-one, dùng lại bất kỳ lúc nào
+opk one
 opk.cmd path
 opencode
 ```
 
-### `opk one` / `opk go` — all-in-one shorthand (sau khi đã cài global lần đầu)
+### After installation
+
+| Command | Purpose |
+|---------|---------|
+| `opk one` / `opk go` | All-in-one: global + project + fullstack + verify |
+| `opk help` | Show full help |
+| `opk version` | Show version |
+| `opk doctor` | Read-only diagnostic |
+| `opk verify` | Verify current project is ready |
+| `opk global` | Install global (agents/commands/skills) |
+| `opk install` | Install into current project |
+| `opk fullstack` | Install full-stack profile (Node/Nest/React/MySQL) |
+
+---
+
+## What's Included
+
+| Component | Count | Location |
+|-----------|-------|----------|
+| Core agents | 13 | `opencode-global/agents/` |
+| Slash commands | 34 | `opencode-global/commands/` |
+| Skills | 20 | `opencode-global/skills/` |
+| Scripts | 12 | `scripts/` |
+| Full-stack profile | 1 | `profiles/node-nest-react-mysql/` |
+| Safety scripts | 4 | `verify.sh`, `doctor.sh`, `cleanup-agent-artifacts.sh`, `opk-command-guard.sh` |
+| Install/Boostrap | 8+ | `bootstrap.*`, `setup.*`, `install*.*` |
+| CLI wrappers | 3 | `bin/opk`, `bin/opk.cmd`, `bin/opk.ps1` |
+
+---
+
+## Power Mode v1.5.0
+
+- **13 core agents** — each specialized for one domain (architecture, debug, QA, security, DB, API, UI/UX, DevOps, release, plus fullstack autopilot, 3 lite agents)
+- **34 commands** — organized into power workflow, safety, build lifecycle, review, DB/API, QA/E2E, DevOps, quality/security, token/tooling
+- **`scripts/opk-command-guard.sh`** — safety guard: warns/blocks dangerous shell commands (`rm -rf`, `git reset --hard`, force push, `DROP TABLE`, ...)
+- **`build-strong` Agent Delegation** — automatically spawns specialized subagents based on context
+- **`/power-build`** — end-to-end workflow: spec → architecture → implementation → QA → security → release
+- **`/agent-router`** — natural language task routing to the right agent
+- **`/tooling-doctor`** — detect third-party tooling (rtk, repomix, semgrep, gitleaks, ...)
+- **100% backward compatible** — everything from previous versions works unchanged
+
+---
+
+## Agent Reference
+
+### Core Power Agents
+
+| Agent | Type | Purpose | Use when |
+|-------|------|---------|----------|
+| `build-strong` | Fullstack | Full-stack autopilot: spec → plan → build slice → verify | Main full-stack feature work |
+| `architect-strong` | Architecture | System design, ADR, cross-module decisions | Task > 5 files, cross-module changes |
+| `debug-strong` | Debug | Scientific method debugging with checkpoint | Complex bugs, elusive root causes |
+| `qa-strong` | QA/Testing | Coverage analysis, regression testing, test suite design | Pre-ship, need solid test suite |
+| `security-strong` | Security | SAST, secret scan, threat model, dependency audit | Pre-release, code with auth/input |
+| `db-strong` | Database | Schema design, migration safety, query optimization | Schema changes, migrations |
+| `api-strong` | API | OpenAPI contract, FE/BE sync, type generation | Endpoint changes, API contract sync |
+| `ui-ux-strong` | UI/UX | Accessibility, responsive design, visual review | Interface review, responsive fixes |
+| `devops-strong` | DevOps | Docker, CI/CD, deploy, infrastructure | Setup/review infrastructure |
+| `release-strong` | Release | Version bump, CHANGELOG, tag, publish | Before release cut |
+| `plan-lite` | Planning | Token-efficient planning | Small tasks needing quick plan |
+| `review-lite` | Review | Token-efficient code/diff review | Quick code review |
+| `debug-lite` | Debug | Token-efficient debugging | Simple bugs |
+
+**Recommended workflow:**
+```
+/agent-router "add Google login feature"
+# Or manually: @architect-strong → @db-strong → @build-strong → @qa-strong → @security-strong → @release-strong
+```
+
+---
+
+## Command Reference
+
+### Power Workflow
+
+| Command | Purpose |
+|---------|---------|
+| `/agent-router` | Route task to the right specialized agent |
+| `/power-build` | End-to-end build: spec → architecture → build → QA → security → release |
+| `/tooling-doctor` | Detect third-party tooling availability |
+
+### Safety
+
+| Command | Purpose |
+|---------|---------|
+| `/cleanup-safe` | Safely move temp artifacts to `.opk-trash/` (default dry-run) |
+| `/checkpoint` | Snapshot working tree before large changes |
+| `/handoff-save` | Update `AI_HANDOFF.md` for context continuity |
+
+### Build Lifecycle
+
+| Command | Purpose |
+|---------|---------|
+| `/spec-lite` | Quick spec (goal, scope, AC, out-of-scope) |
+| `/plan-work` | Break task into ≤ 7 steps with files + tests |
+| `/build-slice` | Implement one slice, ≤ 2 files, ≤ 100 lines diff |
+| `/ci-fix` | Read CI/test/build errors and fix safely |
+| `/ship-check` | Pre-commit/pre-push checklist |
+
+### Review
+
+| Command | Purpose |
+|---------|---------|
+| `/review-diff` | Review git diff |
+| `/security-review` | Security review (secrets, auth, input validation) |
+| `/api-contract-review` | Check FE/BE API contract alignment |
+| `/migration-safe` | Verify migration safety before running |
+| `/release-check` | Check VERSION/README/CHANGELOG/tag before release |
+
+### DB / API
+
+| Command | Purpose |
+|---------|---------|
+| `/db-readonly` | Read-only DB checks |
+| `/migration-safe` | Migration safety check |
+| `/openapi-check` | OpenAPI spec validation (spectral/oasdiff) |
+| `/secret-scan` | Secret pattern scan (gitleaks/trufflehog) |
+| `/sast-check` | Static analysis (semgrep) |
+
+### QA / E2E
+
+| Command | Purpose |
+|---------|---------|
+| `/test-proof` | Run/propose tests as proof |
+| `/test-matrix` | Generate test matrix (unit/integration/e2e/smoke) |
+| `/e2e-flow` | Plan and run E2E proof with Playwright |
+| `/e2e-plan` | Propose Playwright E2E flows |
+
+### DevOps / Environment
+
+| Command | Purpose |
+|---------|---------|
+| `/env-doctor` | Check env safety (no secret values printed) |
+| `/docker-dev-doctor` | Check docker-compose dev setup |
+| `/fullstack-scan` | Full-stack project scan (FE/BE/DB/scripts/env/docker) |
+
+### Quality / Security
+
+| Command | Purpose |
+|---------|---------|
+| `/js-quality-check` | Detect eslint/prettier/biome/knip/vitest/tsc |
+| `/smart-scan` | Quick project health scan |
+| `/kit-audit` | Audit opencode-power-kit structure |
+| `/repo-map` | Generate project map |
+| `/bugfix-safe` | Safe bug fix workflow |
+
+### Token / Tooling
+
+| Command | Purpose |
+|---------|---------|
+| `/rtk-gain` | Run `rtk gain` or guide installation |
+| `/token-pack` | Pack context via Repomix |
+
+---
+
+## Skills Summary
+
+| Category | Skills |
+|----------|--------|
+| Architecture / ADR | `adr-architecture-decision` |
+| API Contract / OpenAPI | `api-contract`, `openapi-contract` |
+| DB Migration | `database-migration-safe` |
+| Docker / Environment | `docker-compose-safe`, `env-config-safe` |
+| Frontend UI Review | `frontend-ui-review` |
+| Full-stack Testing | `fullstack-test-strategy`, `test-strategy` |
+| JS/TS Quality | `js-ts-project`, `js-ts-quality` |
+| Security | `security-review`, `secure-fullstack` |
+| Token / Repo Map | `rtk-token-optimizer`, `repo-map` |
+| Safe Edit | `safe-edit` |
+| Serena First | `serena-first` |
+| Dependency | `dependency-maintenance` |
+| Nest/React/MySQL | `nest-react-mysql` |
+
+---
+
+## Full-stack Profile
+
+Stack: **Node.js + NestJS + React/Vite + MySQL**
 
 ```bash
 # Linux / macOS / Git Bash / WSL
@@ -226,24 +234,16 @@ cd C:\path\to\your\project
 opk one            # = opk go
 ```
 
-> Bootstrap tự phát hiện shell: không sudo, không `curl|sh`, backup mọi file cũ, idempotent (chạy lại không duplicate PATH / marker / config). Từ chối cài project trong `$HOME`, kit dir, `/`, `/tmp`, `/var/tmp`, `/usr`, `/etc` (hoặc `C:\`, `C:\Windows`, `C:\Program Files*`, `$env:TEMP` trên Windows). Nếu pwd không an toàn, `--all` vẫn chạy global + in cảnh báo hướng dẫn `cd` sang project.
+> Bootstrap tự động: không sudo, không `curl|sh`, backup mọi file cũ, idempotent.
 
-## Cài thủ công / Advanced
-
-Khuyến nghị: dùng lệnh 1 dòng ở trên. Cách dưới đây dành cho ai muốn kiểm
-soát từng bước (review script trước khi chạy, dùng fork nội bộ, CI, v.v.).
+## Manual Install / Advanced
 
 ### Linux / macOS / Git Bash / WSL
 
 ```bash
-# 1) Clone kit (một lần)
 git clone https://github.com/laivannha0202/opencode-power-kit.git ~/opencode-power-kit
-
-# 2) Cài global (commands / skills / agents + opk CLI + ~/.bashrc)
 bash ~/opencode-power-kit/setup.sh --global
-
-# 3) Kích hoạt + mở OpenCode
-source ~/.bashrc    # zsh thì: source ~/.zshrc
+source ~/.bashrc
 opk help
 opencode
 ```
@@ -251,488 +251,118 @@ opencode
 ### Windows PowerShell
 
 ```powershell
-# 1) Clone kit
 git clone https://github.com/laivannha0202/opencode-power-kit.git $HOME\opencode-power-kit
-
-# 2) Cài global
 powershell -ExecutionPolicy Bypass -File "$HOME\opencode-power-kit\setup.ps1" -Global -Yes
-
-# 3) Mở PowerShell mới, rồi:
-opk.cmd help
+# Open new PowerShell, then:
 opk.cmd path
 opencode
 ```
 
-### Sau khi cài global — dùng với mọi project
+### After global install — use with any project
 
 ```bash
 cd /path/to/your/project
-opk install           # cài AGENTS.md / OPENCODE.md / .opencode/opencode.json
-opk fullstack         # (tùy chọn) cài profile Node/Nest/React/MySQL
-opk verify            # kiểm tra project đã sẵn sàng
-```
-
-```powershell
-# Windows
-cd C:\path\to\your\project
-opk.cmd install
-opk.cmd fullstack
-opk.cmd verify
-```
-
-Cờ non-interactive đầy đủ (cả bash và PowerShell):
-
-```bash
-bash setup.sh --global      # cài global
-bash setup.sh --project     # cài vào project hiện tại
-bash setup.sh --fullstack   # cài full-stack profile
-bash setup.sh --all         # cài tất cả (cần cd vào project)
-bash setup.sh --doctor      # chẩn đoán (read-only)
-bash setup.sh --dry-run     # in kế hoạch, không sửa gì
-bash setup.sh --yes         # skip confirm
-bash setup.sh --help        # in hướng dẫn
-```
-
-Sau khi cài global, lệnh `opk` có sẵn trong shell (PATH):
-
-| `opk ...`        | Tác dụng                                                                  |
-|------------------|----------------------------------------------------------------------------|
-| `opk one`        | **All-in-one**: global + project + fullstack + verify (khuyến nghị)        |
-| `opk go`         | Alias: `opk one`                                                          |
-| `opk help`       | In trợ giúp đầy đủ                                                        |
-| `opk version`    | In version kit                                                             |
-| `opk path`       | In đường dẫn kit hiện tại                                                  |
-| `opk global`     | Cài global (commands / skills / agents + opk CLI)                         |
-| `opk install`    | Cài vào project hiện tại (= `opk init`)                                    |
-| `opk fullstack`  | Cài full-stack profile                                                     |
-| `opk all`        | Cài tất cả: global + project + fullstack + verify                          |
-| `opk doctor`     | Chẩn đoán (read-only)                                                      |
-| `opk verify`     | Kiểm tra project hiện tại                                                  |
-| `opk tools`      | Detect / hướng dẫn cài `rtk`, `tokscale`                                   |
-| `opk update-bmad`| Cập nhật BMAD Method cho project hiện tại                                 |
-
-## Có gì mới trong v1.3.2
-
-- **`opk one` / `opk go` — all-in-one shorthand** — chạy 1 lệnh duy nhất
-  để cài **global + project + fullstack + verify** trong project hiện tại.
-  `opk one` = `bootstrap.sh --all --project-dir "$(pwd)" --yes` (bash) /
-  `bootstrap.ps1 -All -ProjectDir (Get-Location).Path -Yes` (PowerShell).
-- **4-step `--all` flow** — `bootstrap.sh` / `bootstrap.ps1` / `setup.sh`
-  / `setup.ps1` giờ log rõ `[1/4] global` → `[2/4] project` →
-  `[3/4] fullstack` → `[4/4] verify`. Idempotent, nếu pwd nguy hiểm thì
-  skip `[2/4] + [3/4] + [4/4]` với cảnh báo rõ hướng dẫn `cd` sang
-  project.
-- **All-in-one one-liner** — top section README trình bày 1 dòng duy
-  nhất cho cả bash và PowerShell: tự clone/pull kit → bootstrap --all
-  → verify → in `✅ OpenCode Power Kit all-in-one done. Run: opencode`.
-- **Final success banner** — `bootstrap.sh` / `bootstrap.ps1` cuối cùng
-  in `✅ OpenCode Power Kit all-in-one done. Run: opencode` thay vì
-  banner trống.
-- **`bin/opk` help text** bổ sung `opk one`, `opk go`, `opk update-bmad`
-  + 2 ví dụ all-in-one one-liner (bash + PowerShell).
-- **Backward compatible** — `--global`, `--project`, `--fullstack`,
-  `--doctor`, `--yes`, `opk global`, `opk install`, `opk fullstack`,
-  `opk all`, `opk doctor`, `opk verify`, `opk tools`, `opk bootstrap`,
-  `opk quick`, `opk init` không đổi. `opk one` đổi semantics (global
-  → all-in-one); ai cần behavior cũ dùng `opk quick`.
-
-## Có gì mới trong v1.3.1
-
-- **`BMAD_METHOD_VERSION` được pin** — mặc định `6.8.0`; override qua env
-  `BMAD_METHOD_VERSION=...` trước khi chạy `install.sh` / `install.ps1`
-  / `update-bmad.sh`. Lockfile-friendly, CI reproducible.
-- **Full log capture cho BMAD** — mọi output của `npx bmad-method ...` đổ
-  vào `.opencode-power-bmad-install.log` (install) hoặc
-  `.opencode-power-bmad-update.log` (update). Lỗi in `tail -50` + đường
-  dẫn log rõ ràng để user mở xem.
-- **PowerShell: check exit code** — `install.ps1` / `update-bmad.ps1`
-  kiểm tra `$LASTEXITCODE` của `npx`; fail thì in log + hướng dẫn sửa.
-- **Safety guard đồng bộ** — `install.sh` / `install.ps1` /
-  `update-bmad.sh` dùng chung `is_bad_project_dir` (Unix) /
-  `Test-BadProjectDir` (Windows) với `bootstrap.sh` / `bootstrap.ps1`.
-  Từ chối: HOME, kit dir, `/`, `/tmp`, `/var/tmp`, `/usr`, `/etc`
-  (Unix); HOME, kit, `C:\`, `C:\Windows`, `C:\Program Files*`,
-  `$env:TEMP` (Windows).
-- **CI strict** — `shellcheck` và `shfmt -d` fail thật (xóa `|| echo
-  "skip..."`); `bash -n`; `validate-opencode-pack`; JSON/YAML/secret
-  scan. Không còn fail-silent.
-- **`LICENSE` (MIT) + `VERSION` bump** — `1.3.0` → `1.3.1`.
-- **`shfmt -w` toàn bộ `.sh`** — conform canonical style (tab indent,
-  `} >>file` không space). `git diff --check` clean.
-- **README restructured** — giữ 1-liner canonical, chuyển
-  "Dùng nhanh 30 giây" thành "Manual / Advanced", cập nhật tree với
-  `bin/opk`, `bin/opk.cmd`, `bin/opk.ps1`, document `BMAD_METHOD_VERSION`.
-
-## Cấu hình BMAD
-
-| Biến                  | Mặc định | Mô tả                                      |
-|-----------------------|----------|--------------------------------------------|
-| `BMAD_METHOD_VERSION` | `6.8.0`  | Pin version BMAD Method (bmm module)       |
-
-```bash
-# Pin version khác (vd muốn thử 6.9.0-beta)
-export BMAD_METHOD_VERSION=6.9.0-beta
-bash ~/opencode-power-kit/install.sh
-```
-
-```powershell
-# Windows
-$env:BMAD_METHOD_VERSION = "6.9.0-beta"
-powershell -File "$HOME\opencode-power-kit\install.ps1"
-```
-
-Log BMAD:
-
-- Install: `<project>/.opencode-power-bmad-install.log`
-- Update:  `<project>/.opencode-power-bmad-update.log`
-
-## Có gì mới trong v1.2.0
-
-- **`setup.sh`** — menu tiếng Việt tương tác + 7 cờ non-interactive
-  (`--global`, `--project`, `--fullstack`, `--all`, `--doctor`,
-  `--dry-run`, `--yes`). Từ chối chạy per-project install trong HOME
-  hoặc trong chính kit. Báo lỗi rõ nếu thiếu script con.
-- **`opk` CLI** — wrapper mỏng gọi lại các script có sẵn. Không duplicate
-  logic. Tự phát hiện đường dẫn kit qua `BASH_SOURCE` hoặc `OPK_KIT_DIR`.
-  Lệnh: `help`, `version`, `path`, `global`, `install`, `fullstack`,
-  `all`, `doctor`, `verify`, `tools`.
-- **`install-global.sh` cải tiến** — tự cài `opk` vào `~/.local/bin/opk`
-  (có backup nếu file đã tồn tại). Tạo `GLOBAL_PACK_REPORT.md` động,
-  liệt kê đúng agents/commands/skills đang cài, kèm vị trí `opk` và
-  trạng thái PATH. Tất cả thao tác đều idempotent.
-- **Không thay đổi hành vi v1.1.1** — tất cả script cũ vẫn chạy được,
-  flag mới chỉ là lớp tiện ích bên ngoài.
-
-## Cài global toàn bộ OpenCode
-
-```bash
-bash ~/opencode-power-kit/install-global.sh
-source ~/.bashrc
-opencode
-```
-
-Sau khi cài global, dùng được:
-- `/smart-scan` — quét nhanh project
-- `/repo-map` — tạo bản đồ project
-- `/bugfix-safe` — sửa bug an toàn
-- `/review-diff` — review git diff
-- `/token-pack` — tạo gói context Repomix
-- `/db-readonly` — kiểm tra DB read-only
-- `@plan-lite` hoặc agent `plan-lite` — lập kế hoạch tiết kiệm token
-
-Và các command nâng cấp v2 (lifecycle + review + token):
-- `/spec-lite` — đặc tả ngắn (scope, AC, out-of-scope)
-- `/plan-work` — chia task nhỏ, có file + test
-- `/build-slice` — triển khai 1 slice, ≤ 2 file
-- `/test-proof` — chạy/đề xuất test chứng minh
-- `/ship-check` — checklist trước commit/push
-- `/security-review` — review security (secrets, auth, input)
-- `/api-contract-review` — check FE/BE API contract
-- `/migration-safe` — kiểm tra migration an toàn
-- `/rtk-gain` — chạy `rtk gain` hoặc hướng dẫn cài
-
-## Cài cho 1 project
-
-```bash
-# Clone (lần đầu)
-git clone https://github.com/laivannha0202/opencode-power-kit.git ~/opencode-power-kit
-
-# Vào project cần cài
-cd /path/to/your/project
-
-# Cài bằng opk (cách khuyến nghị từ v1.2.0)
 opk install
-# hoặc
-bash ~/opencode-power-kit/install.sh
+opk fullstack   # optional
+opk verify
 ```
 
-## Cấu trúc
+## Project Structure
 
 ```
 ~/opencode-power-kit/
-├── README.md              # Tài liệu này
-├── setup.sh               # v1.2.0: menu + flags non-interactive
-├── bin/
-│   ├── opk                # v1.2.0: CLI wrapper (bash — Linux/macOS/WSL/Git Bash)
-│   ├── opk.cmd            # v1.3.0: CLI wrapper (Windows cmd)
-│   └── opk.ps1            # v1.3.0: CLI wrapper (Windows PowerShell)
-├── install.sh             # v1.3.1: cài per-project (BMAD pin + log + safety)
-├── install.ps1            # v1.3.1: cài per-project Windows
-├── bootstrap.sh           # v1.3.0: cài global qua curl|bash
-├── bootstrap.ps1          # v1.3.0: cài global Windows
-├── setup.sh               # v1.2.0: menu + flags non-interactive
-├── setup.ps1              # v1.3.0: setup Windows
-├── install-global.sh      # v1.2.0: cài global + opk CLI + report động
-├── verify.sh              # Script kiểm tra
-├── doctor.sh              # Chẩn đoán (read-only)
-├── uninstall.sh           # Gỡ cài (có confirm / --yes)
-├── uninstall.ps1          # v1.3.0: gỡ cài Windows
-├── update-bmad.sh         # v1.3.1: cập nhật BMAD (BMAD pin + log + safety)
-├── scripts/
-│   └── install-token-tools.sh  # Kiểm tra + hướng dẫn cài rtk/tokscale
-├── opencode-global/       # Config global
-│   ├── agents/            # Agents tiết kiệm token
-│   │   ├── plan-lite.md
-│   │   ├── review-lite.md
-│   │   ├── debug-lite.md
-│   │   ├── build-strong.md
-│   │   ├── architect-strong.md
-│   │   ├── debug-strong.md
-│   │   ├── qa-strong.md
-│   │   ├── security-strong.md
-│   │   ├── db-strong.md
-│   │   ├── api-strong.md
-│   │   ├── ui-ux-strong.md
-│   │   ├── devops-strong.md
-│   │   └── release-strong.md
-│   ├── commands/          # Commands theo nhu cầu
-│   │   ├── smart-scan.md
-│   │   ├── bugfix-safe.md
-│   │   ├── review-diff.md
-│   │   ├── repo-map.md
-│   │   ├── token-pack.md
-│   │   ├── db-readonly.md
-│   │   ├── spec-lite.md
-│   │   ├── plan-work.md
-│   │   ├── build-slice.md
-│   │   ├── test-proof.md
-│   │   ├── ship-check.md
-│   │   ├── security-review.md
-│   │   ├── api-contract-review.md
-│   │   ├── migration-safe.md
-│   │   ├── rtk-gain.md
-│   │   ├── cleanup-safe.md
-│   │   ├── handoff-save.md
-│   │   ├── checkpoint.md
-│   │   ├── agent-router.md
-│   │   ├── ci-fix.md
-│   │   ├── e2e-flow.md
-│   │   ├── release-check.md
-│   │   ├── kit-audit.md
-│   │   ├── power-build.md
-│   │   └── tooling-doctor.md
-│   └── skills/            # Skills load theo nhu cầu
-│       ├── token-smart-code/
-│       ├── serena-first/
-│       ├── safe-edit/
-│       ├── repo-map/
-│       ├── js-ts-project/
-│       ├── security-review/         # v2
-│       ├── api-contract/            # v2
-│       ├── database-migration-safe/ # v2
-│       ├── test-strategy/           # v2
-│       ├── frontend-ui-review/      # v2
-│       ├── adr-architecture-decision/ # v2
-│       └── rtk-token-optimizer/     # v2
-├── templates/
-│   ├── AGENTS.md          # Rules cho AI agent
-│   ├── OPENCODE.md        # Guide project
-│   ├── opencode.json      # Config OpenCode
-│   ├── lefthook.yml       # Git hooks
-│   ├── knip.json          # Dead code detector
-│   └── gitignore-extra.txt # Gitignore bổ sung
-└── docs/
-    ├── workflow.md        # Quy trình làm việc
-    ├── prompts.md         # Prompt mẫu
-    └── safety.md          # Rules an toàn
+├── README.md
+├── setup.sh / setup.ps1          # interactive + flags
+├── bin/opk, opk.cmd, opk.ps1     # CLI wrappers
+├── install.sh / install.ps1       # per-project
+├── bootstrap.sh / bootstrap.ps1   # one-command installer
+├── install-global.sh / .ps1       # global install
+├── verify.sh / verify.ps1         # verification
+├── doctor.sh / doctor.ps1         # diagnostics
+├── uninstall.sh / uninstall.ps1   # removal
+├── update-bmad.sh / .ps1          # BMAD update
+├── scripts/                       # install helpers
+├── opencode-global/               # agents, commands, skills
+├── templates/                     # AGENTS.md, OPENCODE.md, configs
+└── docs/                          # workflow, prompts, safety
 ```
-
-## Sau khi install per-project
-
-`install.sh` sẽ thêm vào project:
-
-| File | Mục đích |
-|------|----------|
-| `AGENTS.md` | Rules bắt buộc cho AI agent |
-| `OPENCODE.md` | Guide tech stack + quy trình |
-| `.opencode/opencode.json` | Config Superpowers plugin |
-| `.gitignore` | Merge thêm ignores |
-| `knip.json` | Dead code detection |
-| `lefthook.yml` | Pre-commit hooks |
-| `opencode-power-install-report.md` | Báo cáo cài đặt |
 
 ## Commands
 
 ```bash
-# Verify project đã cài đúng
 bash ~/opencode-power-kit/verify.sh
-
-# Cập nhật BMAD
 bash ~/opencode-power-kit/update-bmad.sh
-
-# Kiểm tra rtk / tokscale (không tự cài)
 bash ~/opencode-power-kit/scripts/install-token-tools.sh
 ```
 
-## Nâng cấp mạnh không cần MCP
+## Full-stack Profile
 
-Bản v2 bổ sung 9 commands + 7 skills tập trung vào **lifecycle** (spec → plan → build → test → ship) và **review chuyên sâu** (security, API contract, migration, UI, ADR). Đặc điểm:
+Stack: **Node.js + NestJS + React/Vite + MySQL**
 
-- **Không thêm MCP server nào** vào repo. Tất cả là command + skill chạy local.
-- **Không copy token, password, API key, `.env`** vào bất kỳ file nào.
-- **Không bulk-copy skill** từ repo khác — mỗi skill viết tay, scoped, có ví dụ cụ thể.
-- Tất cả command đều tôn trọng quy tắc `safe-edit`: không xóa file, không push force, không tự chạy curl|sh.
-
-## Full-stack profile: Node + NestJS + React/Vite + MySQL
-
-Bản v1.1.0 thêm 1 profile chuyên cho stack full-stack:
-
-- **Backend:** NestJS + TypeORM/Prisma.
-- **Frontend:** React + Vite + React Query / Zustand.
-- **Database:** MySQL 8.x.
-- **Auth:** JWT + RBAC.
-- **Test:** Vitest + supertest + Playwright.
-
-### Cài vào project
+### Install
 
 ```bash
-# Từ thư mục project (KHÔNG chạy trong HOME hay ~/opencode-power-kit)
+# After global install, from project directory:
+opk fullstack
+# Or:
+bash ~/opencode-power-kit/scripts/install-fullstack-profile.sh
 bash ~/opencode-power-kit/scripts/install-fullstack-profile.sh
 ```
 
-Script sẽ:
+Includes:
+- 5 profile-specific commands: `api-e2e-flow`, `docker-dev-doctor`, `env-doctor`, `fullstack-scan`, `seed-data-safe`
+- 5 profile-specific skills: `nestjs-backend`, `react-vite-frontend`, `mysql-schema-safe`, `auth-rbac-review`, `fullstack-test-strategy`
+- 9 global full-stack commands: `fullstack-scan`, `openapi-check`, `secret-scan`, `sast-check`, `e2e-plan`, `test-matrix`, `js-quality-check`, `env-doctor`, `docker-dev-doctor`
+- 8 global full-stack skills: `openapi-contract`, `secure-fullstack`, `dependency-maintenance`, `fullstack-test-strategy`, `js-ts-quality`, `env-config-safe`, `docker-compose-safe`, `nest-react-mysql`
 
-1. Backup `AGENTS.md` / `OPENCODE.md` (nếu có) vào `.opencode-power-kit-backup-<timestamp>/`.
-2. Append `AGENTS.append.md` + `OPENCODE.append.md` qua marker (idempotent).
-3. Copy 5 commands vào `.opencode/commands/fullstack/`.
-4. Copy 5 skills vào `.agents/skills/`.
-5. Tạo `FULLSTACK_PROFILE_REPORT.md` ở project.
+Best for projects using: NestJS backend, React/Vite frontend, MySQL database, JWT + RBAC auth.
 
-### Commands mới (global full-stack)
+---
 
-| Command | Mục đích |
-|---------|----------|
-| `/fullstack-scan` | Quét project full-stack (FE/BE/DB/scripts/env/docker) |
-| `/openapi-check` | Check OpenAPI spec với spectral/oasdiff (in hướng dẫn cài nếu thiếu) |
-| `/secret-scan` | Quét secret pattern với gitleaks/trufflehog |
-| `/sast-check` | SAST với semgrep |
-| `/e2e-plan` | Đề xuất Playwright E2E flow |
-| `/test-matrix` | Tạo test matrix (unit/integration/e2e/smoke) |
-| `/js-quality-check` | Detect eslint/prettier/biome/knip/vitest/tsc |
-| `/env-doctor` | Kiểm tra env an toàn, không in secret value |
-| `/docker-dev-doctor` | Kiểm tra docker-compose dev (ports, volumes, healthcheck) |
+## Safety Model
 
-### Skills mới (global full-stack)
+| Rule | Description |
+|------|-------------|
+| No `rm -rf` | Never runs destructive file removal |
+| No `git reset --hard` | Never destroys working tree |
+| No `git clean -fd` | Never force-cleans untracked files |
+| No force push | Never rewrites remote history |
+| No .env/secrets | Never reads or exposes secret values |
+| DB destructive ops require confirmation | `DROP TABLE`, `TRUNCATE`, `DELETE` without WHERE are blocked |
+| Cleanup moves to `.opk-trash/` | Never deletes, always moves with timestamp |
+| Checkpoint creates patch | `git diff` saved as `.patch` before large changes |
+| No MCP bundled | All commands are local, no MCP servers shipped |
+| No auto-update on shell start | All updates are explicit user commands |
+| Backup before overwrite | Existing files are backed up before modification |
 
-| Skill | Phạm vi |
-|-------|---------|
-| `openapi-contract` | OpenAPI 3.1 spec, status code, error format, pagination, auth |
-| `secure-fullstack` | Secrets, auth, input validation, CORS, headers, uploads, logging |
-| `dependency-maintenance` | Update dep an toàn, lockfile, renovate, audit |
-| `fullstack-test-strategy` | Test pyramid cho FE/BE/API/DB |
-| `js-ts-quality` | TypeScript, eslint/prettier/biome, knip, vitest, build |
-| `env-config-safe` | `.env`/`.env.example`, validation, secret management |
-| `docker-compose-safe` | Compose dev: ports, volumes, healthcheck, env |
-| `nest-react-mysql` | Tổng hợp rule cho stack NestJS + React/Vite + MySQL |
+---
 
-### Detect-only scripts (optional)
+## Releases
 
-Không tự cài, không sudo, không `curl|sh`. Chỉ detect + in hướng dẫn:
+| Version | Tag | Theme | Highlights |
+|---------|-----|-------|------------|
+| v1.5.0 | `v1.5.0` | Power Mode | 13 agents, 34 commands, safety guard, agent delegation, power-build |
+| v1.4.0 | `v1.4.0` | Fullstack Autopilot | build-strong fullstack-autopilot, 12 hard rules |
+| v1.3.4 | — | GSD Core Opt-in | GSD integration, update-all, verify.yml |
+| v1.3.3 | `v1.3.3` | Safety Workflows | cleanup-safe, checkpoint, handoff-save, auto-router |
+| v1.3.2 | `v1.3.2` | One-command All-in-one | opk one/go, 4-step flow, batch bootstrap |
+| v1.3.1 | — | Hardening + CI | BMAD pin, full log capture, CI strict, shfmt |
+| v1.3.0 | `v1.3.0` | Cross-platform | Windows PowerShell, bootstrap.ps1, opk.cmd |
+| v1.2.0 | `v1.2.0` | opk CLI / Setup | setup.sh, opk CLI, install-global.sh |
+| v1.1.0 | `v1.1.0` | Full-stack Profile | Node/Nest/React/MySQL profile |
+| v1.0.0 | `v1.0.0` | Production Release | Initial production release |
 
-```bash
-bash ~/opencode-power-kit/scripts/install-security-tools.sh       # gitleaks, trufflehog, semgrep
-bash ~/opencode-power-kit/scripts/install-api-tools.sh            # spectral, oasdiff, openapi-generator
-bash ~/opencode-power-kit/scripts/install-js-quality-tools.sh     # eslint, prettier, biome, knip, vitest, tsc
-```
+Full release notes: [docs/RELEASES.md](./docs/RELEASES.md)
 
-Mỗi script tạo report tương ứng (`SECURITY_TOOLS_REPORT.md`,
-`API_TOOLS_REPORT.md`, `JS_QUALITY_TOOLS_REPORT.md`).
+---
 
-### Templates mới (optional, copy sang project nếu muốn)
+## Troubleshooting
 
-- `templates/biome.json.example` — config Biome (thay ESLint + Prettier).
-- `templates/renovate.json.example` — config Renovate (auto-update dep).
-- `templates/openapi/openapi.yaml.example` — OpenAPI 3.1 skeleton.
-- `templates/openapi/spectral.yaml.example` — Spectral ruleset.
+- **GitHub Actions failing?** Verify your GitHub billing is active. The Actions runner may fail due to billing/policy issues unrelated to code quality.
+- **Local verify passes but Actions fail?** Check billing status, rerun failed jobs. If the issue persists, open an issue.
+- **Need help?** Run `opk doctor` for a read-only diagnostic, or check [docs/](./docs/) for detailed references.
 
-### Commands mới
-
-| Command | Mục đích | Dùng khi |
-|---------|----------|----------|
-| `/spec-lite` | Đặc tả ngắn (goal, scope, AC, out-of-scope) | Bắt đầu task mới, cần scope rõ trước khi code |
-| `/plan-work` | Chia task ≤ 7 bước, mỗi bước có file + test | Sau spec, cần kế hoạch atomic commit được |
-| `/build-slice` | Triển khai 1 slice, ≤ 2 file, ≤ 100 dòng diff | Theo plan, mỗi step là 1 slice |
-| `/test-proof` | Chạy/đề xuất test chứng minh | Sau khi sửa, cần proof không regress |
-| `/ship-check` | Checklist trước commit/push | Trước khi tạo PR / merge |
-| `/security-review` | Review security (secrets, auth, input) | Trước merge code có auth/input mới |
-| `/api-contract-review` | Check FE/BE API contract | Trước/sau khi thay đổi API |
-| `/migration-safe` | Kiểm tra migration an toàn | Trước khi chạy migration DB |
-| `/rtk-gain` | Chạy `rtk gain` hoặc hướng dẫn cài | Khi muốn tối ưu token usage |
-
-### Skills mới
-
-| Skill | Phạm vi |
-|-------|---------|
-| `security-review` | Secrets, auth, input validation, crypto, headers |
-| `api-contract` | Endpoint, type, status, error format, auth, pagination |
-| `database-migration-safe` | DROP/TRUNCATE/DELETE guard, backfill, rollback |
-| `test-strategy` | Pyramid, framework theo stack, minimal infra |
-| `frontend-ui-review` | A11y, layout, typography, color, state, performance |
-| `adr-architecture-decision` | Format ADR Nygard, khi nào viết |
-| `rtk-token-optimizer` | Mapping lệnh thường → rtk, alias gợi ý |
-
-## Cách dùng RTK / tokscale (không bắt buộc)
-
-RTK (Rust Token Killer) wrapper các lệnh shell phổ biến, giảm **40-60% output token**. Tokscale vẽ bar chart token usage để phát hiện request tốn token.
-
-### Kiểm tra nhanh
-
-```bash
-bash ~/opencode-power-kit/scripts/install-token-tools.sh
-```
-
-Script **không sudo**, **không tự chạy `curl|sh`**, **không bắt buộc cài**. Nó:
-1. Phát hiện rtk / tokscale trong `$PATH`.
-2. In hướng dẫn cài thủ công nếu thiếu.
-3. Tạo `TOKEN_TOOLS_REPORT.md` với hướng dẫn chi tiết.
-
-### Cài thủ công (nếu muốn)
-
-```bash
-# Cần Rust/cargo trước
-cargo install rtk
-cargo install tokscale
-# Repo: https://github.com/rtk-ai/rtk
-#       https://github.com/hasansezertasan/tokscale
-```
-
-### Dùng
-
-```bash
-# Thay vì:
-ls -la
-git status
-cargo test
-
-# Dùng:
-rtk ls
-rtk git status
-rtk cargo test
-```
-
-Hoặc alias trong `~/.bashrc`:
-```bash
-alias ls='rtk ls'
-alias cat='rtk cat'
-alias rg='rtk rg'
-alias git='rtk git'
-```
-
-Trong OpenCode, dùng command `/rtk-gain` để chạy `rtk gain` (auto-suggest alias).
-
-## Ghi chú quan trọng
-
-- Repo này **không copy MCP config** (`opencode.json` mcp section) từ bất kỳ đâu.
-- Tất cả command mới **không touch** `~/.config/opencode/opencode.json` global.
-- Nếu user muốn MCP, tự thêm vào project `.opencode/opencode.json` của họ.
-
-## An toàn
-
-- Không copy token, password, API key, `.env`.
-- Không copy `~/.config/opencode/opencode.json`.
-- Không xóa file ngoài `~/opencode-power-kit`.
-- Backup trước khi overwrite.
-- Không tự push.
+---
 
 ## License
 
