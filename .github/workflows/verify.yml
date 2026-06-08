@@ -9,7 +9,7 @@ on:
 
 jobs:
   verify:
-    name: verify v1.3.4
+    name: verify v1.5.0
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
