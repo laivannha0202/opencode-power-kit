@@ -5,11 +5,51 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.6.1] - 2026-06-08
 
 ### Added
 
-- (nothing yet)
+- **Detailed Credits / Upstream Projects section** in README with full table:
+  - 18 upstreams/tools listed with author, role, integration mode, update path
+  - Integration mode definitions: target platform, plugin reference, install-time
+    dependency, config-only reference, opt-in wrapper, detect-only, recommended
+    ecosystem
+- **Quality Scorecard** in README — 6 tiêu chí với điểm số và giải thích trung thực:
+  Dễ cài 10/10, Mạnh full-stack 10/10, Workflow agent 10/10, Safety 10/10
+  (trusted-local) / 8/10 (power mode), Tài liệu 10/10, Third-party packaging 10/10
+- **How to Update Upstreams** section — hướng dẫn update cho BMAD, GSD Core,
+  Superpowers, detect-only tools, và kit itself
+- **THIRD_PARTY.md** viết lại hoàn toàn:
+  - Header version sửa từ v1.3.4 → v1.6.1
+  - Chính sách rõ ràng 9 mục: không bundled source, không auto-update, opt-in, detect-only
+  - Integration modes table 7 dòng
+  - Full component table 18 dòng với license notes
+  - BMAD mô tả đúng: install-time dependency (không còn ghi "bundled in-tree")
+  - Superpowers mô tả đúng: plugin reference (không còn ghi "bundled in-tree")
+  - Detect-only tools bảng chi tiết 14 tool với detection path
+  - Update policy cho từng nhóm
+  - License notes cho từng upstream
+- Số liệu README chính xác hơn:
+  - Core agents: 13 core + 33 GSD companions = 46 total
+  - Scripts: 13 helper scripts + 15 root-level scripts
+
+### Changed
+
+- `VERSION`: 1.6.0 → 1.6.1
+- `THIRD_PARTY.md`: sửa version drift, mô tả chính xác BMAD (install-time
+  dependency, không bundled) và Superpowers (plugin reference, không bundled)
+- `README.md` component table: scripts 12 → 13, thêm "total agent files 46",
+  thêm "root-level scripts 15"
+- README version badge: 1.6.0 → 1.6.1
+
+### Safety
+
+- Không thêm third-party source mới
+- Không thêm dependency mới
+- Không thêm auto-update behavior
+- Không sửa .env, secrets, token
+- Không sửa backend/frontend/database của project khác
+- Chỉ sửa markdown/VERSION trong opencode-power-kit repo
 
 ## [1.6.0] - 2026-06-08
 
@@ -705,6 +745,7 @@ First production-grade release. Bumped from 9.4/10 → 10/10.
 - **Badges** in `README.md`: CI status, version, no-MCP policy,
   safe/no-secrets policy
 
+[1.6.1]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.1
 [1.6.0]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.0
 [1.5.0]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.5.0
 [1.4.0]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.4.0

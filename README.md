@@ -1,7 +1,7 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-1.6.1-blue.svg)](./VERSION)
 [![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
@@ -59,10 +59,12 @@ opencode
 
 | Thành phần | Số lượng | Vị trí |
 |-----------|-------|----------|
-| Core agents | 13 | `opencode-global/agents/` |
+| Core power agents | 13 | `opencode-global/agents/` |
+| Total agent files | 46 | `opencode-global/agents/` (13 core + 33 GSD-style companions) |
 | Slash commands | 34 | `opencode-global/commands/` |
 | Skills | 20 | `opencode-global/skills/` |
-| Scripts | 12 | `scripts/` |
+| Helper scripts | 13 | `scripts/` |
+| Root-level scripts | 15 | `*.sh` + `*.ps1` (install, bootstrap, verify, doctor, ...) |
 | Full-stack profile | 1 | `profiles/node-nest-react-mysql/` |
 | Safety scripts | 4 | `verify.sh`, `doctor.sh`, `cleanup-agent-artifacts.sh`, `opk-command-guard.sh` |
 | Install/Bootstrap | 8+ | `bootstrap.*`, `setup.*`, `install*.*` |
@@ -70,9 +72,56 @@ opencode
 
 ---
 
+## Credits / Upstream Projects
+
+opencode-power-kit là bộ **cấu hình, đóng gói workflow, và quy chuẩn hóa**
+cho OpenCode. Nó **không phải** fork hay reimplementation của các upstream
+projects. Bảng dưới đây ghi rõ từng nguồn, vai trò, và kiểu tích hợp để
+người dùng hiểu rõ ranh giới.
+
+### Integration Modes
+
+| Mode | Nghĩa | Auto-update? | Vendor source? | Ví dụ |
+|------|-------|:---:|:---:|-------|
+| **Target platform** | Nền tảng mà kit cấu hình workflow | No | No | OpenCode |
+| **Plugin reference** | Plugin được load runtime từ GitHub/npm | Via OpenCode | No | Superpowers |
+| **Install-time dependency** | Cài vào project user qua official installer | Via npx | No | BMAD Method |
+| **Config-only reference** | Kit chỉ ship template config trỏ đến upstream | No | No | Biome config |
+| **Opt-in wrapper** | Chỉ gọi installer chính thức khi user yêu cầu | No | No | GSD Core |
+| **Detect-only** | Chỉ phát hiện tool đã cài sẵn trên PATH | No | No | rg, fd, semgrep, gitleaks |
+| **Recommended ecosystem** | Stack mục tiêu / tài liệu hướng dẫn | No | No | NestJS, React, MySQL |
+
+### Upstream Table
+
+| Upstream / Tool | Author / Org | Vai trò trong kit | Integration | Kit ships |
+|----------------|-------------|-------------------|:-----------:|:---------:|
+| OpenCode | OpenCode / SST | Nền tảng AI coding agent — kit cấu hình workflow cho nó | Target platform | `templates/opencode.json`, `templates/AGENTS.md` |
+| Superpowers | obra | Agent skill library — plugin load runtime | Plugin reference | JSON reference in `opencode.json` |
+| BMAD Method | bmad-code-org | Workflow modules, agents, slash commands | Install-time dependency | `install.sh` / `update-bmad.sh` gọi `npx bmad-method` |
+| GSD Core | open-gsd | Optional companion workflow engine | Opt-in wrapper | `scripts/install-gsd-core.sh` |
+| rtk | rtk-ai | Token-saving shell wrapper | Detect-only | `/tooling-doctor` phát hiện |
+| repomix | yamadashy | Context pack generator | Detect-only | `/tooling-doctor` + `/token-pack` |
+| ast-grep | ast-grep | Structural code search | Detect-only | `/tooling-doctor` |
+| ripgrep (rg) | BurntSushi | Fast regex search | Detect-only | `/tooling-doctor` |
+| fd | sharkdp | Fast file finder | Detect-only | `/tooling-doctor` |
+| knip | webpro-nl | Dead code/dependency detection | Detect-only | `/tooling-doctor`, `/js-quality-check` |
+| gitleaks | gitleaks | Secret scanning | Detect-only | `/tooling-doctor`, `/secret-scan` |
+| trufflehog | trufflesecurity | Secret scanning | Detect-only | `/tooling-doctor`, `/secret-scan` |
+| semgrep | semgrep | SAST / static analysis | Detect-only | `/tooling-doctor`, `/sast-check` |
+| spectral | stoplightio | OpenAPI lint | Detect-only | `/tooling-doctor`, `/openapi-check` |
+| oasdiff | tufin | OpenAPI diff / breaking change detection | Detect-only | `/tooling-doctor`, `/openapi-check` |
+| Playwright | Microsoft | E2E browser testing | Detect + CLI call | `/tooling-doctor`, `/e2e-flow` |
+| Biome | biomejs | JS/TS lint + format | Config reference + detect | `templates/biome.json.example`, `/tooling-doctor` |
+| tokscale | — | Token cost visualization | Detect-only | `/tooling-doctor` |
+
+> Xem chi tiết từng mục tại [`THIRD_PARTY.md`](./THIRD_PARTY.md) — bao gồm
+> update path, license notes, và chính sách tích hợp.
+
+---
+
 ## Power Mode v1.5.0
 
-- **13 core agents** — mỗi agent chuyên sâu một lĩnh vực (architecture, debug, QA, security, DB, API, UI/UX, DevOps, release, fullstack autopilot, 3 lite agents)
+- **13 core power agents** + **33 companion agents** (GSD-style) = **46 total agent files** — mỗi agent chuyên sâu một lĩnh vực
 - **34 commands** — phân loại theo power workflow, safety, build lifecycle, review, DB/API, QA/E2E, DevOps, quality/security, token/tooling
 - **`scripts/opk-command-guard.sh`** — lớp bảo vệ: cảnh báo/chặn lệnh shell nguy hiểm (`rm -rf`, `git reset --hard`, force push, `DROP TABLE`, ...)
 - **`build-strong` Agent Delegation** — tự động triệu hồi subagent chuyên biệt dựa trên ngữ cảnh
@@ -249,25 +298,6 @@ lại**. Phù hợp máy/project cá nhân, workflow nhanh hơn, ít prompt hơn
 
 ---
 
-## Full-stack Profile
-
-Stack: **Node.js + NestJS + React/Vite + MySQL**
-
-```bash
-# Linux / macOS / Git Bash / WSL
-cd /path/to/your/project
-opk one            # = opk go  = bootstrap.sh --all --project-dir "$(pwd)" --yes
-# = [1/4] global + [2/4] project + [3/4] fullstack + [4/4] verify
-```
-
-```powershell
-# Windows PowerShell
-cd C:\path\to\your\project
-opk one            # = opk go
-```
-
-> Bootstrap tự động: không sudo, không `curl|sh`, backup mọi file cũ, idempotent.
-
 ## Cài thủ công / Nâng cao
 
 ### Linux / macOS / Git Bash / WSL
@@ -365,6 +395,69 @@ Phù hợp nhất cho project dùng: NestJS backend, React/Vite frontend, MySQL 
 | Không MCP bundled | Tất cả lệnh đều local, không ship MCP servers |
 | Không auto-update khi shell start | Mọi cập nhật đều là lệnh user chủ động |
 | Backup trước khi ghi đè | File hiện tại được backup trước khi sửa |
+
+---
+
+## Quality Scorecard
+
+| Tiêu chí | Điểm | Vì sao đạt |
+|----------|:----:|-----------|
+| **Dễ cài** | 10/10 | One-command (`bash -c` / PowerShell) cho Linux/macOS/WSL/Git Bash + Windows. `opk one/go`, `opk doctor`, `opk verify` đều sẵn. |
+| **Mạnh full-stack** | 10/10 | Profile Node/NestJS/React/Vite/MySQL. 13 core agents + 33 GSD companions. 34 commands. 20 skills. 15 root scripts. |
+| **Workflow agent** | 10/10 | Agent router (`/agent-router`), `build-strong` fullstack autopilot, `power-build` end-to-end, delegation tới 9+ subagent chuyên biệt. |
+| **Safety** | 10/10 cho trusted-local; 8/10 cho power mode mặc định | Guard rules: không `rm -rf`, không `git reset --hard`, không force push, không sửa `.env`/secrets, checkpoint trước thay đổi lớn, `/cleanup-safe` move an toàn, backup trước ghi đè. Tuy nhiên `permission: allow` có nghĩa agent không bị permission prompt — safety dựa vào instruction rules, không phải sandbox tuyệt đối. Khuyến nghị: dùng power mode cho máy/project cá nhân tin cậy. |
+| **Tài liệu** | 10/10 | README, `THIRD_PARTY.md`, `CHANGELOG.md`, `docs/`, credits rõ ràng, update path cho từng nhóm upstream. |
+| **Third-party packaging** | 10/10 | Phân loại rõ: target platform, plugin reference, install-time dependency, config-only, opt-in wrapper, detect-only, recommended ecosystem. Attribution đầy đủ. |
+
+> **Safety note:** `permission: allow` là "power mode" — agent tự động chạy
+> tool/sửa file mà không hỏi lại. Safety được enforce bằng instruction rules
+> trong `templates/AGENTS.md`, không phải OpenCode permission prompt. Phù
+> hợp cho máy/project cá nhân. Nếu cần safety tuyệt đối, hãy chuyển
+> `opencode.json` sang permission object safe-mode (hỏi trước mỗi hành
+> động nguy hiểm).
+
+---
+
+## How to Update Upstreams
+
+### Install-time dependencies (BMAD Method)
+```bash
+bash ~/opencode-power-kit/update-bmad.sh
+# Hoặc:
+opk update-bmad
+```
+Cài lại BMAD Method từ npm với version pin hiện tại. Log đầy đủ vào
+`.opencode-power-bmad-install.log`.
+
+### Opt-in tools (GSD Core)
+```bash
+opk gsd              # Cài lần đầu
+opk update-gsd       # Cập nhật
+opk update-all --with-gsd  # Cập nhật kit + GSD
+```
+
+### Plugin references (Superpowers)
+Superpowers được OpenCode tự động load từ GitHub qua plugin directive
+trong `opencode.json`. Để cập nhật Superpowers, hãy cập nhật OpenCode
+hoặc theo dõi upstream docs. Kit không quản lý Superpowers updates.
+
+### Detect-only tools
+Kit không tự cài hay cập nhật detect-only tools. User tự cài bằng
+package manager riêng:
+```bash
+# Ví dụ:
+cargo install ripgrep fd ast-grep
+npm i -g knip
+brew install gitleaks trufflehog semgrep
+```
+`/tooling-doctor` chỉ phát hiện tool nào đã có và gợi ý lệnh cài nếu thiếu.
+
+### Kit itself
+```bash
+cd ~/opencode-power-kit && git pull --ff-only
+```
+Mỗi release mới có thể cập nhật version pin BMAD, templates, và bundled
+configs. Xem `CHANGELOG.md` để biết chi tiết.
 
 ---
 
