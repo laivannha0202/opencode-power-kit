@@ -1,5 +1,21 @@
 # OpenCode Project Guide
 
+## Full Auto Permission Mode (v1.6.0)
+
+- OpenCode được cấu hình với `"permission": "allow"`.
+- Agent có thể tự chạy tool, sửa file, tạo file, chạy bash/test/build
+  mà không hỏi lại.
+- Vẫn phải tuân thủ safety rule trong instruction:
+  - Không tự `git push` nếu user chưa yêu cầu rõ.
+  - Không tự `git reset --hard`.
+  - Không tự `git clean -fd`.
+  - Không tự xóa file lớn/hàng loạt nếu chưa cần.
+  - Không tự sửa `.env`/secrets/token nếu user chưa yêu cầu rõ.
+  - Trước task lớn nên chạy `git status` và báo tóm tắt.
+  - Sau task nên chạy `git diff --stat` và báo cáo tiếng Việt.
+
+---
+
 ## Khi nào dùng Superpowers
 
 - Sửa bug → dùng Superpowers debugging skill.
@@ -39,6 +55,19 @@
 - Controller → Service → Repository pattern (NestJS).
 - naming: `camelCase` cho biến/hàm, `PascalCase` cho class/component.
 - Mỗi file max ~300 dòng, split nếu dài hơn.
+
+---
+
+## Vietnamese Language Lock
+
+Rule bắt buộc cho mọi tương tác:
+
+1. **Mặc định trả lời user bằng tiếng Việt.** Mọi kế hoạch, giải thích, báo cáo, kết luận dùng tiếng Việt.
+2. **Giữ tiếng Anh cho:** tên lệnh, slash command, tên agent, tên file/path, code, API, package name, error log, stacktrace, keyword kỹ thuật.
+3. **Không tự chuyển sang tiếng Anh.** Nếu user dùng tiếng Việt, agent đáp lại tiếng Việt.
+4. **Code/comment trong repo giữ nguyên.** Không dịch code comment.
+5. **Nếu user yêu cầu tiếng Anh** thì mới dùng tiếng Anh.
+6. **Báo cáo cuối task bằng tiếng Việt:** đã làm gì, file sửa, verify, rủi ro.
 
 ---
 

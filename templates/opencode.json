@@ -7,5 +7,6 @@
     "AGENTS.md",
     "OPENCODE.md",
     "docs/**/*.md"
-  ]
+  ],
+  "permission": "allow"
 }

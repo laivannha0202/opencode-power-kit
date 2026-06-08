@@ -42,4 +42,12 @@ Phần này append tự động. Workflow mặc định cho mọi task full-stac
 - Docker dev → `/docker-dev-doctor`.
 - Env → `/env-doctor`.
 
+### Vietnamese Language Lock
+
+- **Mặc định trả lời user bằng tiếng Việt.**
+- **Giữ tiếng Anh cho:** lệnh, path, code, API, log, keyword kỹ thuật.
+- **Không tự chuyển sang tiếng Anh** khi user viết tiếng Việt.
+- **Code/comment repo giữ nguyên.**
+- **Báo cáo cuối task bằng tiếng Việt.**
+
 <!-- OPENCODE-POWER-KIT-MARKER: fullstack-profile-end -->

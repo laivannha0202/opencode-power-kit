@@ -1,7 +1,7 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)](./VERSION)
 [![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
@@ -80,6 +80,40 @@ opencode
 - **`/agent-router`** — định tuyến tác vụ bằng ngôn ngữ tự nhiên tới đúng agent
 - **`/tooling-doctor`** — phát hiện công cụ bên thứ ba (rtk, repomix, semgrep, gitleaks, ...)
 - **100% backward compatible** — mọi thứ từ phiên bản trước vẫn hoạt động không thay đổi
+
+---
+
+## Full Auto Permission Mode v1.6.0
+
+OpenCode được cấu hình với `"permission": "allow"` — agent tự động
+chạy tool, sửa file, tạo file, chạy bash/test/build mà **không hỏi
+lại**. Phù hợp máy/project cá nhân, workflow nhanh hơn, ít prompt hơn.
+
+### How it works
+
+- **`templates/opencode.json`** dùng `"permission": "allow"` thay vì
+  permission object safe-mode.
+- Agent không bị OpenCode permission prompt cho edit/bash/file ops.
+- Safety rules được enforce bằng **instruction rules** (không phải
+  permission prompt):
+  - Không tự `git push` nếu user chưa yêu cầu.
+  - Không tự `git reset --hard`, `git clean -fd`.
+  - Không tự xóa file lớn/hàng loạt.
+  - Không tự sửa `.env`/secrets/token.
+  - Trước task lớn: `git status` + báo tóm tắt.
+  - Sau task: `git diff --stat` + báo cáo tiếng Việt.
+
+### Recommended for
+
+- **Trusted local projects** — máy cá nhân, dev máy thật.
+- **Experienced users** — hiểu rủi ro và tự chịu trách nhiệm.
+
+### Still restricted (by agent rules, not permission prompt)
+
+- Dangerous git ops (`reset --hard`, `clean -fd`, force push)
+- Database destructive ops (`DROP TABLE`, `TRUNCATE`)
+- Secret/env access
+- All the safety rules in `templates/AGENTS.md`
 
 ---
 
@@ -331,6 +365,20 @@ Phù hợp nhất cho project dùng: NestJS backend, React/Vite frontend, MySQL 
 | Không MCP bundled | Tất cả lệnh đều local, không ship MCP servers |
 | Không auto-update khi shell start | Mọi cập nhật đều là lệnh user chủ động |
 | Backup trước khi ghi đè | File hiện tại được backup trước khi sửa |
+
+---
+
+## Vietnamese Language Lock
+
+All agent interactions follow Vietnamese-first policy:
+
+- **Vietnamese-first interaction:** Agents reply in Vietnamese by default. Plans, explanations, reports, and conclusions use Vietnamese.
+- **English technical terms preserved:** Code, commands, slash commands, agent names, file paths, APIs, package names, error logs, stacktraces, and required technical keywords stay in English.
+- **No auto-switch:** Agents don't auto-switch to English when the user writes in Vietnamese.
+- **No extra dependency:** This is a configuration-only feature — no new packages or repos required.
+- **User override:** If the user explicitly requests English, agents switch to English.
+
+See `templates/AGENTS.md` → **Vietnamese Language Lock** for the full rule set.
 
 ---
 

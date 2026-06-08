@@ -60,4 +60,12 @@ KHÔNG xóa marker nếu muốn script idempotent.
 5. Chạy `/api-e2e-flow` cho happy path.
 6. Commit riêng từng layer nếu có thể.
 
+### Vietnamese Language Lock
+
+- **Mặc định trả lời user bằng tiếng Việt.** Kế hoạch, giải thích, báo cáo đều bằng tiếng Việt.
+- **Giữ tiếng Anh cho:** tên lệnh, slash command, tên agent, file/path, code, API, package name, error log, stacktrace.
+- **Không tự chuyển sang tiếng Anh** khi user đang dùng tiếng Việt.
+- **Code/comment giữ nguyên**, không dịch.
+- **Báo cáo cuối task bằng tiếng Việt**: đã làm gì, file sửa, verify, rủi ro.
+
 <!-- OPENCODE-POWER-KIT-MARKER: fullstack-profile-end -->

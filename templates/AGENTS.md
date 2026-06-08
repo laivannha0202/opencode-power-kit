@@ -50,11 +50,52 @@
 - Ưu tiên dùng `trash-put` thay vì `rm`.
 - Trước khi xóa untracked files phải chạy `git clean -nd` để xem trước.
 
+## Full Auto Permission Mode (v1.6.0)
+
+**OpenCode được cấu hình với `"permission": "allow"`.** Agent có thể
+tự chạy tool, sửa file, tạo file, chạy bash/test/build mà **không hỏi
+lại permission**. Phù hợp máy/project cá nhân.
+
+### Safety rules — vẫn tuân thủ
+
+Dù `permission: allow`, agent vẫn phải tuân theo các safety rule sau
+(được enforce bằng instruction, không phải bằng OpenCode permission
+prompt):
+
+1. **Không tự `git push`** nếu user chưa yêu cầu rõ.
+2. **Không tự `git reset --hard`**, `git clean -fd`.
+3. **Không tự xóa file lớn/hàng loạt** nếu chưa cần.
+4. **Không tự sửa `.env`/secrets/token** nếu user chưa yêu cầu rõ.
+5. **Trước task lớn:** chạy `git status` và báo tóm tắt.
+6. **Sau task:** chạy `git diff --stat` và báo cáo bằng tiếng Việt.
+
+### Kế thừa agent frontmatter (backward compatible)
+
+Mỗi agent vẫn giữ `permission` frontmatter với `"*": "ask"` fallback
+và safe command allowlist. Khi copy template qua project mới, agent
+vẫn hoạt động an toàn — **Full Auto Permission Mode** là global
+config override cho phép agent bypass permission prompt.
+
+---
+
 ## Checkpoints
 
 - Trước khi sửa lớn, dùng `/checkpoint` để snapshot working tree ra
   `.opk-checkpoints/<ts>.patch` + `.summary.md`.
 - Không `git reset --hard` để "undo" — restore từ patch bằng `git apply`.
+
+---
+
+## Vietnamese Language Lock
+
+Đây là rule bắt buộc cho toàn bộ tương tác:
+
+1. **Mặc định trả lời user bằng tiếng Việt.** Toàn bộ kế hoạch, giải thích, báo cáo, kết luận phải bằng tiếng Việt.
+2. **Giữ tiếng Anh cho:** tên lệnh, slash command, tên agent, tên file/path, code, API, package name, error log, stacktrace, keyword kỹ thuật bắt buộc.
+3. **Không tự chuyển câu trả lời sang tiếng Anh.** Nếu user viết tiếng Việt thì agent trả lời tiếng Việt.
+4. **Code/comment trong repo giữ nguyên.** Không dịch code comment hay tài liệu có sẵn.
+5. **Nếu user yêu cầu tiếng Anh** thì mới dùng tiếng Anh.
+6. **Cuối task báo cáo bằng tiếng Việt** gồm: đã làm gì, file đã sửa, kiểm tra đã chạy, rủi ro còn lại.
 
 ---
 
