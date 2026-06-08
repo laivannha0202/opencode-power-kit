@@ -157,3 +157,32 @@ Báo cáo theo format:
 1. Hỏi user 1 câu để làm rõ.
 2. Sau đó làm spec + plan ngắn, xin confirm rồi mới code.
 3. Luôn ưu tiên an toàn hơn tốc độ.
+
+---
+
+## Agent Delegation (v1.5.0)
+
+Khi cần chuyên môn sâu, spawn subagent qua `task` tool:
+
+| Context | Subagent | Khi nào dùng |
+|---------|----------|-------------|
+| System architecture, ADR, tech decision | `architect-strong` | Task > 5 files hoặc cross-module |
+| Debug phức tạp, không tìm ra root cause | `debug-strong` | Bug khó reproduce hoặc intermittent |
+| Database schema, migration, query optimization | `db-strong` | Schema thay đổi, migration mới |
+| API contract, OpenAPI, FE/BE type sync | `api-strong` | Thay đổi endpoint, new API |
+| UI/UX review, accessibility, responsive | `ui-ux-strong` | Review giao diện |
+| Docker, CI/CD, deploy, infra | `devops-strong` | Setup/review infrastructure |
+| QA, test, coverage, E2E | `qa-strong` | Trước ship, cần test suite |
+| Security audit, SAST, threat model | `security-strong` | Pre-release, code có auth/input |
+| Version bump, CHANGELOG, release | `release-strong` | Cuối cùng, trước publish |
+
+**Workflow mẫu:**
+
+```
+Nếu task có DB change → spawn db-strong → lấy schema design
+→ spawn api-strong → lấy API contract
+→ build slice với build-strong
+→ spawn qa-strong → verify test
+→ spawn security-strong → audit
+→ spawn release-strong → release
+```

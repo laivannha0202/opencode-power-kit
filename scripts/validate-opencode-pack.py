@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # ============================================================================
 # OpenCode Power Kit - Pack validator
-# opencode-power-kit v1.4.0
+# opencode-power-kit v1.5.0
 #
 # Kiểm tra cấu trúc:
 #   - opencode-global/commands/*.md phải có frontmatter + description
@@ -40,7 +40,7 @@ PROFILES_DIR = KIT_ROOT / "profiles"
 TEMPLATES_DIR = KIT_ROOT / "templates"
 
 # ─── version compliance constants ───────────────────────────────────
-EXPECTED_VERSION = "1.4.0"
+EXPECTED_VERSION = "1.5.0"
 
 AUTO_ROUTER_NEEDLES: tuple[tuple[str, str], ...] = (
     ("templates/AGENTS.md", "Natural Language Auto Router"),
@@ -51,6 +51,7 @@ CHANGELOG_NEEDLES: tuple[str, ...] = (
     "1.3.3",
     "1.3.4",
     "1.4.0",
+    "1.5.0",
     "cleanup-safe",
     "handoff-save",
     "checkpoint",
@@ -59,6 +60,9 @@ CHANGELOG_NEEDLES: tuple[str, ...] = (
     "GSD Core",
     "build-strong",
     "Fullstack-Autopilot",
+    "Power Mode",
+    "architect-strong",
+    "opk-command-guard",
 )
 
 THIRD_PARTY_NEEDLES: tuple[tuple[str, str], ...] = (
@@ -291,12 +295,12 @@ def validate_version() -> list[str]:
     else:
         errors.append("THIRD_PARTY.md missing")
 
-    # build-strong.md content needles (v1.4.0)
+    # build-strong.md content needles (v1.4.0 + v1.5.0)
     print("[build-strong agent content]")
     bs_path = GLOBAL_DIR / "agents" / "build-strong.md"
     if bs_path.is_file():
         bs_text = bs_path.read_text(encoding="utf-8")
-        for needle in ("Fullstack-Autopilot", "Hard Rules"):
+        for needle in ("Fullstack-Autopilot", "Hard Rules", "Agent Delegation"):
             if needle in bs_text:
                 ok(f"build-strong.md contains: {needle}")
             else:
@@ -328,6 +332,42 @@ def main() -> int:
 
     print("[templates/openapi]")
     errors += validate_openapi_templates()
+
+    # THIRD_PARTY.md tooling policy section (v1.5.0)
+    print("[THIRD_PARTY.md tooling policy]")
+    tp = KIT_ROOT / "THIRD_PARTY.md"
+    if tp.is_file():
+        tp_text = tp.read_text(encoding="utf-8")
+        for needle in ("Tooling Policy", "detect-only", "ast-grep"):
+            if needle in tp_text:
+                ok(f"THIRD_PARTY.md contains: {needle}")
+            else:
+                errors.append(f"THIRD_PARTY.md missing needle: {needle}")
+    else:
+        errors.append("THIRD_PARTY.md missing")
+
+    # opk-command-guard.sh exists (v1.5.0)
+    print("[opk-command-guard.sh]")
+    guard_path = KIT_ROOT / "scripts" / "opk-command-guard.sh"
+    if guard_path.is_file():
+        ok("scripts/opk-command-guard.sh exists")
+    else:
+        errors.append("scripts/opk-command-guard.sh missing")
+
+    # New agents check (v1.5.0)
+    print("[v1.5.0 new agents]")
+    agent_names = [
+        "architect-strong", "debug-strong", "qa-strong",
+        "security-strong", "db-strong", "api-strong",
+        "ui-ux-strong", "devops-strong", "release-strong",
+    ]
+    agents_dir = GLOBAL_DIR / "agents"
+    for name in agent_names:
+        agent_file = agents_dir / f"{name}.md"
+        if agent_file.is_file():
+            ok(f"agents/{name}.md exists")
+        else:
+            errors.append(f"agents/{name}.md missing")
 
     # version compliance (VERSION, THIRD_PARTY, Auto Router, CHANGELOG needles, build-strong content)
     errors += validate_version()

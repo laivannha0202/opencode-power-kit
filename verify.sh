@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────
 # verify.sh
-# opencode-power-kit v1.4.0
+# opencode-power-kit v1.5.0
 #
 # Sanity-check the power-kit. Runs on every CI run and is also safe
 # to run locally: it does not modify anything, it only inspects.
@@ -107,10 +107,27 @@ require_file "THIRD_PARTY.md"
 require_file "verify.sh"
 require_file "verify.ps1"
 require_file "opencode-global/agents/build-strong.md"
+require_file "opencode-global/agents/architect-strong.md"
+require_file "opencode-global/agents/debug-strong.md"
+require_file "opencode-global/agents/qa-strong.md"
+require_file "opencode-global/agents/security-strong.md"
+require_file "opencode-global/agents/db-strong.md"
+require_file "opencode-global/agents/api-strong.md"
+require_file "opencode-global/agents/ui-ux-strong.md"
+require_file "opencode-global/agents/devops-strong.md"
+require_file "opencode-global/agents/release-strong.md"
 require_file "opencode-global/commands/cleanup-safe.md"
 require_file "opencode-global/commands/handoff-save.md"
 require_file "opencode-global/commands/checkpoint.md"
+require_file "opencode-global/commands/agent-router.md"
+require_file "opencode-global/commands/ci-fix.md"
+require_file "opencode-global/commands/e2e-flow.md"
+require_file "opencode-global/commands/release-check.md"
+require_file "opencode-global/commands/kit-audit.md"
+require_file "opencode-global/commands/power-build.md"
+require_file "opencode-global/commands/tooling-doctor.md"
 require_file "scripts/cleanup-agent-artifacts.sh"
+require_file "scripts/opk-command-guard.sh"
 require_file "scripts/validate-opencode-pack.py"
 require_file "scripts/install-gsd-core.sh"
 require_file "scripts/install-gsd-core.ps1"
@@ -144,11 +161,12 @@ require_contains "templates/AGENTS.md" "Natural Language Auto Router"
 require_contains "templates/OPENCODE.md" "Natural Language Auto Router"
 echo
 
-# ─── CHANGELOG mentions v1.3.3 / v1.3.4 / v1.4.0 ────────────────
+# ─── CHANGELOG mentions v1.3.3 / v1.3.4 / v1.4.0 / v1.5.0 ──────
 echo "[changelog invariants]"
 require_contains "CHANGELOG.md" "1.3.3"
 require_contains "CHANGELOG.md" "1.3.4"
 require_contains "CHANGELOG.md" "1.4.0"
+require_contains "CHANGELOG.md" "1.5.0"
 require_contains "CHANGELOG.md" "build-strong"
 require_contains "CHANGELOG.md" "fullstack-autopilot"
 require_contains "CHANGELOG.md" "cleanup-safe"
@@ -157,6 +175,9 @@ require_contains "CHANGELOG.md" "checkpoint"
 require_contains "CHANGELOG.md" "Natural Language Auto Router"
 require_contains "CHANGELOG.md" "Backward compatible"
 require_contains "CHANGELOG.md" "GSD Core"
+require_contains "CHANGELOG.md" "Power Mode"
+require_contains "CHANGELOG.md" "architect-strong"
+require_contains "CHANGELOG.md" "opk-command-guard"
 require_contains "THIRD_PARTY.md" "BMAD"
 require_contains "THIRD_PARTY.md" "GSD Core"
 
@@ -166,12 +187,14 @@ require_contains "opencode-global/agents/build-strong.md" "Fullstack-Autopilot"
 require_contains "opencode-global/agents/build-strong.md" "Hard Rules"
 require_contains "opencode-global/agents/build-strong.md" "vertical slice"
 require_contains "opencode-global/agents/build-strong.md" "cleanup-safe"
+require_contains "opencode-global/agents/build-strong.md" "Agent Delegation"
 echo
 
 # ─── Script sanity (shellcheck optional, syntax required) ─────────
 echo "[script sanity]"
 SCRIPTS_TO_CHECK=(
 	"scripts/cleanup-agent-artifacts.sh"
+	"scripts/opk-command-guard.sh"
 	"scripts/install-gsd-core.sh"
 	"verify.sh"
 )
@@ -194,6 +217,7 @@ done
 if command -v shellcheck >/dev/null 2>&1; then
 	SHELLCHECK_FILES=(
 		"scripts/cleanup-agent-artifacts.sh"
+		"scripts/opk-command-guard.sh"
 		"scripts/install-gsd-core.sh"
 		"verify.sh"
 	)

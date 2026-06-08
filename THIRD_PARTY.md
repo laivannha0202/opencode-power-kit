@@ -107,6 +107,38 @@ explicit integration in a future release.
 
 ---
 
+## 5. Third-Party Tooling Policy (v1.5.0)
+
+**The kit detects or documents the following tools but NEVER vendors
+their source, NEVER auto-updates on shell start, and NEVER runs their
+installer without explicit user command.**
+
+| Tool | Purpose | Detection | Policy |
+|------|---------|-----------|--------|
+| rtk | Token-saving shell wrapper | `/tooling-doctor` | detect-only |
+| repomix | Context pack generator | `/tooling-doctor` | detect-only |
+| ast-grep | Code search / structural | `/tooling-doctor` | detect-only |
+| rg (ripgrep) | Fast regex search | `/tooling-doctor` | detect-only |
+| fd | Fast file find | `/tooling-doctor` | detect-only |
+| knip | Dead code detection | `/tooling-doctor` | detect-only |
+| gitleaks | Git secret scanning | `/tooling-doctor` | detect-only |
+| trufflehog | Secret scanning | `/tooling-doctor` | detect-only |
+| semgrep | SAST / static analysis | `/tooling-doctor` | detect-only |
+| spectral | OpenAPI lint | `/tooling-doctor` | detect-only |
+| oasdiff | OpenAPI diff | `/tooling-doctor` | detect-only |
+| Playwright | E2E browser testing | `/tooling-doctor`, `/e2e-flow` | detect + call CLI |
+| Biome | Lint / format | `/tooling-doctor` | detect-only |
+| tokscale | Token cost visualization | `/tooling-doctor` | detect-only |
+
+The `/tooling-doctor` command detects which tools are installed and
+prints install hints for missing ones. The kit NEVER runs `cargo install`,
+`npm i -g`, `pip install`, `brew install`, `go install`, or any package
+manager on behalf of the user — it only prints the command the user
+can run themselves.
+
+The `/e2e-flow` command may call `npx playwright test` if Playwright is
+present, but it never installs Playwright itself.
+
 _If you add a new optional integration, follow the same shape:_
 _add a row to this table, prefer forwarding to the official_
 _installer, and never auto-update on shell start._

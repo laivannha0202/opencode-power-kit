@@ -1,7 +1,7 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/nguoikhongten02022005-cell/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/nguoikhongten02022005-cell/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](./VERSION)
 [![BMAD](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](#cấu-hình-bmad)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#ghi-chu-quan-trong)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#an-toan)
@@ -9,26 +9,85 @@
 
 Toolkit dùng lại cho mọi project OpenCode — cài Superpowers + BMAD Method chỉ với 1 lệnh, hỗ trợ **Linux / macOS / Windows PowerShell** (Git Bash / WSL / native).
 
+## Có gì mới trong v1.5.0 — Power Mode
+
+- **9 new agents** (tổng cộng 13 agents) — mỗi agent chuyên sâu một lĩnh vực:
+  - `architect-strong` — system architecture, ADR, design decisions
+  - `debug-strong` — deep debug với scientific method, checkpoint
+  - `qa-strong` — QA/testing, coverage analysis, regression testing
+  - `security-strong` — SAST, secret scan, threat model, dependency audit
+  - `db-strong` — schema design, migration safety, query optimization
+  - `api-strong` — API contract, OpenAPI spec, FE/BE sync, type generation
+  - `ui-ux-strong` — UI/UX review, accessibility, responsive design
+  - `devops-strong` — Docker, CI/CD, deploy, infrastructure
+  - `release-strong` — version bump, CHANGELOG, tag, publish
+- **7 new commands** (34 commands total) — `/agent-router`, `/ci-fix`,
+  `/e2e-flow`, `/release-check`, `/kit-audit`, `/power-build`, `/tooling-doctor`
+- **`scripts/opk-command-guard.sh`** — safety guard: warning/block nguy hiểm
+  commands (`rm -rf`, `git reset --hard`, force push, DROP TABLE...)
+- **build-strong Agent Delegation** — tự động spawn agent chuyên môn theo nhu cầu
+- **Power Mode** — `/power-build` workflow: spec → architecture → implementation
+  → QA → security → release, chỉ 1 câu lệnh duy nhất
+- **Backward compatible 100%** — mọi thứ cũ vẫn hoạt động nguyên xi
+
+Xem section [Power Mode — dùng 13 agents chuyên môn](#power-mode--dùng-13-agents-chuyên-môn).
+
 ## Có gì mới trong v1.4.0
 
 - **`build-strong` → fullstack-autopilot** — agent `build-strong` được nâng
   cấp thành fullstack-autopilot mạnh mẽ hơn nhưng vẫn an toàn. Tự động xử
   lý task full-stack theo flow chuẩn:
-  1. `git status` → detect stack/backend/frontend/database → đọc package scripts
-  2. Checkpoint trước sửa lớn (`/checkpoint`)
-  3. Spec ngắn + acceptance criteria + API contract
-  4. Plan-work chia vertical slice nhỏ
-  5. Build từng slice — đảm bảo FE/BE/API/DB contract khớp
-  6. Chạy lint/typecheck/test/build; nếu không có test → manual proof bảng
-  7. Cleanup file tạm (`/cleanup-safe`)
-  8. Handoff nếu task lớn (`/handoff-save`)
-  9. Báo cáo cuối: file sửa, lý do, verify result, git status
+   1. `git status` → detect stack/backend/frontend/database → đọc package scripts
+   2. Checkpoint trước sửa lớn (`/checkpoint`)
+   3. Spec ngắn + acceptance criteria + API contract
+   4. Plan-work chia vertical slice nhỏ
+   5. Build từng slice — đảm bảo FE/BE/API/DB contract khớp
+   6. Chạy lint/typecheck/test/build; nếu không có test → manual proof bảng
+   7. Cleanup file tạm (`/cleanup-safe`)
+   8. Handoff nếu task lớn (`/handoff-save`)
+   9. Báo cáo cuối: file sửa, lý do, verify result, git status
 - **Guard an toàn nghiêm ngặt** — hard rules: không `rm -rf`, không
   `git reset --hard`, không `git clean -fd`, không force push, không sửa
   `.env`, không DROP/TRUNCATE/DELETE không hỏi trước.
 - **Backward compatible 100%** — agent vẫn tên `build-strong`, mode `all`,
   không thay đổi frontmatter hay permission. Phiên bản cũ vẫn dùng được.
 - Xem cách dùng chi tiết ở section [Dùng build-strong cho fullstack-auto](#dùng-build-strong-cho-fullstack-auto).
+
+## Power Mode — dùng 13 agents chuyên môn
+
+Bắt đầu từ v1.5.0, kit có 13 agents chuyên sâu. Dùng `/agent-router` để
+tự động route task hoặc spawn trực tiếp:
+
+| Agent | Chuyên môn | Dùng khi |
+|-------|-----------|----------|
+| `build-strong` | Fullstack autopilot | Task fullstack chính |
+| `architect-strong` | System architecture, ADR | Task > 5 files, cross-module |
+| `debug-strong` | Deep debug | Bug phức tạp, không tìm ra root cause |
+| `qa-strong` | QA/testing, coverage | Trước ship, cần test suite |
+| `security-strong` | Security audit, SAST | Pre-release, code có auth/input mới |
+| `db-strong` | Database, migration, query | Schema thay đổi, migration, optimize |
+| `api-strong` | API contract, OpenAPI | Thay đổi endpoint, FE/BE sync |
+| `ui-ux-strong` | UI/UX review, a11y | Review giao diện, responsive |
+| `devops-strong` | Docker, CI/CD, deploy | Setup/review infrastructure |
+| `release-strong` | Version bump, CHANGELOG | Cuối cùng, trước release |
+| `plan-lite` | Kế hoạch tiết kiệm token | Task nhỏ, cần plan nhanh |
+| `review-lite` | Review code/diff | Code review nhanh |
+| `debug-lite` | Debug nhanh | Bug đơn giản |
+
+**Workflow khuyến nghị:**
+
+```bash
+# Full workflow tự động
+/agent-router "thêm tính năng đăng nhập bằng Google"
+
+# Hoặc spawn thủ công từng bước
+# 1. @architect-strong thiết kế giải pháp
+# 2. @db-strong thiết kế schema
+# 3. @build-strong implement
+# 4. @qa-strong viết test
+# 5. @security-strong audit
+# 6. @release-strong release
+```
 
 ## Dùng build-strong cho fullstack-auto
 
@@ -414,7 +473,16 @@ bash ~/opencode-power-kit/install.sh
 │   │   ├── plan-lite.md
 │   │   ├── review-lite.md
 │   │   ├── debug-lite.md
-│   │   └── build-strong.md
+│   │   ├── build-strong.md
+│   │   ├── architect-strong.md
+│   │   ├── debug-strong.md
+│   │   ├── qa-strong.md
+│   │   ├── security-strong.md
+│   │   ├── db-strong.md
+│   │   ├── api-strong.md
+│   │   ├── ui-ux-strong.md
+│   │   ├── devops-strong.md
+│   │   └── release-strong.md
 │   ├── commands/          # Commands theo nhu cầu
 │   │   ├── smart-scan.md
 │   │   ├── bugfix-safe.md
@@ -422,15 +490,25 @@ bash ~/opencode-power-kit/install.sh
 │   │   ├── repo-map.md
 │   │   ├── token-pack.md
 │   │   ├── db-readonly.md
-│   │   ├── spec-lite.md           # v2: đặc tả ngắn
-│   │   ├── plan-work.md           # v2: chia task nhỏ
-│   │   ├── build-slice.md         # v2: triển khai slice
-│   │   ├── test-proof.md          # v2: chứng minh test
-│   │   ├── ship-check.md          # v2: checklist ship
-│   │   ├── security-review.md     # v2: review security
-│   │   ├── api-contract-review.md # v2: review API contract
-│   │   ├── migration-safe.md      # v2: check migration
-│   │   └── rtk-gain.md            # v2: tối ưu token với rtk
+│   │   ├── spec-lite.md
+│   │   ├── plan-work.md
+│   │   ├── build-slice.md
+│   │   ├── test-proof.md
+│   │   ├── ship-check.md
+│   │   ├── security-review.md
+│   │   ├── api-contract-review.md
+│   │   ├── migration-safe.md
+│   │   ├── rtk-gain.md
+│   │   ├── cleanup-safe.md
+│   │   ├── handoff-save.md
+│   │   ├── checkpoint.md
+│   │   ├── agent-router.md
+│   │   ├── ci-fix.md
+│   │   ├── e2e-flow.md
+│   │   ├── release-check.md
+│   │   ├── kit-audit.md
+│   │   ├── power-build.md
+│   │   └── tooling-doctor.md
 │   └── skills/            # Skills load theo nhu cầu
 │       ├── token-smart-code/
 │       ├── serena-first/

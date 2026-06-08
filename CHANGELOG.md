@@ -5,6 +5,52 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-06-08
+
+### Added
+
+- **9 new agents** — opencode-power-kit giờ có tổng cộng 13 agents:
+  - `architect-strong` — system architecture, ADR, design decisions
+  - `debug-strong` — deep debug với scientific method, checkpoint
+  - `qa-strong` — QA/testing, coverage analysis, regression testing
+  - `security-strong` — SAST, secret scan, threat model, dependency audit
+  - `db-strong` — schema design, migration safety, query optimization
+  - `api-strong` — API contract, OpenAPI spec, FE/BE sync, type generation
+  - `ui-ux-strong` — UI/UX review, accessibility, responsive design
+  - `devops-strong` — Docker, CI/CD, deploy, infrastructure
+  - `release-strong` — version bump, CHANGELOG, tag, publish
+- **7 new commands** (34 commands total):
+  - `/agent-router` — tự động route task sang agent chuyên môn
+  - `/ci-fix` — đọc lỗi CI/test/build rồi sửa an toàn
+  - `/e2e-flow` — lập và chạy E2E proof với Playwright
+  - `/release-check` — kiểm tra VERSION/README/CHANGELOG/tag trước release
+  - `/kit-audit` — audit chính opencode-power-kit (cấu trúc, version, agents)
+  - `/power-build` — workflow tổng hợp spec→architecture→impl→QA→security→release
+  - `/tooling-doctor` — detect third-party tooling (rtk, repomix, semgrep, ...)
+- **`scripts/opk-command-guard.sh`** — safety guard cho shell commands: cảnh
+  báo/chặn `rm -rf`, `git reset --hard`, `git clean -fd`, force push,
+  `DROP TABLE`, `DELETE FROM` không WHERE. Có allowlist cho thao tác an toàn.
+  Có thể source vào shell (PROMPT_COMMAND) hoặc dùng độc lập.
+- **`build-strong` Agent Delegation** — agent build-strong giờ có hướng dẫn
+  spawn 9 subagent chuyên môn theo context: architect cho design, debug-strong
+  cho lỗi phức tạp, db-strong cho migration, api-strong cho contract, v.v.
+- **Power Mode** — workflow `/power-build` tích hợp tất cả agents: spec →
+  architecture → implementation → QA → security → release. Một câu lệnh duy
+  nhất cho toàn bộ lifecycle.
+- **README Power Mode section** — hướng dẫn dùng 13 agents + 34 commands với
+  bảng agent routing và use cases.
+- **`THIRD_PARTY.md` tooling policy** — thêm section "Third-Party Tooling
+  Policy" liệt kê các tools detect-only và quy tắc: không vendor source,
+  không auto-update, detect-only hoặc gọi official CLI.
+
+### Backward compatibility
+
+- **100% backward compatible.** Tất cả agent/command hiện có giữ nguyên tên,
+  mode, frontmatter, permission.
+- `verify.sh` / `verify.ps1` thêm checks cho v1.5.0 content.
+- `validate-opencode-pack.py` version pin lên 1.5.0, thêm needles cho agents
+  mới, commands mới, guard script.
+
 ## [1.4.0] - 2026-06-08
 
 ### Added

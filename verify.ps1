@@ -1,6 +1,6 @@
 # ─────────────────────────────────────────────────────────────────
 # verify.ps1
-# opencode-power-kit v1.4.0
+# opencode-power-kit v1.5.0
 #
 # PowerShell mirror of verify.sh. Read-only sanity check.
 #
@@ -102,10 +102,27 @@ Require-File 'THIRD_PARTY.md'
 Require-File 'verify.sh'
 Require-File 'verify.ps1'
 Require-File 'opencode-global/agents/build-strong.md'
+Require-File 'opencode-global/agents/architect-strong.md'
+Require-File 'opencode-global/agents/debug-strong.md'
+Require-File 'opencode-global/agents/qa-strong.md'
+Require-File 'opencode-global/agents/security-strong.md'
+Require-File 'opencode-global/agents/db-strong.md'
+Require-File 'opencode-global/agents/api-strong.md'
+Require-File 'opencode-global/agents/ui-ux-strong.md'
+Require-File 'opencode-global/agents/devops-strong.md'
+Require-File 'opencode-global/agents/release-strong.md'
 Require-File 'opencode-global/commands/cleanup-safe.md'
 Require-File 'opencode-global/commands/handoff-save.md'
 Require-File 'opencode-global/commands/checkpoint.md'
+Require-File 'opencode-global/commands/agent-router.md'
+Require-File 'opencode-global/commands/ci-fix.md'
+Require-File 'opencode-global/commands/e2e-flow.md'
+Require-File 'opencode-global/commands/release-check.md'
+Require-File 'opencode-global/commands/kit-audit.md'
+Require-File 'opencode-global/commands/power-build.md'
+Require-File 'opencode-global/commands/tooling-doctor.md'
 Require-File 'scripts/cleanup-agent-artifacts.sh'
+Require-File 'scripts/opk-command-guard.sh'
 Require-File 'scripts/validate-opencode-pack.py'
 Require-File 'scripts/install-gsd-core.sh'
 Require-File 'scripts/install-gsd-core.ps1'
@@ -130,11 +147,12 @@ Require-Contains 'templates/AGENTS.md' 'Natural Language Auto Router'
 Require-Contains 'templates/OPENCODE.md' 'Natural Language Auto Router'
 Write-Host ''
 
-# ─── CHANGELOG mentions v1.3.3 / v1.3.4 / v1.4.0 ────────────────
+# ─── CHANGELOG mentions v1.3.3 / v1.3.4 / v1.4.0 / v1.5.0 ──────
 Write-Host '[changelog invariants]'
 Require-Contains 'CHANGELOG.md' '1.3.3'
 Require-Contains 'CHANGELOG.md' '1.3.4'
 Require-Contains 'CHANGELOG.md' '1.4.0'
+Require-Contains 'CHANGELOG.md' '1.5.0'
 Require-Contains 'CHANGELOG.md' 'build-strong'
 Require-Contains 'CHANGELOG.md' 'fullstack-autopilot'
 Require-Contains 'CHANGELOG.md' 'cleanup-safe'
@@ -143,6 +161,9 @@ Require-Contains 'CHANGELOG.md' 'checkpoint'
 Require-Contains 'CHANGELOG.md' 'Natural Language Auto Router'
 Require-Contains 'CHANGELOG.md' 'Backward compatible'
 Require-Contains 'CHANGELOG.md' 'GSD Core'
+Require-Contains 'CHANGELOG.md' 'Power Mode'
+Require-Contains 'CHANGELOG.md' 'architect-strong'
+Require-Contains 'CHANGELOG.md' 'opk-command-guard'
 Require-Contains 'THIRD_PARTY.md' 'BMAD'
 Require-Contains 'THIRD_PARTY.md' 'GSD Core'
 
@@ -152,6 +173,7 @@ Require-Contains 'opencode-global/agents/build-strong.md' 'Fullstack-Autopilot'
 Require-Contains 'opencode-global/agents/build-strong.md' 'Hard Rules'
 Require-Contains 'opencode-global/agents/build-strong.md' 'vertical slice'
 Require-Contains 'opencode-global/agents/build-strong.md' 'cleanup-safe'
+Require-Contains 'opencode-global/agents/build-strong.md' 'Agent Delegation'
 Write-Host ''
 
 # ─── PowerShell parser self-check ─────────────────────────────────
