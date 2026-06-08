@@ -273,7 +273,7 @@ function Show-HelpText {
     Write-Host "OpenCode Power Kit v$ver"
     Write-Host ""
     Write-Host "Dung nhanh (30 giay):"
-    Write-Host "  git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git C:\opencode-power-kit"
+    Write-Host "  git clone https://github.com/laivannha0202/opencode-power-kit.git C:\opencode-power-kit"
     Write-Host "  cd C:\opencode-power-kit"
     Write-Host "  powershell -ExecutionPolicy Bypass -File .\setup.ps1 -Global"
     Write-Host ""

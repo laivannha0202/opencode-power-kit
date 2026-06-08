@@ -28,7 +28,7 @@
 
 ### Bước 1: Clone power kit (lần đầu)
 ```bash
-git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git ~/opencode-power-kit
+git clone https://github.com/laivannha0202/opencode-power-kit.git ~/opencode-power-kit
 ```
 
 ### Bước 2: Vào project cần cài
@@ -89,12 +89,12 @@ gh repo create opencode-power-kit --private --source=. --remote=origin --push
 
 ### Clone trên máy khác
 ```bash
-git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git ~/opencode-power-kit
+git clone https://github.com/laivannha0202/opencode-power-kit.git ~/opencode-power-kit
 ```
 
 ---
 
 ## GitHub URL
 
-- **Repository:** https://github.com/nguoikhongten02022005-cell/opencode-power-kit
-- **Clone:** `git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git ~/opencode-power-kit`
+- **Repository:** https://github.com/laivannha0202/opencode-power-kit
+- **Clone:** `git clone https://github.com/laivannha0202/opencode-power-kit.git ~/opencode-power-kit`

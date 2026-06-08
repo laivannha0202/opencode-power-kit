@@ -280,7 +280,7 @@ show_help_text() {
 OpenCode Power Kit v$(cat "$KIT_DIR/VERSION")
 
 Dùng nhanh (30 giây):
-  git clone https://github.com/nguoikhongten02022005-cell/opencode-power-kit.git ~/opencode-power-kit
+  git clone https://github.com/laivannha0202/opencode-power-kit.git ~/opencode-power-kit
   cd ~/opencode-power-kit
   bash setup.sh --global
 
