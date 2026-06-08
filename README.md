@@ -9,6 +9,71 @@
 
 Toolkit dùng lại cho mọi project OpenCode — cài Superpowers + BMAD Method chỉ với 1 lệnh, hỗ trợ **Linux / macOS / Windows PowerShell** (Git Bash / WSL / native).
 
+## Có gì mới trong v1.4.0
+
+- **`build-strong` → fullstack-autopilot** — agent `build-strong` được nâng
+  cấp thành fullstack-autopilot mạnh mẽ hơn nhưng vẫn an toàn. Tự động xử
+  lý task full-stack theo flow chuẩn:
+  1. `git status` → detect stack/backend/frontend/database → đọc package scripts
+  2. Checkpoint trước sửa lớn (`/checkpoint`)
+  3. Spec ngắn + acceptance criteria + API contract
+  4. Plan-work chia vertical slice nhỏ
+  5. Build từng slice — đảm bảo FE/BE/API/DB contract khớp
+  6. Chạy lint/typecheck/test/build; nếu không có test → manual proof bảng
+  7. Cleanup file tạm (`/cleanup-safe`)
+  8. Handoff nếu task lớn (`/handoff-save`)
+  9. Báo cáo cuối: file sửa, lý do, verify result, git status
+- **Guard an toàn nghiêm ngặt** — hard rules: không `rm -rf`, không
+  `git reset --hard`, không `git clean -fd`, không force push, không sửa
+  `.env`, không DROP/TRUNCATE/DELETE không hỏi trước.
+- **Backward compatible 100%** — agent vẫn tên `build-strong`, mode `all`,
+  không thay đổi frontmatter hay permission. Phiên bản cũ vẫn dùng được.
+- Xem cách dùng chi tiết ở section [Dùng build-strong cho fullstack-auto](#dùng-build-strong-cho-fullstack-auto).
+
+## Dùng build-strong cho fullstack-auto
+
+Agent `build-strong` (mặc định trong kit) đã được nâng cấp thành
+**fullstack-autopilot**. Để dùng:
+
+```bash
+# Mở OpenCode, trong project của bạn, nói tự nhiên:
+# "làm tính năng X fullstack"
+# "thêm API Y"
+# "fix lỗi Z"
+
+# Hoặc gọi agent trực tiếp:
+# @build-strong làm tính năng đăng nhập
+```
+
+Agent sẽ tự động chạy full workflow: spec → plan → build slice → verify.
+
+### Ví dụ
+
+| Bạn nói | Agent làm |
+|---------|-----------|
+| `@build-strong thêm API CRUD user` | Spec ngắn → plan slice (DB → BE → FE) → build → verify |
+| `@build-strong sửa lỗi login không redirect` | git status → detect stack → debug → fix nhỏ → verify |
+| `@build-strong thêm validation cho form đăng ký` | Check contract FE/BE → thêm validation 2 phía → test |
+
+### Workflow chi tiết
+
+Agent tuân thủ 8 bước:
+
+```
+git status → detect stack → /checkpoint (nếu lớn)
+→ spec + AC → plan → build slice → verify → báo cáo
+```
+
+- Kiểm soát contract FE/BE/DB ở mỗi slice.
+- Không tự push, không tự migration nguy hiểm.
+- Dùng `/checkpoint` và `/cleanup-safe` tích hợp sẵn.
+- Báo cáo cuối: file sửa, lý do, test result, diff.
+
+### Backward compat
+
+Agent vẫn tên `build-strong`, mode `all`. Mọi script gọi `@build-strong`
+trong code cũ vẫn hoạt động. Không cần thay đổi config.
+
 ## Có gì mới trong v1.3.4
 
 - **GSD Core opt-in integration** — `opk gsd` / `opk update-gsd` chuyển

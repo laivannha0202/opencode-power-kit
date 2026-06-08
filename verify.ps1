@@ -1,6 +1,6 @@
 # ─────────────────────────────────────────────────────────────────
 # verify.ps1
-# opencode-power-kit v1.3.4
+# opencode-power-kit v1.4.0
 #
 # PowerShell mirror of verify.sh. Read-only sanity check.
 #
@@ -101,6 +101,7 @@ Require-File 'README.md'
 Require-File 'THIRD_PARTY.md'
 Require-File 'verify.sh'
 Require-File 'verify.ps1'
+Require-File 'opencode-global/agents/build-strong.md'
 Require-File 'opencode-global/commands/cleanup-safe.md'
 Require-File 'opencode-global/commands/handoff-save.md'
 Require-File 'opencode-global/commands/checkpoint.md'
@@ -129,10 +130,13 @@ Require-Contains 'templates/AGENTS.md' 'Natural Language Auto Router'
 Require-Contains 'templates/OPENCODE.md' 'Natural Language Auto Router'
 Write-Host ''
 
-# ─── CHANGELOG mentions v1.3.3 / v1.3.4 ──────────────────────────
+# ─── CHANGELOG mentions v1.3.3 / v1.3.4 / v1.4.0 ────────────────
 Write-Host '[changelog invariants]'
 Require-Contains 'CHANGELOG.md' '1.3.3'
 Require-Contains 'CHANGELOG.md' '1.3.4'
+Require-Contains 'CHANGELOG.md' '1.4.0'
+Require-Contains 'CHANGELOG.md' 'build-strong'
+Require-Contains 'CHANGELOG.md' 'fullstack-autopilot'
 Require-Contains 'CHANGELOG.md' 'cleanup-safe'
 Require-Contains 'CHANGELOG.md' 'handoff-save'
 Require-Contains 'CHANGELOG.md' 'checkpoint'
@@ -141,6 +145,13 @@ Require-Contains 'CHANGELOG.md' 'Backward compatible'
 Require-Contains 'CHANGELOG.md' 'GSD Core'
 Require-Contains 'THIRD_PARTY.md' 'BMAD'
 Require-Contains 'THIRD_PARTY.md' 'GSD Core'
+
+# ─── build-strong.md content ─────────────────────────────────────
+Write-Host '[build-strong agent content]'
+Require-Contains 'opencode-global/agents/build-strong.md' 'Fullstack-Autopilot'
+Require-Contains 'opencode-global/agents/build-strong.md' 'Hard Rules'
+Require-Contains 'opencode-global/agents/build-strong.md' 'vertical slice'
+Require-Contains 'opencode-global/agents/build-strong.md' 'cleanup-safe'
 Write-Host ''
 
 # ─── PowerShell parser self-check ─────────────────────────────────

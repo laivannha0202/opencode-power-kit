@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # ============================================================================
 # OpenCode Power Kit - Pack validator
-# opencode-power-kit v1.3.4
+# opencode-power-kit v1.4.0
 #
 # Kiểm tra cấu trúc:
 #   - opencode-global/commands/*.md phải có frontmatter + description
@@ -19,6 +19,12 @@
 #   - Natural Language Auto Router có mặt trong templates/AGENTS.md và
 #     templates/OPENCODE.md
 #
+# v1.4.0 bổ sung:
+#   - VERSION pin = "1.4.0"
+#   - CHANGELOG.md chứa thêm needle build-strong / Fullstack-Autopilot
+#   - opencode-global/agents/build-strong.md chứa Fullstack-Autopilot /
+#     Hard Rules / vertical slice / cleanup-safe
+#
 # Exit code 0 nếu pass, 1 nếu fail.
 # ============================================================================
 from __future__ import annotations
@@ -33,8 +39,8 @@ GLOBAL_DIR = KIT_ROOT / "opencode-global"
 PROFILES_DIR = KIT_ROOT / "profiles"
 TEMPLATES_DIR = KIT_ROOT / "templates"
 
-# ─── v1.3.4 compliance constants ────────────────────────────────────
-EXPECTED_VERSION = "1.3.4"
+# ─── version compliance constants ───────────────────────────────────
+EXPECTED_VERSION = "1.4.0"
 
 AUTO_ROUTER_NEEDLES: tuple[tuple[str, str], ...] = (
     ("templates/AGENTS.md", "Natural Language Auto Router"),
@@ -44,12 +50,15 @@ AUTO_ROUTER_NEEDLES: tuple[tuple[str, str], ...] = (
 CHANGELOG_NEEDLES: tuple[str, ...] = (
     "1.3.3",
     "1.3.4",
+    "1.4.0",
     "cleanup-safe",
     "handoff-save",
     "checkpoint",
     "Natural Language Auto Router",
     "Backward compatible",
     "GSD Core",
+    "build-strong",
+    "Fullstack-Autopilot",
 )
 
 THIRD_PARTY_NEEDLES: tuple[tuple[str, str], ...] = (
@@ -217,13 +226,13 @@ def validate_openapi_templates() -> list[str]:
     return errors
 
 
-# ─── v1.3.4 compliance section ──────────────────────────────────────
-def validate_v134() -> list[str]:
-    """v1.3.4 release invariants. Returns list of error messages."""
+# ─── version compliance section ─────────────────────────────────────
+def validate_version() -> list[str]:
+    """Release invariants for current EXPECTED_VERSION. Returns list of error messages."""
     errors: list[str] = []
 
     # VERSION file pin
-    print("[v1.3.4 VERSION]")
+    print(f"[VERSION == {EXPECTED_VERSION}]")
     version_path = KIT_ROOT / "VERSION"
     if version_path.is_file():
         current = version_path.read_text(encoding="utf-8").strip()
@@ -236,17 +245,17 @@ def validate_v134() -> list[str]:
     else:
         errors.append(f"VERSION file missing at {version_path}")
 
-    # Optional v1.3.4 hint files (warn-only, do not fail on missing)
-    print("[v1.3.4 hint files (optional, warn-only)]")
+    # Optional hint files (warn-only, do not fail on missing)
+    print("[hint files (optional, warn-only)]")
     for rel in V134_HINT_FILES:
         p = KIT_ROOT / rel
         if p.is_file():
             ok(f"present: {rel}")
         else:
-            print(f"  warn: missing optional v1.3.4 file: {rel}")
+            print(f"  warn: missing optional file: {rel}")
 
     # Natural Language Auto Router presence
-    print("[v1.3.4 Natural Language Auto Router]")
+    print("[Natural Language Auto Router]")
     for rel, needle in AUTO_ROUTER_NEEDLES:
         p = KIT_ROOT / rel
         if p.is_file() and needle in p.read_text(encoding="utf-8"):
@@ -255,7 +264,7 @@ def validate_v134() -> list[str]:
             errors.append(f"{rel} missing needle: {needle}")
 
     # CHANGELOG needles
-    print("[v1.3.4 CHANGELOG invariants]")
+    print("[CHANGELOG invariants]")
     cl = KIT_ROOT / "CHANGELOG.md"
     if cl.is_file():
         text = cl.read_text(encoding="utf-8")
@@ -269,7 +278,7 @@ def validate_v134() -> list[str]:
         errors.append("CHANGELOG.md missing")
 
     # THIRD_PARTY.md needles
-    print("[v1.3.4 THIRD_PARTY.md invariants]")
+    print("[THIRD_PARTY.md invariants]")
     tp = KIT_ROOT / "THIRD_PARTY.md"
     if tp.is_file():
         text = tp.read_text(encoding="utf-8")
@@ -281,6 +290,19 @@ def validate_v134() -> list[str]:
                 errors.append(f"{rel} missing needle: {needle}")
     else:
         errors.append("THIRD_PARTY.md missing")
+
+    # build-strong.md content needles (v1.4.0)
+    print("[build-strong agent content]")
+    bs_path = GLOBAL_DIR / "agents" / "build-strong.md"
+    if bs_path.is_file():
+        bs_text = bs_path.read_text(encoding="utf-8")
+        for needle in ("Fullstack-Autopilot", "Hard Rules"):
+            if needle in bs_text:
+                ok(f"build-strong.md contains: {needle}")
+            else:
+                errors.append(f"build-strong.md missing needle: {needle}")
+    else:
+        errors.append("opencode-global/agents/build-strong.md missing")
 
     return errors
 
@@ -307,8 +329,8 @@ def main() -> int:
     print("[templates/openapi]")
     errors += validate_openapi_templates()
 
-    # v1.3.4 release compliance (VERSION, THIRD_PARTY, Auto Router, CHANGELOG needles)
-    errors += validate_v134()
+    # version compliance (VERSION, THIRD_PARTY, Auto Router, CHANGELOG needles, build-strong content)
+    errors += validate_version()
 
     if errors:
         print("\nPack validation FAILED:", file=sys.stderr)

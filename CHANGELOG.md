@@ -5,6 +5,40 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-06-08
+
+### Added
+
+- **`build-strong` → fullstack-autopilot** — agent `build-strong` được nâng
+  cấp thành fullstack-autopilot với quy trình tự động 9 bước:
+  1. Git status & detect stack (backend/frontend/database/scripts).
+  2. Checkpoint trước sửa lớn (≥ 3 file hoặc migration).
+  3. Spec ngắn + acceptance criteria + API contract scope.
+  4. Plan-work chia vertical slice (≤ 2 file, ≤ 100 dòng diff).
+  5. Build từng slice — đảm bảo contract DB ↔ BE ↔ FE khớp.
+  6. Verify: chạy lint/typecheck/test/build nếu có; manual proof nếu không.
+  7. Cleanup file tạm qua `/cleanup-safe`.
+  8. Handoff qua `/handoff-save` nếu task lớn.
+  9. Báo cáo cuối: file sửa, lý do, slice count, verify result, git status.
+- **12 Hard Rules an toàn** trong agent prompt: không `rm -rf`, không
+  `git reset --hard`, không `git clean -fd`, không force push, không sửa
+  `.env`/secrets, không DROP/TRUNCATE/DELETE không hỏi, không tự push,
+  không xóa tracked files, không đọc toàn repo, mỗi slice ≤ 100 dòng diff,
+  luôn `git status` trước/sau, luôn báo cáo cuối.
+- **Layer-specific hướng dẫn kỹ thuật** — backend (NestJS/Express/Django/
+  Rails), frontend (React/Next.js/Vue), database (Prisma/TypeORM/migration)
+  với các kỹ thuật đặc thù từng layer.
+- **README section "Dùng build-strong cho fullstack-auto"** — hướng dẫn
+  chi tiết cách dùng agent build-strong cho fullstack task.
+
+### Backward compatibility
+
+- **100% backward compatible.** Agent vẫn tên `build-strong`, mode `all`,
+  không thay đổi frontmatter hay permission structure.
+- Tất cả commands/skills/scripts hiện có không bị ảnh hưởng.
+- `verify.sh` / `verify.ps1` thêm check build-strong content để đảm bảo
+  agent đã được nâng cấp.
+
 ## [1.3.4] - 2026-06-06
 
 ### Added
