@@ -63,7 +63,7 @@ opencode
 | Total agent files | 46 | `opencode-global/agents/` (13 core + 33 GSD-style companions) |
 | Slash commands | 34 | `opencode-global/commands/` |
 | Skills | 20 | `opencode-global/skills/` |
-| Helper scripts | 13 | `scripts/` |
+| Helper scripts | 12 | `scripts/` |
 | Root-level scripts | 15 | `*.sh` + `*.ps1` (install, bootstrap, verify, doctor, ...) |
 | Full-stack profile | 1 | `profiles/node-nest-react-mysql/` |
 | Safety scripts | 4 | `verify.sh`, `doctor.sh`, `cleanup-agent-artifacts.sh`, `opk-command-guard.sh` |

@@ -8,7 +8,7 @@
 
 ---
 
-## Policy
+## Tooling Policy
 
 1. **No bundled third-party source** unless explicitly documented as such.
 2. **No hidden auto-update.** No shell-startup auto installer.

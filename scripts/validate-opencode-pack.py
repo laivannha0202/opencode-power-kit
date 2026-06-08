@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # ============================================================================
 # OpenCode Power Kit - Pack validator
-# opencode-power-kit v1.6.0
+# opencode-power-kit v1.6.1
 #
 # Kiểm tra cấu trúc:
 #   - opencode-global/commands/*.md phải có frontmatter + description
@@ -40,7 +40,7 @@ PROFILES_DIR = KIT_ROOT / "profiles"
 TEMPLATES_DIR = KIT_ROOT / "templates"
 
 # ─── version compliance constants ───────────────────────────────────
-EXPECTED_VERSION = "1.6.0"
+EXPECTED_VERSION = "1.6.1"
 
 AUTO_ROUTER_NEEDLES: tuple[tuple[str, str], ...] = (
     ("templates/AGENTS.md", "Natural Language Auto Router"),
@@ -53,6 +53,7 @@ CHANGELOG_NEEDLES: tuple[str, ...] = (
     "1.4.0",
     "1.5.0",
     "1.6.0",
+    "1.6.1",
     "cleanup-safe",
     "handoff-save",
     "checkpoint",
@@ -327,10 +328,17 @@ def validate_version() -> list[str]:
     # v1.6.0: docs/release notes
     print("[v1.6.0 release notes]")
     release_path = KIT_ROOT / "docs" / "releases" / "v1.6.0.md"
-    if release_path.is_file():
+    if release_path.exists():
         ok("docs/releases/v1.6.0.md exists")
     else:
         errors.append("docs/releases/v1.6.0.md missing")
+    # v1.6.1: docs/release notes
+    print("[v1.6.1 release notes]")
+    release_path = KIT_ROOT / "docs" / "releases" / "v1.6.1.md"
+    if release_path.exists():
+        ok("docs/releases/v1.6.1.md exists")
+    else:
+        errors.append("docs/releases/v1.6.1.md missing")
 
     # build-strong.md content needles (v1.4.0 + v1.5.0)
     print("[build-strong agent content]")
