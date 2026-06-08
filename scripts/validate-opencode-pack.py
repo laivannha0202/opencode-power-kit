@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # ============================================================================
 # OpenCode Power Kit - Pack validator
-# opencode-power-kit v1.5.0
+# opencode-power-kit v1.6.0
 #
 # Kiểm tra cấu trúc:
 #   - opencode-global/commands/*.md phải có frontmatter + description
@@ -40,7 +40,7 @@ PROFILES_DIR = KIT_ROOT / "profiles"
 TEMPLATES_DIR = KIT_ROOT / "templates"
 
 # ─── version compliance constants ───────────────────────────────────
-EXPECTED_VERSION = "1.5.0"
+EXPECTED_VERSION = "1.6.0"
 
 AUTO_ROUTER_NEEDLES: tuple[tuple[str, str], ...] = (
     ("templates/AGENTS.md", "Natural Language Auto Router"),
@@ -52,6 +52,7 @@ CHANGELOG_NEEDLES: tuple[str, ...] = (
     "1.3.4",
     "1.4.0",
     "1.5.0",
+    "1.6.0",
     "cleanup-safe",
     "handoff-save",
     "checkpoint",
@@ -63,6 +64,8 @@ CHANGELOG_NEEDLES: tuple[str, ...] = (
     "Power Mode",
     "architect-strong",
     "opk-command-guard",
+    "Full Auto Permission Mode",
+    "Vietnamese Language Lock",
 )
 
 THIRD_PARTY_NEEDLES: tuple[tuple[str, str], ...] = (
@@ -294,6 +297,40 @@ def validate_version() -> list[str]:
                 errors.append(f"{rel} missing needle: {needle}")
     else:
         errors.append("THIRD_PARTY.md missing")
+
+    # v1.6.0: Full Auto Permission Mode check
+    print("[Full Auto Permission Mode]")
+    opencode_json = KIT_ROOT / "templates" / "opencode.json"
+    if opencode_json.is_file():
+        json_text = opencode_json.read_text(encoding="utf-8")
+        if '"permission": "allow"' in json_text:
+            ok("templates/opencode.json has permission: allow")
+        else:
+            errors.append("templates/opencode.json missing 'permission': 'allow'")
+    else:
+        errors.append("templates/opencode.json missing")
+
+    # v1.6.0: Vietnamese Language Lock
+    print("[Vietnamese Language Lock]")
+    for rel, needle in (
+        ("templates/AGENTS.md", "Vietnamese Language Lock"),
+        ("templates/AGENTS.md", "Full Auto Permission Mode"),
+        ("templates/OPENCODE.md", "Vietnamese Language Lock"),
+        ("templates/OPENCODE.md", "Full Auto Permission Mode"),
+    ):
+        p = KIT_ROOT / rel
+        if p.is_file() and needle in p.read_text(encoding="utf-8"):
+            ok(f"{rel} contains: {needle}")
+        else:
+            errors.append(f"{rel} missing needle: {needle}")
+
+    # v1.6.0: docs/release notes
+    print("[v1.6.0 release notes]")
+    release_path = KIT_ROOT / "docs" / "releases" / "v1.6.0.md"
+    if release_path.is_file():
+        ok("docs/releases/v1.6.0.md exists")
+    else:
+        errors.append("docs/releases/v1.6.0.md missing")
 
     # build-strong.md content needles (v1.4.0 + v1.5.0)
     print("[build-strong agent content]")

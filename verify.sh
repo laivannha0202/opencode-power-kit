@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────
 # verify.sh
-# opencode-power-kit v1.5.0
+# opencode-power-kit v1.6.0
 #
 # Sanity-check the power-kit. Runs on every CI run and is also safe
 # to run locally: it does not modify anything, it only inspects.
@@ -161,12 +161,15 @@ require_contains "templates/AGENTS.md" "Natural Language Auto Router"
 require_contains "templates/OPENCODE.md" "Natural Language Auto Router"
 echo
 
-# ─── CHANGELOG mentions v1.3.3 / v1.3.4 / v1.4.0 / v1.5.0 ──────
+# ─── CHANGELOG mentions v1.3.3 / v1.3.4 / v1.4.0 / v1.5.0 / v1.6.0 ──────
 echo "[changelog invariants]"
 require_contains "CHANGELOG.md" "1.3.3"
 require_contains "CHANGELOG.md" "1.3.4"
 require_contains "CHANGELOG.md" "1.4.0"
 require_contains "CHANGELOG.md" "1.5.0"
+require_contains "CHANGELOG.md" "1.6.0"
+require_contains "CHANGELOG.md" "Full Auto Permission Mode"
+require_contains "CHANGELOG.md" "Vietnamese Language Lock"
 require_contains "CHANGELOG.md" "build-strong"
 require_contains "CHANGELOG.md" "fullstack-autopilot"
 require_contains "CHANGELOG.md" "cleanup-safe"
@@ -180,6 +183,24 @@ require_contains "CHANGELOG.md" "architect-strong"
 require_contains "CHANGELOG.md" "opk-command-guard"
 require_contains "THIRD_PARTY.md" "BMAD"
 require_contains "THIRD_PARTY.md" "GSD Core"
+
+# ─── v1.6.0: Full Auto Permission Mode ──────────────────────────
+echo "[v1.6.0 Full Auto Permission Mode]"
+require_contains "templates/opencode.json" '"permission": "allow"'
+require_contains "templates/AGENTS.md" "Full Auto Permission Mode"
+require_contains "templates/OPENCODE.md" "Full Auto Permission Mode"
+echo
+
+# ─── v1.6.0: Vietnamese Language Lock ───────────────────────────
+echo "[v1.6.0 Vietnamese Language Lock]"
+require_contains "templates/AGENTS.md" "Vietnamese Language Lock"
+require_contains "templates/OPENCODE.md" "Vietnamese Language Lock"
+echo
+
+# ─── v1.6.0: docs/releases ──────────────────────────────────────
+echo "[v1.6.0 release notes]"
+require_file "docs/releases/v1.6.0.md"
+echo
 
 # ─── build-strong.md content ─────────────────────────────────────
 echo "[build-strong agent content]"

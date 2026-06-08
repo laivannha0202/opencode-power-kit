@@ -89,7 +89,7 @@ OpenCode được cấu hình với `"permission": "allow"` — agent tự độ
 chạy tool, sửa file, tạo file, chạy bash/test/build mà **không hỏi
 lại**. Phù hợp máy/project cá nhân, workflow nhanh hơn, ít prompt hơn.
 
-### How it works
+### Cách hoạt động
 
 - **`templates/opencode.json`** dùng `"permission": "allow"` thay vì
   permission object safe-mode.
@@ -103,17 +103,17 @@ lại**. Phù hợp máy/project cá nhân, workflow nhanh hơn, ít prompt hơn
   - Trước task lớn: `git status` + báo tóm tắt.
   - Sau task: `git diff --stat` + báo cáo tiếng Việt.
 
-### Recommended for
+### Phù hợp cho
 
-- **Trusted local projects** — máy cá nhân, dev máy thật.
-- **Experienced users** — hiểu rủi ro và tự chịu trách nhiệm.
+- **Dự án local tin cậy** — máy cá nhân, dev máy thật.
+- **Người dùng có kinh nghiệm** — hiểu rủi ro và tự chịu trách nhiệm.
 
-### Still restricted (by agent rules, not permission prompt)
+### Vẫn bị hạn chế (bởi agent rules, không phải permission prompt)
 
-- Dangerous git ops (`reset --hard`, `clean -fd`, force push)
-- Database destructive ops (`DROP TABLE`, `TRUNCATE`)
-- Secret/env access
-- All the safety rules in `templates/AGENTS.md`
+- Git ops nguy hiểm (`reset --hard`, `clean -fd`, force push)
+- DB destructive ops (`DROP TABLE`, `TRUNCATE`)
+- Truy cập secret/env
+- Tất cả safety rules trong `templates/AGENTS.md`
 
 ---
 
@@ -370,15 +370,15 @@ Phù hợp nhất cho project dùng: NestJS backend, React/Vite frontend, MySQL 
 
 ## Vietnamese Language Lock
 
-All agent interactions follow Vietnamese-first policy:
+Tất cả tương tác của agent tuân theo chính sách ưu tiên tiếng Việt:
 
-- **Vietnamese-first interaction:** Agents reply in Vietnamese by default. Plans, explanations, reports, and conclusions use Vietnamese.
-- **English technical terms preserved:** Code, commands, slash commands, agent names, file paths, APIs, package names, error logs, stacktraces, and required technical keywords stay in English.
-- **No auto-switch:** Agents don't auto-switch to English when the user writes in Vietnamese.
-- **No extra dependency:** This is a configuration-only feature — no new packages or repos required.
-- **User override:** If the user explicitly requests English, agents switch to English.
+- **Tương tác ưu tiên tiếng Việt:** Agent mặc định trả lời bằng tiếng Việt. Kế hoạch, giải thích, báo cáo và kết luận đều dùng tiếng Việt.
+- **Giữ nguyên thuật ngữ kỹ thuật tiếng Anh:** Code, command, slash command, tên agent, file/path, API, package name, error log, stacktrace và keyword kỹ thuật bắt buộc được giữ nguyên.
+- **Không tự chuyển sang tiếng Anh:** Khi user viết tiếng Việt, agent không tự chuyển toàn bộ câu trả lời sang tiếng Anh.
+- **Không thêm dependency:** Đây chỉ là thay đổi markdown/config, không thêm package hoặc repo ngoài.
+- **User có thể override:** Nếu user yêu cầu trả lời bằng tiếng Anh rõ ràng thì agent mới dùng tiếng Anh.
 
-See `templates/AGENTS.md` → **Vietnamese Language Lock** for the full rule set.
+Xem `templates/AGENTS.md` → **Vietnamese Language Lock** để biết đầy đủ rule.
 
 ---
 

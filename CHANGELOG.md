@@ -38,10 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Agents: thêm `Vietnamese Language Lock` instruction cho tất cả 46 agent files
     trong `opencode-global/agents/*.md`.
   - README: thêm mục "Vietnamese Language Lock" mô tả policy.
-- **Vietnamese-first interaction:** Agents mặc định trả lời bằng tiếng Việt. Giữ
+- **Tương tác ưu tiên tiếng Việt:** Agents mặc định trả lời bằng tiếng Việt. Giữ
   tiếng Anh cho code, lệnh, path, log, keyword kỹ thuật. Không tự chuyển sang
   tiếng Anh. User có thể override bằng tiếng Anh.
-- **No extra dependency:** Tính năng chỉ dùng markdown/config — không thêm repo,
+- **Không thêm dependency:** Tính năng chỉ dùng markdown/config — không thêm repo,
   package, hay logic installer mới.
 
 ### Backward compatibility
