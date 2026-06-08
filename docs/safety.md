@@ -23,8 +23,8 @@ SELECT COUNT(*) FROM table_name WHERE condition;
 -- mysqldump -u user -p database > backup_$(date +%Y%m%d).sql
 
 -- KHÔNG BAO GIỜ
-DROP TABLE ...;           --除非 user confirm
-TRUNCATE ...;             --除非 user confirm
+DROP TABLE ...;           -- trừ khi user confirm
+TRUNCATE ...;             -- trừ khi user confirm
 DELETE FROM ...;          -- luôn cần WHERE clause
 ```
 
@@ -39,7 +39,7 @@ git checkout -b <branch>    # tạo branch mới
 
 # NGUY HIỂM - cần confirm
 git reset --hard            # MẤT dữ liệu
-git push --force            # GHI DEP LÊN REMOTE
+git push --force            # GHI ĐÈ LÊN REMOTE
 git clean -fd               # XÓA untracked files
 ```
 

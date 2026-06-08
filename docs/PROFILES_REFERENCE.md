@@ -1,39 +1,39 @@
-# Profiles Reference
+# Profiles Tham khảo
 
 ## Full-stack Profile: Node.js + NestJS + React/Vite + MySQL
 
-### Profile Commands (5)
+### Lệnh Profile (5)
 
-| Command | Purpose |
+| Lệnh | Công dụng |
 |---------|---------|
-| `api-e2e-flow` | API end-to-end flow with Playwright |
-| `docker-dev-doctor` | Check docker-compose dev setup |
-| `env-doctor` | Check env safety (no secret values printed) |
-| `fullstack-scan` | Full-stack project scan (FE/BE/DB/scripts/env/docker) |
-| `seed-data-safe` | Safe database seeding |
+| `api-e2e-flow` | API end-to-end flow với Playwright |
+| `docker-dev-doctor` | Kiểm tra docker-compose dev setup |
+| `env-doctor` | Kiểm tra an toàn env (không in secret values) |
+| `fullstack-scan` | Quét full-stack project (FE/BE/DB/scripts/env/docker) |
+| `seed-data-safe` | Seed database an toàn |
 
-### Profile Skills (5)
+### Skills Profile (5)
 
-| Skill | Purpose |
+| Skill | Công dụng |
 |-------|---------|
 | `nestjs-backend` | NestJS backend best practices |
 | `react-vite-frontend` | React/Vite frontend patterns |
-| `mysql-schema-safe` | MySQL schema safety checks |
-| `auth-rbac-review` | Auth/RBAC review |
-| `fullstack-test-strategy` | Full-stack testing strategy |
+| `mysql-schema-safe` | Kiểm tra an toàn MySQL schema |
+| `auth-rbac-review` | Review Auth/RBAC |
+| `fullstack-test-strategy` | Chiến lược testing full-stack |
 
-### Shared Global Full-stack Commands (9)
+### Lệnh Full-stack Toàn cục Dùng Chung (9)
 
 `fullstack-scan`, `openapi-check`, `secret-scan`, `sast-check`, `e2e-plan`, `test-matrix`, `js-quality-check`, `env-doctor`, `docker-dev-doctor`
 
-### Shared Global Full-stack Skills (8)
+### Skills Full-stack Toàn cục Dùng Chung (8)
 
 `openapi-contract`, `secure-fullstack`, `dependency-maintenance`, `fullstack-test-strategy`, `js-ts-quality`, `env-config-safe`, `docker-compose-safe`, `nest-react-mysql`
 
-### Installation
+### Cài đặt
 
 ```bash
 opk fullstack
-# or
+# hoặc
 bash ~/opencode-power-kit/scripts/install-fullstack-profile.sh
 ```

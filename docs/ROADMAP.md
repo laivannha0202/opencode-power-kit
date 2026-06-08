@@ -1,31 +1,31 @@
-# Roadmap
+# Lộ trình
 
-## v1.5.x — Power Mode (Current)
+## v1.5.x — Power Mode (Hiện tại)
 
 - 13 core agents, 34 commands, safety guard
-- Agent delegation and auto-router
-- Full-stack profile with Nest/React/MySQL
+- Agent delegation và auto-router
+- Full-stack profile với Nest/React/MySQL
 
-## v1.6.x — Stabilization
+## v1.6.x — Ổn định hóa
 
-- More test coverage for scripts
-- Better error message handling
-- Improved cross-platform compatibility
-- Documentation improvements
+- Tăng test coverage cho scripts
+- Xử lý error messages tốt hơn
+- Cải thiện tương thích đa nền tảng
+- Cải tiến tài liệu
 
-## v1.7.x — Community
+## v1.7.x — Cộng đồng
 
-- Template system for project initialization
-- Contributing guidelines and issue templates
-- Plugin mechanism for custom commands/agents
+- Hệ thống template cho khởi tạo project
+- Hướng dẫn đóng góp và issue templates
+- Cơ chế plugin cho custom commands/agents
 
-## v2.0.x — Major
+## v2.0.x — Bản lớn
 
-- Formal plugin/extension API
+- Plugin/extension API chính thức
 - Visual agent workflow designer
-- Integration with more CI/CD platforms
-- Performance optimization for large projects
+- Tích hợp thêm nhiều CI/CD platforms
+- Tối ưu hiệu năng cho project lớn
 
 ---
 
-*Roadmap is subject to change based on community feedback and project requirements.*
+*Lộ trình có thể thay đổi dựa trên phản hồi cộng đồng và yêu cầu dự án.*

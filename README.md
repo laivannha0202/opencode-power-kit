@@ -3,15 +3,15 @@
 [![CI](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](./VERSION)
 [![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
-[![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#safety-model)
-[![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#safety-model)
-[![Cross-platform](https://img.shields.io/badge/cross--platform-Linux%20%7C%20macOS%20%7C%20Windows-blue.svg)](#quick-start)
+[![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
+[![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
+[![Cross-platform](https://img.shields.io/badge/cross--platform-Linux%20%7C%20macOS%20%7C%20Windows-blue.svg)](#cài-nhanh)
 
 > Bộ công cụ OpenCode full-stack có thể tái sử dụng: agents, commands, skills, quy trình an toàn, full-stack profile, công cụ release.
 
 ---
 
-## Quick Start
+## Cài nhanh
 
 ### Linux / macOS / Git Bash / WSL
 
@@ -19,11 +19,11 @@
 bash -c 'PROJECT="$PWD"; KIT="$HOME/opencode-power-kit"; if [ -d "$KIT/.git" ]; then git -C "$KIT" pull --ff-only; else git clone https://github.com/laivannha0202/opencode-power-kit.git "$KIT"; fi; bash "$KIT/bootstrap.sh" --all --project-dir "$PROJECT"; cd "$PROJECT"; bash "$KIT/verify.sh"; echo "Done. Run: opencode"'
 ```
 
-Then reload and verify:
+Sau đó tải lại profile và kiểm tra:
 ```bash
 source ~/.bashrc    # or source ~/.zshrc
-opk one             # re-run all-in-one anytime
-opk doctor          # check everything
+opk one             # chạy lại all-in-one bất cứ lúc nào
+opk doctor          # kiểm tra mọi thứ
 opencode
 ```
 
@@ -33,31 +33,31 @@ opencode
 powershell -ExecutionPolicy Bypass -Command "$Project=(Get-Location).Path; $KIT=Join-Path $HOME 'opencode-power-kit'; if (Test-Path (Join-Path $KIT '.git')) { & git -C $KIT pull --ff-only } else { & git clone https://github.com/laivannha0202/opencode-power-kit.git $KIT }; & (Join-Path $KIT 'bootstrap.ps1') -All -ProjectDir $Project -Yes; & (Join-Path $KIT 'verify.ps1'); Write-Host 'Done. Run: opencode'"
 ```
 
-Open a **new PowerShell** window, then:
+Mở cửa sổ **PowerShell mới**, sau đó:
 ```powershell
 opk one
 opk.cmd path
 opencode
 ```
 
-### After installation
+### Sau khi cài đặt
 
-| Command | Purpose |
+| Lệnh | Công dụng |
 |---------|---------|
 | `opk one` / `opk go` | All-in-one: global + project + fullstack + verify |
-| `opk help` | Show full help |
-| `opk version` | Show version |
-| `opk doctor` | Read-only diagnostic |
-| `opk verify` | Verify current project is ready |
-| `opk global` | Install global (agents/commands/skills) |
-| `opk install` | Install into current project |
-| `opk fullstack` | Install full-stack profile (Node/Nest/React/MySQL) |
+| `opk help` | Hiển thị help đầy đủ |
+| `opk version` | Hiển thị phiên bản |
+| `opk doctor` | Chẩn đoán (read-only) |
+| `opk verify` | Kiểm tra project sẵn sàng |
+| `opk global` | Cài đặt toàn cục (agents/commands/skills) |
+| `opk install` | Cài vào project hiện tại |
+| `opk fullstack` | Cài full-stack profile (Node/Nest/React/MySQL) |
 
 ---
 
-## What's Included
+## Bộ này gồm những gì
 
-| Component | Count | Location |
+| Thành phần | Số lượng | Vị trí |
 |-----------|-------|----------|
 | Core agents | 13 | `opencode-global/agents/` |
 | Slash commands | 34 | `opencode-global/commands/` |
@@ -65,7 +65,7 @@ opencode
 | Scripts | 12 | `scripts/` |
 | Full-stack profile | 1 | `profiles/node-nest-react-mysql/` |
 | Safety scripts | 4 | `verify.sh`, `doctor.sh`, `cleanup-agent-artifacts.sh`, `opk-command-guard.sh` |
-| Install/Boostrap | 8+ | `bootstrap.*`, `setup.*`, `install*.*` |
+| Install/Bootstrap | 8+ | `bootstrap.*`, `setup.*`, `install*.*` |
 | CLI wrappers | 3 | `bin/opk`, `bin/opk.cmd`, `bin/opk.ps1` |
 
 ---
@@ -83,25 +83,25 @@ opencode
 
 ---
 
-## Agent Reference
+## Danh sách Agent
 
 ### Core Power Agents
 
-| Agent | Type | Purpose | Use when |
+| Agent | Loại | Công dụng | Dùng khi |
 |-------|------|---------|----------|
-| `build-strong` | Fullstack | Full-stack autopilot: spec → plan → build slice → verify | Main full-stack feature work |
-| `architect-strong` | Architecture | System design, ADR, cross-module decisions | Task > 5 files, cross-module changes |
-| `debug-strong` | Debug | Scientific method debugging with checkpoint | Complex bugs, elusive root causes |
-| `qa-strong` | QA/Testing | Coverage analysis, regression testing, test suite design | Pre-ship, need solid test suite |
-| `security-strong` | Security | SAST, secret scan, threat model, dependency audit | Pre-release, code with auth/input |
-| `db-strong` | Database | Schema design, migration safety, query optimization | Schema changes, migrations |
-| `api-strong` | API | OpenAPI contract, FE/BE sync, type generation | Endpoint changes, API contract sync |
-| `ui-ux-strong` | UI/UX | Accessibility, responsive design, visual review | Interface review, responsive fixes |
-| `devops-strong` | DevOps | Docker, CI/CD, deploy, infrastructure | Setup/review infrastructure |
-| `release-strong` | Release | Version bump, CHANGELOG, tag, publish | Before release cut |
-| `plan-lite` | Planning | Token-efficient planning | Small tasks needing quick plan |
-| `review-lite` | Review | Token-efficient code/diff review | Quick code review |
-| `debug-lite` | Debug | Token-efficient debugging | Simple bugs |
+| `build-strong` | Fullstack | Full-stack autopilot: spec → plan → build slice → verify | Làm feature full-stack chính |
+| `architect-strong` | Architecture | Thiết kế hệ thống, ADR, quyết định cross-module | Task > 5 files, thay đổi cross-module |
+| `debug-strong` | Debug | Debug theo phương pháp khoa học với checkpoint | Bug phức tạp, root cause khó tìm |
+| `qa-strong` | QA/Testing | Phân tích coverage, regression testing, thiết kế test suite | Trước khi ship, cần test suite chất lượng |
+| `security-strong` | Security | SAST, secret scan, threat model, dependency audit | Trước release, code có auth/input |
+| `db-strong` | Database | Thiết kế schema, migration safety, tối ưu query | Thay đổi schema, migrations |
+| `api-strong` | API | OpenAPI contract, đồng bộ FE/BE, sinh type | Thay đổi endpoint, đồng bộ API contract |
+| `ui-ux-strong` | UI/UX | Accessibility, responsive design, visual review | Review giao diện, sửa responsive |
+| `devops-strong` | DevOps | Docker, CI/CD, deploy, infrastructure | Thiết lập/review infrastructure |
+| `release-strong` | Release | Bump version, CHANGELOG, tag, publish | Trước khi cắt release |
+| `plan-lite` | Planning | Lập kế hoạch tiết kiệm token | Tác vụ nhỏ cần plan nhanh |
+| `review-lite` | Review | Review code/diff tiết kiệm token | Quick code review |
+| `debug-lite` | Debug | Debug tiết kiệm token | Bug đơn giản |
 
 **Quy trình khuyến nghị:**
 ```
@@ -111,93 +111,93 @@ opencode
 
 ---
 
-## Command Reference
+## Danh sách lệnh
 
 ### Power Workflow
 
-| Command | Purpose |
+| Lệnh | Công dụng |
 |---------|---------|
-| `/agent-router` | Route task to the right specialized agent |
-| `/power-build` | End-to-end build: spec → architecture → build → QA → security → release |
-| `/tooling-doctor` | Detect third-party tooling availability |
+| `/agent-router` | Định tuyến tác vụ tới agent chuyên biệt phù hợp |
+| `/power-build` | Build đầu cuối: spec → architecture → build → QA → security → release |
+| `/tooling-doctor` | Phát hiện công cụ bên thứ ba có sẵn |
 
-### Safety
+### An toàn
 
-| Command | Purpose |
+| Lệnh | Công dụng |
 |---------|---------|
-| `/cleanup-safe` | Safely move temp artifacts to `.opk-trash/` (default dry-run) |
-| `/checkpoint` | Snapshot working tree before large changes |
-| `/handoff-save` | Update `AI_HANDOFF.md` for context continuity |
+| `/cleanup-safe` | Di chuyển artifact tạm vào `.opk-trash/` an toàn (mặc định dry-run) |
+| `/checkpoint` | Chụp working tree trước thay đổi lớn |
+| `/handoff-save` | Cập nhật `AI_HANDOFF.md` cho liên tục ngữ cảnh |
 
-### Build Lifecycle
+### Vòng đời Build
 
-| Command | Purpose |
+| Lệnh | Công dụng |
 |---------|---------|
-| `/spec-lite` | Quick spec (goal, scope, AC, out-of-scope) |
-| `/plan-work` | Break task into ≤ 7 steps with files + tests |
-| `/build-slice` | Implement one slice, ≤ 2 files, ≤ 100 lines diff |
-| `/ci-fix` | Read CI/test/build errors and fix safely |
-| `/ship-check` | Pre-commit/pre-push checklist |
+| `/spec-lite` | Spec nhanh (goal, scope, AC, out-of-scope) |
+| `/plan-work` | Chia tác vụ thành ≤ 7 bước kèm file + tests |
+| `/build-slice` | Implement một slice, ≤ 2 files, ≤ 100 dòng diff |
+| `/ci-fix` | Đọc lỗi CI/test/build và sửa an toàn |
+| `/ship-check` | Checklist trước commit/push |
 
 ### Review
 
-| Command | Purpose |
+| Lệnh | Công dụng |
 |---------|---------|
 | `/review-diff` | Review git diff |
 | `/security-review` | Security review (secrets, auth, input validation) |
-| `/api-contract-review` | Check FE/BE API contract alignment |
-| `/migration-safe` | Verify migration safety before running |
-| `/release-check` | Check VERSION/README/CHANGELOG/tag before release |
+| `/api-contract-review` | Kiểm tra khớp API contract FE/BE |
+| `/migration-safe` | Kiểm tra migration an toàn trước khi chạy |
+| `/release-check` | Kiểm tra VERSION/README/CHANGELOG/tag trước release |
 
 ### DB / API
 
-| Command | Purpose |
+| Lệnh | Công dụng |
 |---------|---------|
-| `/db-readonly` | Read-only DB checks |
-| `/migration-safe` | Migration safety check |
-| `/openapi-check` | OpenAPI spec validation (spectral/oasdiff) |
-| `/secret-scan` | Secret pattern scan (gitleaks/trufflehog) |
-| `/sast-check` | Static analysis (semgrep) |
+| `/db-readonly` | Kiểm tra DB chỉ đọc |
+| `/migration-safe` | Kiểm tra an toàn migration |
+| `/openapi-check` | Xác thực OpenAPI spec (spectral/oasdiff) |
+| `/secret-scan` | Quét pattern secret (gitleaks/trufflehog) |
+| `/sast-check` | Phân tích tĩnh (semgrep) |
 
 ### QA / E2E
 
-| Command | Purpose |
+| Lệnh | Công dụng |
 |---------|---------|
-| `/test-proof` | Run/propose tests as proof |
-| `/test-matrix` | Generate test matrix (unit/integration/e2e/smoke) |
-| `/e2e-flow` | Plan and run E2E proof with Playwright |
-| `/e2e-plan` | Propose Playwright E2E flows |
+| `/test-proof` | Chạy/đề xuất tests làm bằng chứng |
+| `/test-matrix` | Tạo test matrix (unit/integration/e2e/smoke) |
+| `/e2e-flow` | Lên kế hoạch và chạy E2E proof với Playwright |
+| `/e2e-plan` | Đề xuất luồng Playwright E2E |
 
-### DevOps / Environment
+### DevOps / Môi trường
 
-| Command | Purpose |
+| Lệnh | Công dụng |
 |---------|---------|
-| `/env-doctor` | Check env safety (no secret values printed) |
-| `/docker-dev-doctor` | Check docker-compose dev setup |
-| `/fullstack-scan` | Full-stack project scan (FE/BE/DB/scripts/env/docker) |
+| `/env-doctor` | Kiểm tra an toàn env (không in secret values) |
+| `/docker-dev-doctor` | Kiểm tra docker-compose dev setup |
+| `/fullstack-scan` | Quét full-stack project (FE/BE/DB/scripts/env/docker) |
 
-### Quality / Security
+### Chất lượng / Bảo mật
 
-| Command | Purpose |
+| Lệnh | Công dụng |
 |---------|---------|
-| `/js-quality-check` | Detect eslint/prettier/biome/knip/vitest/tsc |
-| `/smart-scan` | Quick project health scan |
-| `/kit-audit` | Audit opencode-power-kit structure |
-| `/repo-map` | Generate project map |
-| `/bugfix-safe` | Safe bug fix workflow |
+| `/js-quality-check` | Phát hiện eslint/prettier/biome/knip/vitest/tsc |
+| `/smart-scan` | Quét nhanh sức khỏe project |
+| `/kit-audit` | Kiểm tra cấu trúc opencode-power-kit |
+| `/repo-map` | Tạo project map |
+| `/bugfix-safe` | Quy trình sửa bug an toàn |
 
-### Token / Tooling
+### Token / Công cụ
 
-| Command | Purpose |
+| Lệnh | Công dụng |
 |---------|---------|
-| `/rtk-gain` | Run `rtk gain` or guide installation |
-| `/token-pack` | Pack context via Repomix |
+| `/rtk-gain` | Chạy `rtk gain` hoặc hướng dẫn cài đặt |
+| `/token-pack` | Đóng gói context qua Repomix |
 
 ---
 
-## Skills Summary
+## Skills Tổng quan
 
-| Category | Skills |
+| Danh mục | Skills |
 |----------|--------|
 | Architecture / ADR | `adr-architecture-decision` |
 | API Contract / OpenAPI | `api-contract`, `openapi-contract` |
@@ -234,7 +234,7 @@ opk one            # = opk go
 
 > Bootstrap tự động: không sudo, không `curl|sh`, backup mọi file cũ, idempotent.
 
-## Manual Install / Advanced
+## Cài thủ công / Nâng cao
 
 ### Linux / macOS / Git Bash / WSL
 
@@ -251,7 +251,7 @@ opencode
 ```powershell
 git clone https://github.com/laivannha0202/opencode-power-kit.git $HOME\opencode-power-kit
 powershell -ExecutionPolicy Bypass -File "$HOME\opencode-power-kit\setup.ps1" -Global -Yes
-# Open new PowerShell, then:
+# Mở PowerShell mới, sau đó:
 opk.cmd path
 opencode
 ```
@@ -265,7 +265,7 @@ opk fullstack   # optional
 opk verify
 ```
 
-## Project Structure
+## Cấu trúc Project
 
 ```
 ~/opencode-power-kit/
@@ -285,7 +285,7 @@ opk verify
 └── docs/                          # workflow, prompts, safety
 ```
 
-## Commands
+## Các lệnh
 
 ```bash
 bash ~/opencode-power-kit/verify.sh
@@ -297,13 +297,12 @@ bash ~/opencode-power-kit/scripts/install-token-tools.sh
 
 Stack: **Node.js + NestJS + React/Vite + MySQL**
 
-### Install
+### Cài đặt
 
 ```bash
-# After global install, from project directory:
+# Sau khi cài global, từ thư mục project:
 opk fullstack
-# Or:
-bash ~/opencode-power-kit/scripts/install-fullstack-profile.sh
+# Hoặc:
 bash ~/opencode-power-kit/scripts/install-fullstack-profile.sh
 ```
 
@@ -317,39 +316,21 @@ Phù hợp nhất cho project dùng: NestJS backend, React/Vite frontend, MySQL 
 
 ---
 
-## Safety Model
+## Mô hình An toàn
 
-| Rule | Description |
+| Quy tắc | Mô tả |
 |------|-------------|
-| No `rm -rf` | Never runs destructive file removal |
-| No `git reset --hard` | Never destroys working tree |
-| No `git clean -fd` | Never force-cleans untracked files |
-| No force push | Never rewrites remote history |
-| No .env/secrets | Never reads or exposes secret values |
-| DB destructive ops require confirmation | `DROP TABLE`, `TRUNCATE`, `DELETE` without WHERE are blocked |
-| Cleanup moves to `.opk-trash/` | Never deletes, always moves with timestamp |
-| Checkpoint creates patch | `git diff` saved as `.patch` before large changes |
-| No MCP bundled | All commands are local, no MCP servers shipped |
-| No auto-update on shell start | All updates are explicit user commands |
-| Backup before overwrite | Existing files are backed up before modification |
-
----
-
-## Lịch sử phiên bản
-
-Repo này dùng GitHub Releases để ghi chi tiết từng phiên bản.
-
-- Xem bản mới nhất: [GitHub Releases](https://github.com/laivannha0202/opencode-power-kit/releases)
-- Release notes chi tiết trong repo: [`docs/RELEASES.md`](docs/RELEASES.md)
-- Release notes từng bản: [`docs/releases/`](docs/releases/)
-
-Các bản chính:
-- `v1.5.0` — Power Mode
-- `v1.4.0` — Fullstack Autopilot
-- `v1.3.x` — Safety workflows, GSD opt-in, one-command install
-- `v1.2.x` — `opk` CLI / setup
-- `v1.1.x` — Full-stack profile
-- `v1.0.0` — Production release
+| Không `rm -rf` | Không bao giờ chạy xoá file phá hoại |
+| Không `git reset --hard` | Không bao giờ phá working tree |
+| Không `git clean -fd` | Không bao giờ force-clean untracked files |
+| Không force push | Không bao giờ viết lại remote history |
+| Không .env/secrets | Không bao giờ đọc hoặc lộ secret values |
+| DB destructive ops cần xác nhận | `DROP TABLE`, `TRUNCATE`, `DELETE` thiếu WHERE bị chặn |
+| Cleanup chuyển vào `.opk-trash/` | Không bao giờ xoá, luôn move kèm timestamp |
+| Checkpoint tạo patch | `git diff` lưu thành `.patch` trước thay đổi lớn |
+| Không MCP bundled | Tất cả lệnh đều local, không ship MCP servers |
+| Không auto-update khi shell start | Mọi cập nhật đều là lệnh user chủ động |
+| Backup trước khi ghi đè | File hiện tại được backup trước khi sửa |
 
 ---
 
@@ -361,6 +342,6 @@ Các bản chính:
 
 ---
 
-## License
+## Giấy phép
 
 MIT

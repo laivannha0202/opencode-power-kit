@@ -2,9 +2,9 @@
 
 Xem release notes chi tiết theo từng phiên bản tại [docs/releases/](./releases/).
 
-## Release History
+## Lịch sử Release
 
-| Version | Date | Tag | Theme | Key Changes |
+| Phiên bản | Ngày | Tag | Chủ đề | Thay đổi chính |
 |---------|------|-----|-------|-------------|
 | [v1.5.0](./releases/v1.5.0.md) | 2026-06-08 | `v1.5.0` | Power Mode | 13 agents, 34 commands, safety guard, agent delegation, power-build |
 | [v1.4.0](./releases/v1.4.0.md) | 2026-06-07 | `v1.4.0` | Fullstack Autopilot | build-strong fullstack-autopilot, 12 hard rules |

@@ -2,23 +2,23 @@
 
 ## Power Workflow
 
-| Command | File | Mục đích |
+| Lệnh | File | Mục đích |
 |---------|------|----------|
 | `/agent-router` | `any.md` | Định tuyến tác vụ tới agent chuyên biệt phù hợp |
 | `/power-build` | `power-build.md` | Build đầu cuối: spec → architecture → build → QA → security → release |
 | `/tooling-doctor` | `tooling-doctor.md` | Phát hiện công cụ bên thứ ba có sẵn |
 
-## Safety
+## An toàn
 
-| Command | File | Mục đích |
+| Lệnh | File | Mục đích |
 |---------|------|----------|
 | `/cleanup-safe` | `cleanup-safe.md` | Di chuyển artifact tạm vào `.opk-trash/` an toàn |
 | `/checkpoint` | `checkpoint.md` | Chụp working tree trước thay đổi lớn |
 | `/handoff-save` | `handoff-save.md` | Cập nhật `AI_HANDOFF.md` cho liên tục ngữ cảnh |
 
-## Build Lifecycle
+## Vòng đời Build
 
-| Command | File | Mục đích |
+| Lệnh | File | Mục đích |
 |---------|------|----------|
 | `/spec-lite` | `spec-lite.md` | Spec nhanh (goal, scope, AC, out-of-scope) |
 | `/plan-work` | `plan-work.md` | Chia tác vụ thành ≤ 7 bước kèm file + tests |
@@ -28,7 +28,7 @@
 
 ## Review
 
-| Command | File | Mục đích |
+| Lệnh | File | Mục đích |
 |---------|------|----------|
 | `/review-diff` | `review-diff.md` | Review git diff |
 | `/security-review` | `security-review.md` | Security review (secrets, auth, input validation) |
@@ -38,7 +38,7 @@
 
 ## DB / API
 
-| Command | File | Mục đích |
+| Lệnh | File | Mục đích |
 |---------|------|----------|
 | `/db-readonly` | `db-readonly.md` | Kiểm tra DB chỉ đọc |
 | `/migration-safe` | `migration-safe.md` | Kiểm tra an toàn migration |
@@ -48,24 +48,24 @@
 
 ## QA / E2E
 
-| Command | File | Mục đích |
+| Lệnh | File | Mục đích |
 |---------|------|----------|
 | `/test-proof` | `test-proof.md` | Chạy/đề xuất tests làm bằng chứng |
 | `/test-matrix` | `test-matrix.md` | Tạo test matrix (unit/integration/e2e/smoke) |
 | `/e2e-flow` | `e2e-flow.md` | Lên kế hoạch và chạy E2E proof với Playwright |
 | `/e2e-plan` | `e2e-plan.md` | Đề xuất luồng Playwright E2E |
 
-## DevOps / Environment
+## DevOps / Môi trường
 
-| Command | File | Mục đích |
+| Lệnh | File | Mục đích |
 |---------|------|----------|
 | `/env-doctor` | `env-doctor.md` | Kiểm tra an toàn env (không in secret values) |
 | `/docker-dev-doctor` | `docker-dev-doctor.md` | Kiểm tra docker-compose dev setup |
 | `/fullstack-scan` | `fullstack-scan.md` | Quét full-stack project (FE/BE/DB/scripts/env/docker) |
 
-## Quality / Security
+## Chất lượng / Bảo mật
 
-| Command | File | Mục đích |
+| Lệnh | File | Mục đích |
 |---------|------|----------|
 | `/js-quality-check` | `js-quality-check.md` | Phát hiện eslint/prettier/biome/knip/vitest/tsc |
 | `/smart-scan` | `smart-scan.md` | Quét nhanh sức khỏe project |
@@ -73,16 +73,16 @@
 | `/repo-map` | `repo-map.md` | Tạo project map |
 | `/bugfix-safe` | `bugfix-safe.md` | Quy trình sửa bug an toàn |
 
-## Token / Tooling
+## Token / Công cụ
 
-| Command | File | Mục đích |
+| Lệnh | File | Mục đích |
 |---------|------|----------|
 | `/rtk-gain` | `rtk-gain.md` | Chạy `rtk gain` hoặc hướng dẫn cài đặt |
 | `/token-pack` | `token-pack.md` | Đóng gói context qua Repomix |
 
 ## CLI Commands
 
-| Command | Mục đích |
+| Lệnh | Mục đích |
 |---------|----------|
 | `opk one` / `opk go` | All-in-one: global + project + fullstack + verify |
 | `opk help` | Hiển thị help đầy đủ |
