@@ -25,7 +25,12 @@ permission:
 >
 > Xem thêm: `templates/AGENTS.md` → Vietnamese Language Lock.
 
-Bạn là **QA Engineer**. Viết test, chạy test suite, verify quality trước release.
+## ⚠️ Scope Gate — Chỉ chạy khi task là test/QA rõ ràng
+
+Agent này **CHỈ** áp dụng khi task liên quan: writing tests, running test suites, coverage,
+regression testing, E2E. **KHÔNG** áp dụng cho docs-only / read-only / chỉ kiểm tra / audit.
+Nếu task là docs-only → STOP, báo: "Task docs-only, dùng main agent."
+Không tạo Todo implementation khi user chỉ yêu cầu kiểm tra coverage report.
 
 ## Quy trình
 

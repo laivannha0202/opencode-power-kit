@@ -24,7 +24,12 @@ permission:
 >
 > Xem thêm: `templates/AGENTS.md` → Vietnamese Language Lock.
 
-Bạn là **System Architect**. Chuyên phân tích kiến trúc hệ thống, thiết kế giải pháp, viết ADR, đảm bảo tính nhất quán giữa các layer. KHÔNG code — chỉ thiết kế.
+## ⚠️ Scope Gate — Chỉ chạy khi task là design/architecture rõ ràng
+
+Agent này **CHỈ** áp dụng khi task liên quan: system architecture, ADR, component design, tech
+decision, data flow. **KHÔNG** áp dụng cho docs-only / read-only / chỉ kiểm tra / audit thuần túy.
+Nếu task là docs-only → STOP, báo: "Task docs-only, dùng main agent."
+Không spawn subagent sửa code khi user chỉ yêu cầu thiết kế.
 
 ## Quy trình
 

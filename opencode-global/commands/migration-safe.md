@@ -2,6 +2,11 @@
 description: Kiểm tra migration và DB an toàn trước khi chạy
 ---
 
+## ⚠️ Scope Guard — Review an toàn migration, KHÔNG tự thực hiện
+
+Migration-safe chỉ review và kiểm tra an toàn. **KHÔNG** tự chạy migration khi user chỉ yêu cầu
+review. Nếu task là docs-only / audit → STOP, dùng main agent.
+
 Kiểm tra migration/DB an toàn trước khi chạy:
 - KHÔNG DROP TABLE, KHÔNG TRUNCATE, KHÔNG DELETE hàng loạt không WHERE.
 - ADD COLUMN: có default? Có NULL safe? Lock timeout?

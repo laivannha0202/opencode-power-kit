@@ -1,3 +1,39 @@
+# Scope Lock — Docs-only / Read-only
+
+Nếu user ghi một trong các cụm sau trong prompt, scope lock có hiệu lực
+**tuyệt đối** và ưu tiên hơn mọi auto-router/workflow khác:
+
+- "chỉ kiểm tra"
+- "không sửa file"
+- "read-only"
+- "docs-only"
+- "chỉ tài liệu"
+- "không code"
+- "không sửa backend/frontend/database"
+- "không migration"
+- "không commit"
+- "không push"
+
+Khi scope lock kích hoạt, **bắt buộc**:
+
+- KHÔNG gọi build-strong.
+- KHÔNG gọi /power-build.
+- KHÔNG gọi /agent-router.
+- KHÔNG gọi build-slice.
+- KHÔNG tự chuyển sang implementation/fix code.
+- KHÔNG tạo Todo implementation (migration, constants, contracts, service, seed).
+- KHÔNG sửa backend, frontend, hay database.
+- KHÔNG tạo migration.
+- KHÔNG commit.
+- KHÔNG push.
+- Nếu phát hiện code/spec lệch nhau → chỉ ghi checklist hoặc báo cáo.
+- Sau khi báo cáo xong → **dừng**.
+
+`docs/` là tài liệu tham khảo, không phải danh sách task tự động để thực thi.
+Không tự đọc toàn bộ `docs/**/*.md` nếu user không chỉ định rõ.
+
+---
+
 # Agent Rules - OpenCode Project
 
 ## Quy tắc bắt buộc

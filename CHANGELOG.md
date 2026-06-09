@@ -5,6 +5,80 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.3] - 2026-06-09
+
+### Fixed
+
+- **Universal Scope Gate — hardened scope drift prevention across ALL agents and commands**.
+  Extends v1.6.2 Scope Lock with enforcement at every agent and command entry point:
+  - **All 9 strong agents** (`api-strong`, `architect-strong`, `db-strong`, `debug-strong`,
+    `devops-strong`, `qa-strong`, `release-strong`, `security-strong`, `ui-ux-strong`): added
+    **Scope Gate** — agent only applies for its specific domain. If task is docs-only/read-only,
+    STOP and return control to main agent.
+  - **6 commands** (`agent-router`, `power-build`, `ci-fix`, `migration-safe`,
+    `api-contract-review`, `kit-audit`): added **Scope Guard** — route docs-only away from
+    build agents, prevent self-execution on docs-only tasks.
+  - **GSD agents** (`gsd-executor`, `gsd-code-fixer`): added **Scope Gate** — prevent
+    dispatch for docs-only tasks, no self-transition from docs to code.
+  - `verify.sh` / `verify.ps1`: expanded checks — all agents must contain "Scope Gate",
+    all commands must contain "Scope Guard".
+  - `scripts/validate-opencode-pack.py`: added scope gate/guard validation for all agents
+    and commands. EXPECTED_VERSION bumped to 1.6.3.
+
+### Changed
+
+- `VERSION`: 1.6.2 → 1.6.3
+
+### Safety
+
+- No new third-party source
+- No new dependencies
+- Backward compatible — all existing workflows unaffected
+
+## [1.6.2] - 2026-06-09
+
+### Fixed
+
+- **Docs-only/read-only scope drift fix** — ngăn agent tự chuyển từ task
+  docs-only/read-only sang implementation code:
+  - `templates/opencode.json`: bỏ `docs/**/*.md` khỏi instructions mặc định.
+    Chỉ AGENTS.md + OPENCODE.md được load tự động.
+  - `templates/AGENTS.md`: thêm section **Scope Lock — Docs-only / Read-only**
+    ở đầu file. Khi user ghi "chỉ kiểm tra", "read-only", "docs-only",
+    "không code", "không sửa file" v.v., scope lock kích hoạt tuyệt đối:
+    KHÔNG gọi build-strong/power-build/agent-router/build-slice,
+    KHÔNG tạo Todo implementation, KHÔNG sửa code, KHÔNG commit/push.
+  - `templates/OPENCODE.md`: thêm Scope Lock tương tự, đảm bảo quy trình
+    "sửa code" chỉ áp dụng khi task là code/fix/build rõ ràng.
+  - `opencode-global/agents/build-strong.md`: thêm **Scope Gate** — build-strong
+    chỉ chạy cho feature/bugfix/refactor/code task rõ ràng. Nếu task là
+    docs-only/read-only → STOP và trả quyền về main agent.
+  - `profiles/node-nest-react-mysql/AGENTS.append.md`: thêm Scope Gate —
+    fullstack workflow chỉ chạy khi user yêu cầu code/fix/build.
+  - `profiles/node-nest-react-mysql/OPENCODE.append.md`: thêm Scope Gate tương tự.
+  - `verify.sh` / `verify.ps1`: thêm checks bắt buộc —
+    opencode.json không còn docs/**/*.md, templates có Scope Lock,
+    build-strong có Scope Gate, profile append có Scope Gate.
+
+### Changed
+
+- `VERSION`: 1.6.1 → 1.6.2
+
+### Safety
+
+- Không thêm third-party source mới
+- Không thêm dependency mới
+- Không sửa backend/frontend/database của project khác
+- Chỉ sửa markdown/JSON/VERSION trong opencode-power-kit repo
+- Không commit, không push
+
+### Backward compatibility
+
+- **100% backward compatible.** Scope Lock là section mới added ở đầu file,
+  không xóa section nào. Build-strong vẫn hoạt động cho task code rõ ràng.
+  Instructions chỉ bớt `docs/**/*.md` (không load tự động) — docs vẫn đọc
+  được khi user chỉ định rõ trong prompt.
+
 ## [1.6.1] - 2026-06-08
 
 ### Added
@@ -745,6 +819,7 @@ First production-grade release. Bumped from 9.4/10 → 10/10.
 - **Badges** in `README.md`: CI status, version, no-MCP policy,
   safe/no-secrets policy
 
+[1.6.2]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.2
 [1.6.1]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.1
 [1.6.0]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.0
 [1.5.0]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.5.0

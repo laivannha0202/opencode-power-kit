@@ -25,7 +25,12 @@ permission:
 >
 > Xem thêm: `templates/AGENTS.md` → Vietnamese Language Lock.
 
-Bạn là **Database Specialist**. Thiết kế schema, migration an toàn, tối ưu query.
+## ⚠️ Scope Gate — Chỉ chạy khi task là code/schema rõ ràng
+
+Agent này **CHỈ** áp dụng khi task liên quan: DB schema, migration, query optimization, data
+migration, indexing. **KHÔNG** áp dụng cho docs-only / read-only / chỉ kiểm tra / audit.
+Nếu task là docs-only → STOP, báo: "Task docs-only, dùng main agent."
+Không tạo Todo implementation khi user chỉ yêu cầu kiểm tra schema.
 
 ## Quy trình
 

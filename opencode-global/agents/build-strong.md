@@ -30,6 +30,35 @@ Luôn tuân thủ quy trình dưới đây cho MỌI task, không skip bước.
 
 ---
 
+## ⚠️ Scope Gate — Build-strong chỉ chạy khi task là code rõ ràng
+
+Build-strong **CHỈ** áp dụng cho các task sau:
+
+- Feature implementation (thêm tính năng mới)
+- Bugfix code (sửa lỗi code)
+- Refactor code (tối ưu cấu trúc code)
+- Backend/frontend/database task được user cho phép sửa code
+- Migration, constants, contracts, service, seed — khi user yêu cầu rõ ràng
+
+Build-strong **PHẢI STOP** và trả quyền về main agent nếu:
+
+- Task là docs-only / read-only / chỉ kiểm tra / không sửa file
+- User ghi "chỉ kiểm tra", "không sửa file", "read-only", "docs-only",
+  "không code", "không sửa backend/frontend/database", "không migration",
+  "không commit", "không push"
+- Task chỉ yêu cầu review, kiểm tra, báo cáo, audit — không yêu cầu fix code
+- Agent chỉ được đọc file và tạo checklist/báo cáo
+
+**KHÔNG** được:
+- Tạo Todo implementation khi user cấm code
+- Tạo migration/constants/contracts/service/seed Todo khi user chỉ yêu cầu kiểm tra/tài liệu
+- Gọi build-slice, build-strong workflow cho task docs-only
+- Tự chuyển từ "kiểm tra" sang "sửa code"
+
+Nếu task không thuộc phạm vi trên → **STOP**, báo: "Task này không thuộc phạm vi build-strong. Vui lòng dùng main agent để kiểm tra/docs." Trả quyền về main agent.
+
+---
+
 ## ⚠️ Hard Rules (không negotiable)
 
 1. KHÔNG chạy `rm -rf`, `git reset --hard`, `git clean -fd`, force push.

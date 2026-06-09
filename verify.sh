@@ -168,6 +168,8 @@ require_contains "CHANGELOG.md" "1.3.4"
 require_contains "CHANGELOG.md" "1.4.0"
 require_contains "CHANGELOG.md" "1.5.0"
 require_contains "CHANGELOG.md" "1.6.0"
+require_contains "CHANGELOG.md" "1.6.2"
+require_contains "CHANGELOG.md" "1.6.3"
 require_contains "CHANGELOG.md" "Full Auto Permission Mode"
 require_contains "CHANGELOG.md" "Vietnamese Language Lock"
 require_contains "CHANGELOG.md" "build-strong"
@@ -195,6 +197,70 @@ echo
 echo "[v1.6.0 Vietnamese Language Lock]"
 require_contains "templates/AGENTS.md" "Vietnamese Language Lock"
 require_contains "templates/OPENCODE.md" "Vietnamese Language Lock"
+echo
+
+# ─── v1.6.2: Scope Lock — docs-only/read-only scope drift fix ──
+echo "[v1.6.2 Scope Lock — docs-only/read-only]"
+require_contains "templates/AGENTS.md" "Scope Lock — Docs-only / Read-only"
+require_contains "templates/OPENCODE.md" "Scope Lock — Docs-only / Read-only"
+require_contains "opencode-global/agents/build-strong.md" "Scope Gate"
+require_contains "profiles/node-nest-react-mysql/AGENTS.append.md" "Scope Gate"
+require_contains "profiles/node-nest-react-mysql/OPENCODE.append.md" "Scope Gate"
+
+# opencode.json must NOT contain docs/**/*.md
+if [[ -f "templates/opencode.json" ]]; then
+	if grep -q 'docs/\*\*/\*\.md' "templates/opencode.json"; then
+		fail "templates/opencode.json still contains docs/**/*.md in instructions"
+	else
+		ok "templates/opencode.json does NOT contain docs/**/*.md"
+	fi
+else
+	fail "templates/opencode.json missing"
+fi
+echo
+
+# ─── v1.6.3: Universal Scope Gate — all strong agents ─────────────
+echo "[v1.6.3 Universal Scope Gate — all agents]"
+AGENTS_WITH_SCOPE_GATE=(
+	"opencode-global/agents/api-strong.md"
+	"opencode-global/agents/architect-strong.md"
+	"opencode-global/agents/build-strong.md"
+	"opencode-global/agents/db-strong.md"
+	"opencode-global/agents/debug-strong.md"
+	"opencode-global/agents/devops-strong.md"
+	"opencode-global/agents/qa-strong.md"
+	"opencode-global/agents/release-strong.md"
+	"opencode-global/agents/security-strong.md"
+	"opencode-global/agents/ui-ux-strong.md"
+	"opencode-global/agents/gsd-executor.md"
+	"opencode-global/agents/gsd-code-fixer.md"
+)
+for agent_file in "${AGENTS_WITH_SCOPE_GATE[@]}"; do
+	if [[ -f "${agent_file}" ]]; then
+		require_contains "${agent_file}" "Scope Gate"
+	else
+		fail "missing agent: ${agent_file}"
+	fi
+done
+echo
+
+# ─── v1.6.3: Scope Guard — commands ──────────────────────────────
+echo "[v1.6.3 Scope Guard — commands]"
+COMMANDS_WITH_SCOPE_GUARD=(
+	"opencode-global/commands/agent-router.md"
+	"opencode-global/commands/power-build.md"
+	"opencode-global/commands/ci-fix.md"
+	"opencode-global/commands/migration-safe.md"
+	"opencode-global/commands/api-contract-review.md"
+	"opencode-global/commands/kit-audit.md"
+)
+for cmd_file in "${COMMANDS_WITH_SCOPE_GUARD[@]}"; do
+	if [[ -f "${cmd_file}" ]]; then
+		require_contains "${cmd_file}" "Scope Guard"
+	else
+		fail "missing command: ${cmd_file}"
+	fi
+done
 echo
 
 # ─── v1.6.0: docs/releases ──────────────────────────────────────

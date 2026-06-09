@@ -15,6 +15,13 @@ Phân tích task và route đến agent chuyên môn phù hợp.
 
 ## Routing logic
 
+## ⚠️ Scope Guard — Docs-only / Read-only routing
+
+Nếu task chứa keyword docs-only, read-only, chỉ kiểm tra, không sửa file, audit, review:
+→ KHÔNG route sang build-strong, power-build, build-slice, db-strong, api-strong.
+→ Chỉ route sang architect-strong (nếu cần design), debug-strong (nếu cần phân tích root cause),
+hoặc main agent (nếu cần docs/report).
+
 | Task type | Route to | Ghi chú |
 |-----------|----------|---------|
 | Architecture, system design, tech decision | `architect-strong` | Nếu task > 5 files hoặc cross-module |

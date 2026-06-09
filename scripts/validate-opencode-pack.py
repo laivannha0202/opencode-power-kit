@@ -40,7 +40,7 @@ PROFILES_DIR = KIT_ROOT / "profiles"
 TEMPLATES_DIR = KIT_ROOT / "templates"
 
 # ─── version compliance constants ───────────────────────────────────
-EXPECTED_VERSION = "1.6.1"
+EXPECTED_VERSION = "1.6.3"
 
 AUTO_ROUTER_NEEDLES: tuple[tuple[str, str], ...] = (
     ("templates/AGENTS.md", "Natural Language Auto Router"),
@@ -54,6 +54,8 @@ CHANGELOG_NEEDLES: tuple[str, ...] = (
     "1.5.0",
     "1.6.0",
     "1.6.1",
+    "1.6.2",
+    "1.6.3",
     "cleanup-safe",
     "handoff-save",
     "checkpoint",
@@ -352,6 +354,42 @@ def validate_version() -> list[str]:
                 errors.append(f"build-strong.md missing needle: {needle}")
     else:
         errors.append("opencode-global/agents/build-strong.md missing")
+
+    # v1.6.3: Universal Scope Gate — all strong agents
+    print("[v1.6.3 Universal Scope Gate — all agents]")
+    agents_with_scope_gate = [
+        "api-strong", "architect-strong", "build-strong",
+        "db-strong", "debug-strong", "devops-strong",
+        "qa-strong", "release-strong", "security-strong", "ui-ux-strong",
+        "gsd-executor", "gsd-code-fixer",
+    ]
+    for name in agents_with_scope_gate:
+        agent_file = GLOBAL_DIR / "agents" / f"{name}.md"
+        if agent_file.is_file():
+            agent_text = agent_file.read_text(encoding="utf-8")
+            if "Scope Gate" in agent_text:
+                ok(f"agents/{name}.md contains: Scope Gate")
+            else:
+                errors.append(f"agents/{name}.md missing Scope Gate")
+        else:
+            errors.append(f"agents/{name}.md missing")
+
+    # v1.6.3: Scope Guard — commands
+    print("[v1.6.3 Scope Guard — commands]")
+    cmd_names_with_scope_guard = [
+        "agent-router", "power-build", "ci-fix",
+        "migration-safe", "api-contract-review", "kit-audit",
+    ]
+    for name in cmd_names_with_scope_guard:
+        cmd_file = GLOBAL_DIR / "commands" / f"{name}.md"
+        if cmd_file.is_file():
+            cmd_text = cmd_file.read_text(encoding="utf-8")
+            if "Scope Guard" in cmd_text:
+                ok(f"commands/{name}.md contains: Scope Guard")
+            else:
+                errors.append(f"commands/{name}.md missing Scope Guard")
+        else:
+            errors.append(f"commands/{name}.md missing")
 
     return errors
 

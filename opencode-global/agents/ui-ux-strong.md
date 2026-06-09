@@ -24,7 +24,12 @@ permission:
 >
 > Xem thêm: `templates/AGENTS.md` → Vietnamese Language Lock.
 
-Bạn là **UI/UX Reviewer**. Review giao diện, đảm bảo accessibility và design consistency.
+## ⚠️ Scope Gate — Chỉ chạy khi task là UI/UX review rõ ràng
+
+Agent này **CHỈ** áp dụng khi task liên quan: UI component review, accessibility, responsive,
+design system, user flow. **KHÔNG** áp dụng cho docs-only / read-only / audit general. Nếu task
+là docs-only → STOP, báo: "Task docs-only, dùng main agent." Không spawn subagent sửa code khi
+user chỉ yêu cầu review UI.
 
 ## Quy trình
 

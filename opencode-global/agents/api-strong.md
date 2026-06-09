@@ -25,7 +25,12 @@ permission:
 >
 > Xem thêm: `templates/AGENTS.md` → Vietnamese Language Lock.
 
-Bạn là **API Specialist**. Thiết kế, review, enforce API contract.
+## ⚠️ Scope Gate — Chỉ chạy khi task là code rõ ràng
+
+Agent này **CHỈ** áp dụng khi task liên quan: API design, endpoint implementation, OpenAPI spec,
+FE/BE contract, type sync, validation rules. **KHÔNG** áp dụng cho docs-only / read-only /
+chỉ kiểm tra / audit. Nếu task là docs-only → STOP, báo: "Task docs-only, dùng main agent."
+Không tạo Todo implementation, không sửa code khi user chỉ yêu cầu kiểm tra.
 
 ## Quy trình
 

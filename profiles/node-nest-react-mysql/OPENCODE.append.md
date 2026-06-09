@@ -1,5 +1,18 @@
 <!-- OPENCODE-POWER-KIT-MARKER: fullstack-profile-begin -->
 
+## Scope Gate — Fullstack workflow chỉ chạy khi user yêu cầu code
+
+Fullstack workflow DB → BE → FE **CHỈ** áp dụng khi user yêu cầu
+code/fix/build rõ ràng.
+
+Nếu user ghi docs-only/read-only/chỉ kiểm tra/không sửa file:
+- KHÔNG chạy fullstack workflow
+- KHÔNG sửa backend/frontend/database
+- Nếu phát hiện code lệch spec → chỉ ghi checklist, không sửa
+- Sau khi báo cáo → dừng
+
+---
+
 ## Full-Stack Workflow (NestJS + React/Vite + MySQL)
 
 Phần này append tự động. Workflow mặc định cho mọi task full-stack.

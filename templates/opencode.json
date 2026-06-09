@@ -5,8 +5,7 @@
   ],
   "instructions": [
     "AGENTS.md",
-    "OPENCODE.md",
-    "docs/**/*.md"
+    "OPENCODE.md"
   ],
   "permission": "allow"
 }

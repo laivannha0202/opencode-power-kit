@@ -6,6 +6,11 @@ description: Đọc lỗi CI/test/build rồi sửa an toàn — phân tích log
 
 Phân tích lỗi CI / test / build và sửa an toàn.
 
+## ⚠️ Scope Guard — Chỉ fix lỗi CI/test/build thực tế
+
+Ci-fix **CHỈ** sửa khi có lỗi CI / test / build / lint thực tế. **KHÔNG** áp dụng cho docs-only
+/ read-only / chỉ kiểm tra / audit. Nếu task là docs-only → STOP, báo: "Task docs-only, dùng main agent."
+
 ## Cách dùng
 
 ```

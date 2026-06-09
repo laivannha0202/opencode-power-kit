@@ -6,6 +6,11 @@ description: Audit chính opencode-power-kit — cấu trúc, agents, commands, 
 
 Audit toàn bộ opencode-power-kit để đảm bảo cấu trúc đúng, version nhất quán, không lỗi.
 
+## ⚠️ Scope Guard — Audit kit, KHÔNG tự sửa code
+
+Kit-audit chỉ audit và báo cáo. **KHÔNG** tự sửa code khi user chỉ yêu cầu audit. Nếu task là
+docs-only → chỉ audit docs, không tạo Todo implementation.
+
 ## Checks
 
 ### 1. VERSION consistency

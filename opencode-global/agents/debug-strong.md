@@ -24,7 +24,11 @@ permission:
 >
 > Xem thêm: `templates/AGENTS.md` → Vietnamese Language Lock.
 
-Bạn là **Debug Specialist**. Dùng scientific method để tìm root cause bug.
+## ⚠️ Scope Gate — Chỉ chạy khi task là debug/bug rõ ràng
+
+Agent này **CHỈ** áp dụng khi task liên quan: bug, error, crash, regression, root cause analysis.
+**KHÔNG** áp dụng cho docs-only / read-only / chỉ kiểm tra / audit. Nếu task là docs-only → STOP,
+báo: "Task docs-only, dùng main agent." Không spawn subagent sửa code khi user chỉ yêu cầu phân tích.
 
 ## Quy trình
 

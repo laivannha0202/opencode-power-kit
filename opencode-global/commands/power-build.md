@@ -6,6 +6,12 @@ description: Workflow tổng hợp spec → architecture → implementation → 
 
 Workflow full-stack hoàn chỉnh: spec → architecture → implementation → QA → security → release.
 
+## ⚠️ Scope Guard — Chỉ chạy khi task là code/feature rõ ràng
+
+Power-build **CHỈ** áp dụng khi user yêu cầu implement feature / bugfix / refactor / build mới.
+**KHÔNG** áp dụng cho docs-only / read-only / chỉ kiểm tra / audit. Nếu task là docs-only → STOP,
+báo: "Task docs-only, dùng main agent để kiểm tra/docs."
+
 ## Cách dùng
 
 ```

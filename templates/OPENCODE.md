@@ -1,3 +1,22 @@
+# Scope Lock — Docs-only / Read-only
+
+Nếu user ghi một trong các cụm sau trong prompt, scope lock có hiệu lực
+tuyệt đối và ưu tiên hơn mọi auto-router/workflow khác:
+
+- "chỉ kiểm tra" / "không sửa file" / "read-only" / "docs-only"
+- "chỉ tài liệu" / "không code" / "không sửa backend/frontend/database"
+- "không migration" / "không commit" / "không push"
+
+Khi scope lock kích hoạt: KHÔNG gọi build-strong, KHÔNG tự chuyển sang
+implementation/fix code, KHÔNG tạo Todo implementation, KHÔNG sửa
+backend/frontend/database, KHÔNG commit/push. Chỉ đọc đúng phạm vi user
+cho phép, ghi checklist nếu phát hiện lệch, rồi dừng.
+
+Quy trình "sửa code" chỉ áp dụng khi task là code/fix/build rõ ràng.
+Với task docs-only/read-only → chỉ đọc và báo cáo.
+
+---
+
 # OpenCode Project Guide
 
 ## Full Auto Permission Mode (v1.6.0)

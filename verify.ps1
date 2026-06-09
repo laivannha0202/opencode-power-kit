@@ -147,12 +147,81 @@ Require-Contains 'templates/AGENTS.md' 'Natural Language Auto Router'
 Require-Contains 'templates/OPENCODE.md' 'Natural Language Auto Router'
 Write-Host ''
 
+# ─── v1.6.2: Scope Lock — docs-only/read-only scope drift fix ──
+Write-Host '[v1.6.2 Scope Lock — docs-only/read-only]'
+Require-Contains 'templates/AGENTS.md' 'Scope Lock — Docs-only / Read-only'
+Require-Contains 'templates/OPENCODE.md' 'Scope Lock — Docs-only / Read-only'
+Require-Contains 'opencode-global/agents/build-strong.md' 'Scope Gate'
+Require-Contains 'profiles/node-nest-react-mysql/AGENTS.append.md' 'Scope Gate'
+Require-Contains 'profiles/node-nest-react-mysql/OPENCODE.append.md' 'Scope Gate'
+
+# opencode.json must NOT contain docs/**/*.md
+$ocJson = Join-Path $KitDir 'templates/opencode.json'
+if (Test-Path -LiteralPath $ocJson -PathType Leaf) {
+    $jsonContent = Get-Content -LiteralPath $ocJson -Raw -ErrorAction SilentlyContinue
+    if ($null -ne $jsonContent -and $jsonContent.Contains('docs/**/*.md')) {
+        Fail 'templates/opencode.json still contains docs/**/*.md in instructions'
+    } else {
+        Ok 'templates/opencode.json does NOT contain docs/**/*.md'
+    }
+} else {
+    Fail 'templates/opencode.json missing'
+}
+Write-Host ''
+
+# ─── v1.6.3: Universal Scope Gate — all agents ────────────────────
+Write-Host '[v1.6.3 Universal Scope Gate — all agents]'
+$agentsWithScopeGate = @(
+    'opencode-global/agents/api-strong.md'
+    'opencode-global/agents/architect-strong.md'
+    'opencode-global/agents/build-strong.md'
+    'opencode-global/agents/db-strong.md'
+    'opencode-global/agents/debug-strong.md'
+    'opencode-global/agents/devops-strong.md'
+    'opencode-global/agents/qa-strong.md'
+    'opencode-global/agents/release-strong.md'
+    'opencode-global/agents/security-strong.md'
+    'opencode-global/agents/ui-ux-strong.md'
+    'opencode-global/agents/gsd-executor.md'
+    'opencode-global/agents/gsd-code-fixer.md'
+)
+foreach ($agentFile in $agentsWithScopeGate) {
+    if (Test-Path -LiteralPath $agentFile -PathType Leaf) {
+        Require-Contains $agentFile 'Scope Gate'
+    } else {
+        Fail "missing agent: $agentFile"
+    }
+}
+Write-Host ''
+
+# ─── v1.6.3: Scope Guard — commands ───────────────────────────────
+Write-Host '[v1.6.3 Scope Guard — commands]'
+$cmdsWithScopeGuard = @(
+    'opencode-global/commands/agent-router.md'
+    'opencode-global/commands/power-build.md'
+    'opencode-global/commands/ci-fix.md'
+    'opencode-global/commands/migration-safe.md'
+    'opencode-global/commands/api-contract-review.md'
+    'opencode-global/commands/kit-audit.md'
+)
+foreach ($cmdFile in $cmdsWithScopeGuard) {
+    if (Test-Path -LiteralPath $cmdFile -PathType Leaf) {
+        Require-Contains $cmdFile 'Scope Guard'
+    } else {
+        Fail "missing command: $cmdFile"
+    }
+}
+Write-Host ''
+
 # ─── CHANGELOG mentions v1.3.3 / v1.3.4 / v1.4.0 / v1.5.0 ──────
 Write-Host '[changelog invariants]'
 Require-Contains 'CHANGELOG.md' '1.3.3'
 Require-Contains 'CHANGELOG.md' '1.3.4'
 Require-Contains 'CHANGELOG.md' '1.4.0'
 Require-Contains 'CHANGELOG.md' '1.5.0'
+Require-Contains 'CHANGELOG.md' '1.6.0'
+Require-Contains 'CHANGELOG.md' '1.6.2'
+Require-Contains 'CHANGELOG.md' '1.6.3'
 Require-Contains 'CHANGELOG.md' 'build-strong'
 Require-Contains 'CHANGELOG.md' 'fullstack-autopilot'
 Require-Contains 'CHANGELOG.md' 'cleanup-safe'
