@@ -162,6 +162,16 @@ opk — OpenCode Power Kit CLI (v$VERSION)
   opk clean       Cleanup project artifacts (mặc định dry-run)
   opk up --clean  Update + cleanup apply
 
+  v1.6.6 — MarkItDown Tools (opt-in):
+  opk markitdown install   Cài MarkItDown (npm — dry-run + confirm)
+  opk markitdown status    Kiểm tra MarkItDown đã cài chưa
+
+  v1.6.7 — Supermemory Memory API (opt-in):
+  opk supermemory install   Cài Supermemory (npm — dry-run + confirm)
+  opk supermemory status    Kiểm tra Supermemory đã cài chưa
+  opk supermemory init      Init Supermemory (yêu cầu đã cài)
+  opk supermemory init-help Xem upstream init --help (không cần cài)
+
 Flags chung (forward cho sub-script):
   --yes   skip confirm
   --help  in trợ giúp của sub-script
