@@ -1,7 +1,7 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.6.4-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-1.6.5-blue.svg)](./VERSION)
 [![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
@@ -52,6 +52,60 @@ opencode
 | `opk global` | Cài đặt toàn cục (agents/commands/skills) |
 | `opk install` | Cài vào project hiện tại |
 | `opk fullstack` | Cài full-stack profile (Node/Nest/React/MySQL) |
+| `opk up` / `opk update` / `opk upgrade` | Update kit + project (One Command Update) |
+| `opk clean` | Cleanup agent artifacts an toàn (mặc định dry-run) |
+| `opk up --clean` | Update + cleanup apply trong một lệnh |
+
+---
+
+## Update bằng một lệnh
+
+Từ v1.6.5, OpenCode Power Kit hỗ trợ **One Command Update**:
+
+```bash
+# Linux / macOS / Git Bash / WSL
+opk up
+
+# Hoặc alias
+opk update
+opk upgrade
+
+# Update + cleanup artifact apply luon
+opk up --clean
+```
+
+```powershell
+# Windows PowerShell
+opk up
+```
+
+### `opk up` làm gì?
+
+1. **Kiểm tra working tree** — Nếu dirty, báo danh sách file dirty, yêu cầu commit
+   hoặc dùng `opk clean`. Không tự stash/reset.
+2. **`git pull --ff-only`** trong thư mục kit (an toàn, không rebase/force).
+3. **`install-global.sh --yes`** (Linux/macOS) hoặc **`install-global.ps1 -Yes`**
+   (Windows) để cập nhật agents/commands/skills.
+4. **Project update** — Nếu pwd là project an toàn (không phải root/system):
+   - `opk install --yes` (cập nhật project config)
+   - `opk fullstack --yes` (cập nhật full-stack profile)
+   - `opk verify` (kiểm tra sau update)
+5. **Cleanup** (với `--clean`): gọi `cleanup-agent-artifacts.sh --apply`.
+
+### `opk clean`
+
+Dọn dẹp agent artifacts an toàn:
+
+```bash
+opk clean          # dry-run: chỉ liệt kê
+opk clean --apply  # apply: move vào .opk-trash/<timestamp>/
+```
+
+- **Mặc định dry-run** — Không đụng file trừ khi có `--apply`.
+- **Move vào `.opk-trash/`** — Không xóa, không `rm -rf`, không `git clean -fd`.
+- **Chỉ đụng untracked files** — Tracked files không bao giờ bị động.
+- **Bảo vệ** `src/`, `app/`, `backend/`, `frontend/`, `docs/`, `.git/`, ...
+- Có thể recover: `mv .opk-trash/<timestamp>/* ./`.
 
 ---
 

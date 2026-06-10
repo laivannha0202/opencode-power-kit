@@ -40,7 +40,7 @@ PROFILES_DIR = KIT_ROOT / "profiles"
 TEMPLATES_DIR = KIT_ROOT / "templates"
 
 # ─── version compliance constants ───────────────────────────────────
-EXPECTED_VERSION = "1.6.4"
+EXPECTED_VERSION = "1.6.5"
 
 AUTO_ROUTER_NEEDLES: tuple[tuple[str, str], ...] = (
     ("templates/AGENTS.md", "Natural Language Auto Router"),
@@ -57,6 +57,7 @@ CHANGELOG_NEEDLES: tuple[str, ...] = (
     "1.6.2",
     "1.6.3",
     "1.6.4",
+    "1.6.5",
     "cleanup-safe",
     "handoff-save",
     "checkpoint",
@@ -391,6 +392,48 @@ def validate_version() -> list[str]:
                 errors.append(f"commands/{name}.md missing Scope Guard")
         else:
             errors.append(f"commands/{name}.md missing")
+
+    # v1.6.5: One Command Update & Cleanup
+    print("[v1.6.5 One Command Update & Cleanup]")
+    v165_checks = [
+        ("CHANGELOG.md", "One Command Update & Cleanup"),
+        ("CHANGELOG.md", "opk up"),
+        ("CHANGELOG.md", "opk clean"),
+        ("scripts/cleanup-agent-artifacts.sh", "GLOBAL_INSTALL_REPORT"),
+        ("scripts/cleanup-agent-artifacts.sh", "OPK_VERIFY_REPORT"),
+        ("scripts/cleanup-agent-artifacts.sh", "OPK_DOCTOR_REPORT"),
+        ("scripts/cleanup-agent-artifacts.sh", "RELEASE_NOTES_v"),
+    ]
+    for rel, needle in v165_checks:
+        p = KIT_ROOT / rel
+        if p.is_file() and needle in p.read_text(encoding="utf-8"):
+            ok(f"{rel} contains: {needle}")
+        else:
+            errors.append(f"{rel} missing needle: {needle}")
+
+    # bin/opk up + clean subcommands
+    opk_path = KIT_ROOT / "bin" / "opk"
+    if opk_path.is_file():
+        opk_text = opk_path.read_text(encoding="utf-8")
+        for needle in ("up|update|upgrade)", " clean)"):
+            if needle in opk_text:
+                ok(f"bin/opk contains: {needle}")
+            else:
+                errors.append(f"bin/opk missing needle: {needle}")
+    else:
+        errors.append("bin/opk missing")
+
+    # bin/opk.ps1 up + clean subcommands
+    opk_ps1_path = KIT_ROOT / "bin" / "opk.ps1"
+    if opk_ps1_path.is_file():
+        opk_ps1_text = opk_ps1_path.read_text(encoding="utf-8")
+        for needle in ("'up'", "'clean'"):
+            if needle in opk_ps1_text:
+                ok(f"bin/opk.ps1 contains: {needle}")
+            else:
+                errors.append(f"bin/opk.ps1 missing needle: {needle}")
+    else:
+        errors.append("bin/opk.ps1 missing")
 
     # v1.6.4: Safety & Compatibility Polish
     print("[v1.6.4 Safety & Compatibility Polish]")

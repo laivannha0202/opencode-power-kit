@@ -17,6 +17,11 @@
 #   opk bootstrap
 #   opk one         # alias: bootstrap.ps1 -All -ProjectDir (Get-Location) -Yes (all-in-one)
 #   opk go          # alias: opk one
+#   opk up          # update kit + project (One Command Update)
+#   opk update      # alias: opk up
+#   opk upgrade     # alias: opk up
+#   opk clean       # cleanup project artifacts (dry-run mặc định)
+#   opk up --clean  # update + cleanup apply
 # ============================================================================
 [CmdletBinding()]
 param(
@@ -148,6 +153,17 @@ switch ($Command.ToLower()) {
         Write-Host "  opk go          Alias: opk one (all-in-one)"
         Write-Host "  opk quick       Alias: opk global"
         Write-Host "  opk init        Alias: opk install"
+        Write-Host "  opk up          Update kit + project (One Command Update)"
+        Write-Host "  opk update      Alias: opk up"
+        Write-Host "  opk upgrade     Alias: opk up"
+        Write-Host "  opk clean       Cleanup project artifacts (dry-run mac dinh)"
+        Write-Host ""
+        Write-Host "v1.6.5 — One Command Update & Cleanup (moi):"
+        Write-Host "  opk up          Update kit + project (git pull + install-global)"
+        Write-Host "  opk update      Alias: opk up"
+        Write-Host "  opk upgrade     Alias: opk up"
+        Write-Host "  opk clean       Cleanup project artifacts (mac dinh dry-run)"
+        Write-Host "  opk up --clean  Update + cleanup apply"
         Write-Host ""
         Write-Host "v1.6.4 — Mode & Safety (moi):"
         Write-Host "  opk mode show   Xem che do Power/Safe hien tai"
@@ -271,6 +287,126 @@ switch ($Command.ToLower()) {
     'quick' {
         Require-File (Join-Path $KitDir 'install-global.ps1')
         & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'install-global.ps1') -Yes
+    }
+
+    # ─── v1.6.5 One Command Update & Cleanup ─────────────────────────
+    { @('up','update','upgrade') -contains $_ } {
+        $doClean = $false
+        $cleanArgs = @()
+        foreach ($a in $Args) {
+            switch -Wildcard ($a.ToLower()) {
+                '--clean'   { $doClean = $true }
+                '--yes'     { $cleanArgs += '-Yes' }
+                '--help'    { Write-Host "opk up [--clean] [--yes]"; exit 0 }
+                default     { Write-Host "opk up: flag khong hop le: $a" -ForegroundColor Red; exit 1 }
+            }
+        }
+
+        # --- Print diagnostic info ---
+        Write-Host "opk: KIT_DIR    = $KitDir"
+        Write-Host "opk: opk path   = $(Join-Path $KitDir 'bin\opk.ps1')"
+        Write-Host "opk: version    = $Version"
+        try {
+            $head = git -C $KitDir rev-parse --short HEAD 2>$null
+            if ($head) { Write-Host "opk: git HEAD   = $head" }
+        } catch {}
+        Write-Host ""
+        Write-Host "opk: VERSION    = $Version"
+        Write-Host ""
+
+        # --- Git pull ---
+        $gitDir = Join-Path $KitDir '.git'
+        if (Test-Path $gitDir -PathType Container) {
+            # Check working tree
+            $dirty = git -C $KitDir diff --quiet 2>$null
+            if (-not $?) {
+                Write-Host "opk: ERROR — working tree dirty, cannot pull --ff-only" -ForegroundColor Red
+                Write-Host "opk: Dirty files:" -ForegroundColor Red
+                git -C $KitDir status --short
+                Write-Host ""
+                Write-Host "opk: Hay commit thay doi truoc, hoac dung: opk clean" -ForegroundColor Red
+                exit 1
+            }
+            Write-Host "opk: git pull --ff-only trong $KitDir"
+            git -C $KitDir pull --ff-only
+            if (-not $?) {
+                Write-Host "opk: ERROR — git pull failed" -ForegroundColor Red
+                exit 1
+            }
+        } else {
+            Write-Host "opk: $KitDir khong phai git repo, bo qua pull"
+        }
+        Write-Host ""
+
+        # --- Run install-global.ps1 -Yes ---
+        $installGlobalPs1 = Join-Path $KitDir 'install-global.ps1'
+        if (Test-Path $installGlobalPs1) {
+            Write-Host "opk: install-global.ps1 -Yes"
+            & powershell -ExecutionPolicy Bypass -File $installGlobalPs1 -Yes
+        }
+        Write-Host ""
+
+        # --- Print version after update ---
+        $newVersion = if (Test-Path $VersionFile) { (Get-Content $VersionFile -Raw).Trim() } else { '?' }
+        Write-Host "opk: version sau update = $newVersion"
+
+        # --- Check if current dir is safe project ---
+        $PwdNow = (Get-Location).Path
+        if (Test-BadProjectDir $PwdNow) {
+            Write-Host ""
+            Write-Host "opk: pwd = $PwdNow la root nguy hiem — bo qua project install." -ForegroundColor Yellow
+            Write-Host "opk:   De update project, cd vao project that roi chay:"
+            Write-Host "opk:     opk up"
+            Write-Host "opk:   Hoac tu chay tung buoc:"
+            Write-Host "opk:     opk install -Yes"
+            Write-Host "opk:     opk fullstack -Yes"
+            Write-Host "opk:     opk verify"
+        } else {
+            Write-Host ""
+            Write-Host "opk: Project dir: $PwdNow"
+            Write-Host "opk: [1/3] opk install -Yes"
+            & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'install.ps1') -Yes
+            Write-Host "opk: [2/3] opk fullstack -Yes"
+            $fullstackPs1 = Join-Path $KitDir 'scripts\install-fullstack-profile.ps1'
+            if (Test-Path $fullstackPs1) {
+                & powershell -ExecutionPolicy Bypass -File $fullstackPs1 -Yes
+            } else {
+                Write-Host "opk:   skip: scripts\install-fullstack-profile.ps1 khong ton tai"
+            }
+            Write-Host "opk: [3/3] opk verify"
+            & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'verify.ps1')
+        }
+        Write-Host ""
+
+        # --- Cleanup ---
+        $cleanupScript = Join-Path $KitDir 'scripts\cleanup-agent-artifacts.sh'
+        if (Test-Path $cleanupScript) {
+            if ($doClean) {
+                Write-Host "opk: cleanup --apply"
+                & bash $cleanupScript --apply
+            } else {
+                Write-Host "opk: cleanup dry-run (dung --clean de apply)"
+                & bash $cleanupScript --dry-run
+            }
+        } else {
+            Write-Host "opk: skip cleanup (scripts\cleanup-agent-artifacts.sh khong ton tai)"
+        }
+        Write-Host ""
+        Write-Host "opk: ✅ Update hoan tat."
+    }
+
+    'clean' {
+        $cleanupScript = Join-Path $KitDir 'scripts\cleanup-agent-artifacts.sh'
+        if (-not (Test-Path $cleanupScript)) {
+            Write-Host "opk: scripts\cleanup-agent-artifacts.sh khong ton tai" -ForegroundColor Red
+            exit 1
+        }
+        $mode = '--dry-run'
+        foreach ($a in $Args) {
+            if ($a.ToLower() -eq '--apply') { $mode = '--apply' }
+            if ($a.ToLower() -eq '--help')  { Write-Host "opk clean [--apply]"; exit 0 }
+        }
+        & bash $cleanupScript $mode
     }
 
     # ─── v1.6.4 Mode management (Power/Safe) ────────────────────────

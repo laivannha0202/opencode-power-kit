@@ -271,6 +271,33 @@ for cmd_file in "${COMMANDS_WITH_SCOPE_GUARD[@]}"; do
 done
 echo
 
+# ─── v1.6.5: One Command Update & Cleanup ──────────────────────
+echo "[v1.6.5 One Command Update & Cleanup]"
+require_contains "CHANGELOG.md" "1.6.5"
+require_contains "CHANGELOG.md" "One Command Update & Cleanup"
+require_contains "CHANGELOG.md" "opk up"
+require_contains "CHANGELOG.md" "opk clean"
+# Use bash -n + grep -E (regex mode) since require_contains uses -F (fixed string)
+if grep -Eq '^\s*up\|update\|upgrade\)' "bin/opk"; then
+	ok "bin/opk has up/update/upgrade case"
+else
+	fail "bin/opk missing up/update/upgrade case"
+fi
+if grep -Eq '^\s*clean\)' "bin/opk"; then
+	ok "bin/opk has clean case"
+else
+	fail "bin/opk missing clean case"
+fi
+require_contains "bin/opk.ps1" "'up'"
+require_contains "bin/opk.ps1" "'clean'"
+require_contains "bin/opk" "up|update|upgrade"
+require_contains "scripts/cleanup-agent-artifacts.sh" "Trash dir"
+require_contains "scripts/cleanup-agent-artifacts.sh" "GLOBAL_INSTALL_REPORT"
+require_contains "scripts/cleanup-agent-artifacts.sh" "OPK_VERIFY_REPORT"
+require_contains "scripts/cleanup-agent-artifacts.sh" "OPK_DOCTOR_REPORT"
+require_contains "scripts/cleanup-agent-artifacts.sh" "RELEASE_NOTES_v"
+echo
+
 # ─── v1.6.4: Safety & Compatibility Polish ──────────────────────
 echo "[v1.6.4 Safety & Compatibility Polish]"
 require_contains "CHANGELOG.md" "Power Mode vs Safe Mode"

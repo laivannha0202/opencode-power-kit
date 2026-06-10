@@ -2,7 +2,7 @@
 # ============================================================================
 # OpenCode Power Kit - opk CLI wrapper
 # Thin wrapper gọi lại các script có sẵn trong kit. Không duplicate logic.
-# v1.6.4: thêm subcommands mode (power/safe/show), safety-plugin.
+# v1.6.5: thêm subcommands up/update/upgrade/clean (One Command Update & Cleanup).
 #
 # Usage:
 #   opk help
@@ -20,6 +20,11 @@
 #   opk bootstrap     # gọi bootstrap.sh
 #   opk one           # alias: bootstrap.sh --all --project-dir "$(pwd)" --yes (all-in-one)
 #   opk go            # alias: opk one
+#   opk up            # update kit + project (One Command Update)
+#   opk update        # alias: opk up
+#   opk upgrade       # alias: opk up
+#   opk clean         # cleanup project artifacts (dry-run mặc định)
+#   opk up --clean    # update + cleanup apply
 #   opk mode          # quản lý Power/Safe mode
 #   opk mode show     # xem mode hiện tại
 #   opk mode power    # chuyển sang Power Mode (permission: allow)
@@ -147,6 +152,13 @@ opk — OpenCode Power Kit CLI (v$VERSION)
   opk gsd         Forward sang official GSD installer (opt-in, --dry-run / --yes)
   opk update-gsd  Tương tự opk gsd, explicit refresh intent
   opk update-all  Pull kit (ff-only) + refresh bmad (+ optional GSD với --with-gsd)
+
+  v1.6.5 — One Command Update & Cleanup:
+  opk up          Update kit + project (git pull --ff-only + install-global)
+  opk update      Alias: opk up
+  opk upgrade     Alias: opk up
+  opk clean       Cleanup project artifacts (mặc định dry-run)
+  opk up --clean  Update + cleanup apply
 
 Flags chung (forward cho sub-script):
   --yes   skip confirm
@@ -352,6 +364,122 @@ EOF
         exit 1
         ;;
     esac
+    ;;
+
+  # ─── v1.6.5 One Command Update & Cleanup ─────────────────────────
+  # opk up / opk update / opk upgrade
+  #   --clean: also run cleanup-agent-artifacts.sh --apply
+  # opk clean
+  #   default dry-run, --apply to move
+  up|update|upgrade)
+    do_clean=0
+    extra_args=()
+    for a in "$@"; do
+      case "$a" in
+        --clean) do_clean=1 ;;
+        -y|--yes) extra_args+=("$a") ;;
+        --help|-h) echo "opk up [--clean] [--yes]"; exit 0 ;;
+        *) err "opk up: flag không hợp lệ: $a" ;;
+      esac
+    done
+
+    # --- Print diagnostic info ---
+    echo "opk: KIT_DIR    = $KIT_DIR"
+    echo "opk: opk path   = ${OPK_BIN_DIR}/opk"
+    echo "opk: version    = $(cat "$KIT_DIR/VERSION" 2>/dev/null || echo '?')"
+    if [ -d "$KIT_DIR/.git" ]; then
+      echo "opk: git HEAD   = $(git -C "$KIT_DIR" rev-parse --short HEAD 2>/dev/null || echo '?')"
+    fi
+    echo "opk: VERSION    = $(cat "$KIT_DIR/VERSION" 2>/dev/null || echo '?')"
+    echo ""
+
+    # --- Git pull ---
+    if [ -d "$KIT_DIR/.git" ] || git -C "$KIT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      # Check working tree first
+      if ! git -C "$KIT_DIR" diff --quiet 2>/dev/null; then
+        echo "opk: ERROR — working tree dirty, cannot pull --ff-only" >&2
+        echo "opk: Dirty files:" >&2
+        git -C "$KIT_DIR" status --short >&2
+        echo "" >&2
+        echo "opk: Hay commit thay đổi trước, hoặc dùng: opk clean" >&2
+        exit 1
+      fi
+      echo "opk: git pull --ff-only trong $KIT_DIR"
+      if ! git -C "$KIT_DIR" pull --ff-only; then
+        echo "opk: ERROR — git pull failed. Kiểm tra network hoặc conflict." >&2
+        exit 1
+      fi
+    else
+      echo "opk: $KIT_DIR không phải git repo, bỏ qua pull"
+    fi
+    echo ""
+
+    # --- Run install-global.sh --yes ---
+    if [ -f "$KIT_DIR/install-global.sh" ]; then
+      echo "opk: install-global.sh --yes"
+      bash "$KIT_DIR/install-global.sh" --yes
+    fi
+    echo ""
+
+    # --- Print version after update ---
+    new_ver="$(cat "$KIT_DIR/VERSION" 2>/dev/null || echo '?')"
+    echo "opk: version sau update = $new_ver"
+
+    # --- Check if current dir is safe project ---
+    if is_bad_project_dir; then
+      echo ""
+      echo "opk: pwd = $(pwd) là root nguy hiểm — bỏ qua project install."
+      echo "opk:   Để update project, cd vào project thật rồi chạy:"
+      echo "opk:     opk up"
+      echo "opk:   Hoặc tự chạy từng bước:"
+      echo "opk:     opk install --yes"
+      echo "opk:     opk fullstack --yes"
+      echo "opk:     opk verify"
+    else
+      echo ""
+      echo "opk: Project dir: $(pwd)"
+      echo "opk: [1/3] opk install --yes"
+      bash "$KIT_DIR/install.sh" --yes
+      echo "opk: [2/3] opk fullstack --yes"
+      if [ -f "$KIT_DIR/scripts/install-fullstack-profile.sh" ]; then
+        bash "$KIT_DIR/scripts/install-fullstack-profile.sh" --yes
+      else
+        echo "opk:   skip: scripts/install-fullstack-profile.sh không tồn tại"
+      fi
+      echo "opk: [3/3] opk verify"
+      bash "$KIT_DIR/verify.sh"
+    fi
+    echo ""
+
+    # --- Cleanup (dry-run mặc định, --clean thì apply) ---
+    if [ -f "$KIT_DIR/scripts/cleanup-agent-artifacts.sh" ]; then
+      if [ "$do_clean" -eq 1 ]; then
+        echo "opk: cleanup --apply"
+        bash "$KIT_DIR/scripts/cleanup-agent-artifacts.sh" --apply
+      else
+        echo "opk: cleanup dry-run (dùng --clean để apply)"
+        bash "$KIT_DIR/scripts/cleanup-agent-artifacts.sh" --dry-run
+      fi
+    else
+      echo "opk: skip cleanup (scripts/cleanup-agent-artifacts.sh không tồn tại)"
+    fi
+    echo ""
+    echo "opk: ✅ Update hoàn tất."
+    ;;
+
+  clean)
+    if [ -f "$KIT_DIR/scripts/cleanup-agent-artifacts.sh" ]; then
+      mode="--dry-run"
+      for a in "$@"; do
+        case "$a" in
+          --apply) mode="--apply" ;;
+          --help|-h) echo "opk clean [--apply]"; exit 0 ;;
+        esac
+      done
+      exec bash "$KIT_DIR/scripts/cleanup-agent-artifacts.sh" "$mode"
+    else
+      err "scripts/cleanup-agent-artifacts.sh không tồn tại"
+    fi
     ;;
 
   # ─── v1.3.4 GSD Core opt-in integration ────────────────────────

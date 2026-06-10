@@ -243,10 +243,28 @@ Require-Contains 'CHANGELOG.md' 'opk-command-guard'
 Require-Contains 'THIRD_PARTY.md' 'BMAD'
 Require-Contains 'THIRD_PARTY.md' 'GSD Core'
 
+# ─── v1.6.5: One Command Update & Cleanup ──────────────────────
+Write-Host '[v1.6.5 One Command Update & Cleanup]'
+Require-Contains 'VERSION' '1.6.5'
+Require-Contains 'README.md' 'version-1.6.5'
+Require-Contains 'CHANGELOG.md' '1.6.5'
+Require-Contains 'CHANGELOG.md' 'One Command Update & Cleanup'
+Require-Contains 'CHANGELOG.md' 'opk up'
+Require-Contains 'CHANGELOG.md' 'opk clean'
+Require-Contains 'bin/opk' "'up')"
+Require-Contains 'bin/opk' "'clean')"
+Require-Contains 'bin/opk.ps1' "'up'"
+Require-Contains 'bin/opk.ps1' "'clean'"
+Require-Contains 'bin/opk' "up|update|upgrade"
+Require-Contains 'bin/opk' "Trash dir"
+Require-Contains 'scripts/cleanup-agent-artifacts.sh' 'GLOBAL_INSTALL_REPORT'
+Require-Contains 'scripts/cleanup-agent-artifacts.sh' 'OPK_VERIFY_REPORT'
+Require-Contains 'scripts/cleanup-agent-artifacts.sh' 'OPK_DOCTOR_REPORT'
+Require-Contains 'scripts/cleanup-agent-artifacts.sh' 'RELEASE_NOTES_v'
+Write-Host ''
+
 # ─── v1.6.4: Safety & Compatibility Polish ──────────────────────
 Write-Host '[v1.6.4 Safety & Compatibility Polish]'
-Require-Contains 'VERSION' '1.6.4'
-Require-Contains 'README.md' 'version-1.6.4'
 Require-Contains 'THIRD_PARTY.md' 'v1.6.4'
 Require-Contains 'CHANGELOG.md' 'Power Mode vs Safe Mode'
 Require-Contains 'CHANGELOG.md' 'Safety plugin guard'

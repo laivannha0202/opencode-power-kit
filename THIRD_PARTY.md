@@ -1,6 +1,6 @@
 # Third-Party Components & Credits
 
-> **Version:** opencode-power-kit v1.6.4
+> **Version:** opencode-power-kit v1.6.5
 >
 > This project packages, configures, and documents workflows around
 > [OpenCode](https://github.com/opencode-ai). It credits upstream authors

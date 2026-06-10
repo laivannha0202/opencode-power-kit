@@ -5,6 +5,45 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.5] - 2026-06-10
+
+### One Command Update & Cleanup
+
+### Added
+
+- **One Command Update: `opk up`** — Update kit + project bằng một lệnh duy nhất.
+  - `opk up` / `opk update` / `opk upgrade` (3 alias, cùng một lệnh)
+  - Git pull `--ff-only` an toàn trong kit repo
+  - Tự động chạy `install-global.sh --yes` (Linux/macOS) hoặc
+    `install-global.ps1 -Yes` (Windows)
+  - Nếu pwd là project an toàn (không phải root/system): chạy `opk install --yes`
+    + `opk fullstack --yes` + `opk verify`
+  - Nếu pwd là root/system: bỏ qua project install, hướng dẫn user `cd` vào
+    project thật
+  - In version sau update để xác nhận
+- **Working tree protection** — `opk up` từ chối nếu working tree dirty, hiển
+  thị danh sách file dirty, hướng dẫn user commit hoặc dùng `opk clean`.
+  Không tự động stash/reset.
+- **Cleanup subcommand: `opk clean`** — Dọn dẹp agent artifact an toàn.
+  - Mặc định `--dry-run` (chỉ liệt kê, không động vào file)
+  - `opk clean --apply` (trên Linux: gọi `cleanup-agent-artifacts.sh --apply`,
+    trên Windows: hướng dẫn chạy trong WSL/Git Bash)
+  - `opk up --clean` (update + cleanup apply trong một lệnh)
+- **`cleanup-agent-artifacts.sh` patterns mở rộng** — Thêm:
+  `GLOBAL_INSTALL_REPORT.md`, `OPK_VERIFY_REPORT.md`, `OPK_DOCTOR_REPORT.md`,
+  `RELEASE_NOTES_v*.md`, `.bak.*` đuôi mở rộng
+- **Hỗ trợ Windows PowerShell** — `bin/opk.ps1` thêm đầy đủ `up`/`update`/
+  `upgrade`/`clean` subcommands, tự động dùng `install-global.ps1` và
+  `cleanup-agent-artifacts.sh` (qua WSL/Git Bash) khi cần
+
+### Safety
+
+- `cleanup-agent-artifacts.sh`: thêm dòng TIP ở cuối script hướng dẫn tích hợp
+  với `opk clean`/`opk up --clean`
+- `bin/opk.ps1`: sử dụng `Test-BadProjectDir` helper (tương tự `is_bad_project_dir`
+  trong bash) để tránh install vào root/system directory
+- Cơ chế dry-run mặc định: `opk clean` không đụng file trừ khi có `--apply`
+
 ## [1.6.4] - 2026-06-10
 
 ### Safety & Compatibility Polish
@@ -857,6 +896,7 @@ First production-grade release. Bumped from 9.4/10 → 10/10.
 - **Badges** in `README.md`: CI status, version, no-MCP policy,
   safe/no-secrets policy
 
+[1.6.5]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.5
 [1.6.4]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.4
 [1.6.3]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.3
 [1.6.2]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.2

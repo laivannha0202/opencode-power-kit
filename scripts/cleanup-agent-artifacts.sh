@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────
 # cleanup-agent-artifacts.sh
-# opencode-power-kit v1.3.3
+# opencode-power-kit v1.6.5
 #
 # Safely clean up temporary, debug, scratch, and reproduction files
 # that an agent (or a developer) may have created.
@@ -32,10 +32,16 @@ ALLOWED_PATTERNS=(
 	'^\.opk-scratch/'
 	'\.tmp$'
 	'\.bak$'
+	'\.bak\..*$'
 	'\.orig$'
 	'\.log$'
 	'^repro-.*'
 	'^debug-.*'
+	'^GLOBAL_INSTALL_REPORT\.md$'
+	'^OPK_VERIFY_REPORT\.md$'
+	'^OPK_DOCTOR_REPORT\.md$'
+	'^RELEASE_NOTES_v[0-9]+\.[0-9]+\.[0-9]+\.md$'
+	'\.opk-trash/'
 )
 
 # Directories that must NEVER be touched, even if they contain
@@ -231,4 +237,11 @@ if [[ ${move_failed} -gt 0 ]]; then
 	echo "WARNING: ${move_failed} item(s) could not be moved. Inspect manually." >&2
 fi
 echo "Files were MOVED, not deleted. Recover with: mv ${TRASH_DIR}/* ."
+echo ""
+echo "=== TIP ==="
+echo "  Cleanup duoc tich hop vao opk:"
+echo "    opk clean       # dry-run (mac dinh)"
+echo "    opk clean --apply  # move vao .opk-trash/"
+echo "    opk up --clean  # update + cleanup apply"
+echo "  Du lieu trong .opk-trash/ co the recover bang: mv .opk-trash/${TIMESTAMP}/* ./"
 exit 0
