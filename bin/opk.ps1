@@ -22,6 +22,10 @@
 #   opk upgrade     # alias: opk up
 #   opk clean       # cleanup project artifacts (dry-run mặc định)
 #   opk up --clean  # update + cleanup apply
+#   opk markitdown install   # cai MarkItDown (opt-in)
+#   opk markitdown status    # kiem tra trang thai
+#   opk md-convert <in> <out> [--force]   # convert file sang Markdown
+#   opk doc-to-md <in> <out> [--force]    # alias: md-convert
 # ============================================================================
 [CmdletBinding()]
 param(
@@ -158,12 +162,11 @@ switch ($Command.ToLower()) {
         Write-Host "  opk upgrade     Alias: opk up"
         Write-Host "  opk clean       Cleanup project artifacts (dry-run mac dinh)"
         Write-Host ""
-        Write-Host "v1.6.5 — One Command Update & Cleanup (moi):"
-        Write-Host "  opk up          Update kit + project (git pull + install-global)"
-        Write-Host "  opk update      Alias: opk up"
-        Write-Host "  opk upgrade     Alias: opk up"
-        Write-Host "  opk clean       Cleanup project artifacts (mac dinh dry-run)"
-        Write-Host "  opk up --clean  Update + cleanup apply"
+        Write-Host "v1.6.6 — MarkItDown Document Tools (opt-in, moi):"
+        Write-Host "  opk markitdown install Cai Microsoft MarkItDown (pipx/pip)"
+        Write-Host "  opk markitdown status   Kiem tra trang thai MarkItDown"
+        Write-Host "  opk md-convert <in> <out> [--force]  Convert file sang Markdown"
+        Write-Host "  opk doc-to-md <in> <out> [--force]   Alias: md-convert"
         Write-Host ""
         Write-Host "v1.6.4 — Mode & Safety (moi):"
         Write-Host "  opk mode show   Xem che do Power/Safe hien tai"
@@ -499,6 +502,77 @@ switch ($Command.ToLower()) {
                 exit 1
             }
         }
+    }
+
+    # ─── v1.6.6 MarkItDown Document Tools (opt-in) ─────────────────
+    'markitdown' {
+        $mdCmd = if ($Args.Count -gt 0) { $Args[0].ToLower() } else { 'status' }
+        $mdArgs = if ($Args.Count -gt 1) { $Args[1..$($Args.Count-1)] } else { @() }
+
+        switch ($mdCmd) {
+            'install' {
+                $installer = Join-Path $KitDir 'scripts\install-markitdown.ps1'
+                Require-File $installer
+                & powershell -ExecutionPolicy Bypass -File $installer @mdArgs
+            }
+            'status' {
+                $md = Get-Command markitdown -ErrorAction SilentlyContinue
+                if ($md) {
+                    Write-Host "opk: ✅ MarkItDown installed at $($md.Source)" -ForegroundColor Green
+                    & $md.Source --help 2>&1 | Select-Object -First 3
+                } else {
+                    Write-Host "opk: ❌ MarkItDown not installed. Run: opk markitdown install" -ForegroundColor Yellow
+                }
+            }
+            default {
+                Write-Host "opk: markitdown: lenh khong hop le '$mdCmd'. Dung: install, status" -ForegroundColor Red
+                exit 1
+            }
+        }
+    }
+
+    { @('md-convert','doc-to-md') -contains $_ } {
+        if (-not (Get-Command markitdown -ErrorAction SilentlyContinue)) {
+            Write-Host "opk: MarkItDown chua duoc cai dat. Chay: opk markitdown install" -ForegroundColor Red
+            exit 1
+        }
+        if ($Args.Count -lt 2) {
+            Write-Host "Usage: opk $Command <input-file> <output-file> [--force]" -ForegroundColor Yellow
+            exit 1
+        }
+        $inputFile = $Args[0]
+        $outputFile = $Args[1]
+        $force = $false
+        if ($Args.Count -gt 2) {
+            foreach ($a in $Args[2..($Args.Count-1)]) {
+                if ($a.ToLower() -eq '--force') { $force = $true }
+                else {
+                    Write-Host "opk: flag khong hop le: $a" -ForegroundColor Red
+                    exit 1
+                }
+            }
+        }
+        # Validate input exists
+        if (-not (Test-Path $inputFile)) {
+            Write-Host "opk: input file khong ton tai: $inputFile" -ForegroundColor Red
+            exit 1
+        }
+        # Check output
+        if ((Test-Path $outputFile) -and -not $force) {
+            Write-Host "opk: output file da ton tai: $outputFile (dung --force de ghi de)" -ForegroundColor Red
+            exit 1
+        }
+        # Don't convert sensitive files
+        $sensitive = @('.env','.secret','.key','.pem','.cert','credential','token','private')
+        $ext = [System.IO.Path]::GetExtension($inputFile).ToLower()
+        if ($sensitive -contains $ext -or $inputFile -match 'secret|private|credential|token') {
+            Write-Host "opk: tu choi convert file nhay cam: $inputFile" -ForegroundColor Red
+            exit 1
+        }
+        Write-Host "opk: Converting $inputFile -> $outputFile"
+        & markitdown $inputFile | Out-File -FilePath $outputFile -Encoding UTF8
+        $bytes = (Get-Item $outputFile).Length
+        Write-Host "opk: ✅ Done ($bytes bytes)" -ForegroundColor Green
     }
 
     default {

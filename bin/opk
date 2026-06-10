@@ -55,8 +55,10 @@ fi
 
 VERSION="$(cat "$KIT_DIR/VERSION" 2>/dev/null || echo "?")"
 
-# --- Helpers ---
-err() { echo "opk: $*" >&2; exit 1; }
+# --- Helpers: output format ---
+err()   { echo "opk: $*" >&2; exit 1; }
+warn()  { echo "opk: $*" >&2; }
+info()  { echo "opk: $*"; }
 
 require_file() {
   [ -f "$1" ] || err "thiếu file: $1"
@@ -529,6 +531,69 @@ EOF
     else
       echo "opk: [3/3] bỏ qua GSD (dùng --with-gsd để chạy)"
     fi
+    ;;
+
+  # ─── v1.6.6 MarkItDown Document Tools (opt-in) ─────────────────
+  markitdown)
+    md_cmd="${1:-status}"
+    shift || true
+    case "$md_cmd" in
+      install)
+        require_file "$KIT_DIR/scripts/install-markitdown.sh"
+        exec bash "$KIT_DIR/scripts/install-markitdown.sh" "$@"
+        ;;
+      status)
+        if command -v markitdown >/dev/null 2>&1; then
+          echo "opk: ✅ MarkItDown installed at $(command -v markitdown)"
+          markitdown --help 2>&1 | head -3
+        else
+          echo "opk: ❌ MarkItDown not installed. Run: opk markitdown install"
+        fi
+        ;;
+      *)
+        echo "opk: markitdown: lệnh không hợp lệ '$md_cmd'. Dùng: install, status" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+
+  md-convert|doc-to-md)
+    # opk md-convert <input> <output> [--force]
+    # opk doc-to-md <input> <output> [--force]
+    if ! command -v markitdown >/dev/null 2>&1; then
+      err "MarkItDown chưa được cài đặt. Chạy: opk markitdown install"
+    fi
+    if [[ $# -lt 2 ]]; then
+      echo "Usage: opk $cmd <input-file> <output-file> [--force]" >&2
+      exit 1
+    fi
+    input="$1"
+    output="$2"
+    shift 2
+    force=0
+    for a in "$@"; do
+      case "$a" in
+        --force) force=1 ;;
+        *) err "flag không hợp lệ: $a" ;;
+      esac
+    done
+    # Validate input exists
+    if [[ ! -f "$input" ]]; then
+      err "input file không tồn tại: $input"
+    fi
+    # Check output does not exist
+    if [[ -f "$output" && "$force" -eq 0 ]]; then
+      err "output file đã tồn tại: $output (dùng --force để ghi đè)"
+    fi
+    # Don't read .env/secrets
+    case "$input" in
+      *.env|*.secret|*secret*|*private*|*key*|*credential*|*token*)
+        err "từ chối convert file nhạy cảm: $input"
+        ;;
+    esac
+    echo "opk: Converting $input -> $output"
+    markitdown "$input" > "$output"
+    echo "opk: ✅ Done ($(wc -c < "$output") bytes)"
     ;;
 
   *)

@@ -1,6 +1,6 @@
 # Third-Party Components & Credits
 
-> **Version:** opencode-power-kit v1.6.5
+> **Version:** opencode-power-kit v1.6.6
 >
 > This project packages, configures, and documents workflows around
 > [OpenCode](https://github.com/opencode-ai). It credits upstream authors
@@ -31,7 +31,7 @@
 | **Plugin reference** | Plugin được load runtime từ GitHub/npm | Via OpenCode | No | Superpowers |
 | **Install-time dependency** | Cài vào project user qua official installer | Via npx | No | BMAD Method |
 | **Config-only reference** | Kit chỉ ship template config trỏ đến upstream | No | No | Biome config |
-| **Opt-in wrapper** | Chỉ gọi installer chính thức khi user yêu cầu | No | No | GSD Core |
+| **Opt-in wrapper** | Chỉ gọi installer chính thức khi user yêu cầu | No | No | GSD Core, MarkItDown |
 | **Detect-only** | Chỉ phát hiện tool đã cài sẵn trên PATH | No | No | rg, fd, semgrep |
 | **Recommended ecosystem** | Stack mục tiêu / tài liệu hướng dẫn | No | No | NestJS, React, MySQL |
 
@@ -45,6 +45,7 @@
 | Superpowers | obra | https://github.com/obra/superpowers | Agent skill library / plugin | Plugin reference | Loaded at runtime by OpenCode plugin system | MIT |
 | BMAD Method | bmad-code-org | https://github.com/bmad-code-org/BMAD-METHOD | Workflow modules, agents, slash commands | Install-time dependency | `install.sh` / `update-bmad.sh` calls `npx bmad-method` | MIT |
 | GSD Core | open-gsd | https://github.com/open-gsd/gsd-core | Optional companion workflow engine | Opt-in wrapper | `opk gsd` / `opk update-gsd` | See npm |
+| MarkItDown | Microsoft | https://github.com/microsoft/markitdown | Document-to-Markdown conversion (PDF/DOCX/PPTX/XLSX/HTML) | Opt-in wrapper | `opk markitdown install` (pipx/pip) | MIT |
 | rtk | rtk-ai | https://github.com/rtk-ai/rtk | Token-saving shell wrapper | Detect-only | User installs separately | MIT |
 | tokscale | — | https://github.com/tokscale/tokscale | Token cost visualization | Detect-only | User installs separately | — |
 | repomix | yamadashy | https://github.com/yamadashy/repomix | Context pack generator | Detect-only | User installs separately | MIT |
@@ -144,7 +145,53 @@ refresh.
 
 ---
 
-## 5. Detect-only Tools
+## 5. MarkItDown — Opt-in Wrapper
+
+| Field | Value |
+|-------|-------|
+| Role | Document-to-Markdown conversion (PDF, DOCX, PPTX, XLSX, HTML, CSV, JSON, XML, ZIP) |
+| Integration | **Opt-in wrapper** — never vendored, never auto-installed |
+| Source | https://github.com/microsoft/markitdown |
+| PyPI | `markitdown[all]` |
+| Installer | `pipx install "markitdown[all]"` (preferred) or `pip install --user "markitdown[all]"` |
+| Kit ships | `scripts/install-markitdown.sh` + `scripts/install-markitdown.ps1` — thin wrappers |
+| Update path | `opk markitdown install` (re-runs pipx/pip) |
+| License | MIT (per upstream) |
+
+The kit does **not** bundle MarkItDown. The wrapper scripts:
+
+1. Verify `python3` is on PATH.
+2. Detect available install tool (`pipx` preferred, `pip --user` fallback).
+3. Print the planned `pipx install "markitdown[all]"` command.
+4. Ask for confirmation (or accept `--yes` / `-Y`).
+5. Forward to the official PyPI installer.
+6. Run `markitdown --help` to verify installation.
+
+### Safety guarantees
+
+- **Never vendors** any MarkItDown source code.
+- **Never installs** automatically — always requires explicit `opk markitdown install`.
+- **Never runs** `sudo` or `curl|sh`.
+- **Never installs** during `opk up`, bootstrap, or shell startup.
+- **Never reads** `.env`, secrets, or sensitive files.
+- **Never overwrites** output files without `--force`.
+
+### Convert commands
+
+| CLI | Description |
+|-----|-------------|
+| `opk md-convert <input> <output>` | Convert file to Markdown |
+| `opk md-convert <input> <output> --force` | Convert and overwrite existing output |
+| `opk doc-to-md <input> <output>` | Alias for `md-convert` |
+
+### Agent command
+
+`opencode-global/commands/doc-to-md.md` guides agents to use the `opk` wrapper.
+Agents never install packages directly.
+
+---
+
+## 6. Detect-only Tools
 
 The following tools are **never vendored, never auto-installed, and never
 auto-updated**. The `/tooling-doctor` command detects whether they are
@@ -176,7 +223,7 @@ present, but it never installs Playwright itself. Similarly,
 
 ---
 
-## 6. Recommended Ecosystem (Target Stack)
+## 7. Recommended Ecosystem (Target Stack)
 
 The full-stack profile recommends the following stack. These are **not**
 bundled or vendored — they are the target technologies that the profile's
@@ -194,7 +241,7 @@ scaffolding, agents, and commands are designed for.
 
 ---
 
-## 7. Update Policy
+## 8. Update Policy
 
 ### Install-time dependencies (BMAD Method)
 
@@ -202,10 +249,11 @@ scaffolding, agents, and commands are designed for.
 - `BMAD_METHOD_VERSION` env overrides the default version pin.
 - Full log captured to `.opencode-power-bmad-install.log`.
 
-### Opt-in tools (GSD Core)
+### Opt-in tools (GSD Core, MarkItDown)
 
 - `opk gsd` / `opk update-gsd` — calls `npx @opengsd/gsd-core@latest`.
 - `opk update-all --with-gsd` — pulls kit + updates GSD.
+- `opk markitdown install` — re-runs `pipx install "markitdown[all]"`.
 - No auto-update, no background refresh.
 
 ### Plugin references (Superpowers)
@@ -228,13 +276,14 @@ scaffolding, agents, and commands are designed for.
 
 ---
 
-## 8. License Notes
+## 9. License Notes
 
 - **opencode-power-kit**: [MIT](./LICENSE)
 - **OpenCode**: MIT
 - **BMAD Method**: MIT
 - **Superpowers**: MIT
 - **GSD Core**: See npm package page
+- **MarkItDown**: MIT
 - **rtk**: MIT
 - **repomix**: MIT
 - **ast-grep**: MIT

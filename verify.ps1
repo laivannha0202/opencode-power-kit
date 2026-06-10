@@ -1,6 +1,6 @@
 # ─────────────────────────────────────────────────────────────────
 # verify.ps1
-# opencode-power-kit v1.6.4
+# opencode-power-kit v1.6.6
 #
 # PowerShell mirror of verify.sh. Read-only sanity check.
 #
@@ -121,11 +121,14 @@ Require-File 'opencode-global/commands/release-check.md'
 Require-File 'opencode-global/commands/kit-audit.md'
 Require-File 'opencode-global/commands/power-build.md'
 Require-File 'opencode-global/commands/tooling-doctor.md'
+Require-File 'opencode-global/commands/doc-to-md.md'
 Require-File 'scripts/cleanup-agent-artifacts.sh'
 Require-File 'scripts/opk-command-guard.sh'
 Require-File 'scripts/validate-opencode-pack.py'
 Require-File 'scripts/install-gsd-core.sh'
 Require-File 'scripts/install-gsd-core.ps1'
+Require-File 'scripts/install-markitdown.sh'
+Require-File 'scripts/install-markitdown.ps1'
 Require-File 'scripts/install-safety-plugin.sh'
 Require-File 'scripts/install-safety-plugin.ps1'
 Require-File 'bin/opk'
@@ -261,6 +264,28 @@ Require-Contains 'scripts/cleanup-agent-artifacts.sh' 'GLOBAL_INSTALL_REPORT'
 Require-Contains 'scripts/cleanup-agent-artifacts.sh' 'OPK_VERIFY_REPORT'
 Require-Contains 'scripts/cleanup-agent-artifacts.sh' 'OPK_DOCTOR_REPORT'
 Require-Contains 'scripts/cleanup-agent-artifacts.sh' 'RELEASE_NOTES_v'
+Write-Host ''
+
+# ─── v1.6.6: MarkItDown Document Tools ──────────────────────────
+Write-Host '[v1.6.6 MarkItDown Document Tools]'
+Require-Contains 'CHANGELOG.md' '1.6.6'
+Require-Contains 'CHANGELOG.md' 'MarkItDown'
+Require-Contains 'scripts/install-markitdown.sh' 'pipx'
+Require-Contains 'scripts/install-markitdown.sh' 'markitdown'
+Require-Contains 'scripts/install-markitdown.sh' '--dry-run'
+Require-Contains 'scripts/install-markitdown.ps1' 'pipx'
+Require-Contains 'scripts/install-markitdown.ps1' 'markitdown'
+Require-Contains 'opencode-global/commands/doc-to-md.md' 'md-convert'
+Require-Contains 'opencode-global/commands/doc-to-md.md' 'markitdown'
+Require-Contains 'bin/opk' 'markitdown)'
+Require-Contains 'bin/opk' 'install-markitdown.sh'
+Require-Contains 'bin/opk' 'md-convert|doc-to-md)'
+Require-Contains 'bin/opk.ps1' "'markitdown'"
+Require-Contains 'bin/opk.ps1' 'install-markitdown.ps1'
+Require-Contains 'bin/opk.ps1' 'md-convert'
+Require-Contains 'README.md' 'MarkItDown'
+Require-Contains 'README.md' 'microsoft/markitdown'
+Require-Contains 'THIRD_PARTY.md' 'MarkItDown'
 Write-Host ''
 
 # ─── v1.6.4: Safety & Compatibility Polish ──────────────────────

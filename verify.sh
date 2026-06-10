@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────
 # verify.sh
-# opencode-power-kit v1.6.4
+# opencode-power-kit v1.6.6
 #
 # Sanity-check the power-kit. Runs on every CI run and is also safe
 # to run locally: it does not modify anything, it only inspects.
@@ -131,6 +131,8 @@ require_file "scripts/opk-command-guard.sh"
 require_file "scripts/validate-opencode-pack.py"
 require_file "scripts/install-gsd-core.sh"
 require_file "scripts/install-gsd-core.ps1"
+require_file "scripts/install-markitdown.sh"
+require_file "scripts/install-markitdown.ps1"
 require_file "scripts/install-safety-plugin.sh"
 require_file "scripts/install-safety-plugin.ps1"
 require_file "bin/opk"
@@ -158,6 +160,7 @@ require_executable "verify.sh"
 require_executable "scripts/cleanup-agent-artifacts.sh"
 require_executable "scripts/validate-opencode-pack.py"
 require_executable "scripts/install-gsd-core.sh"
+require_executable "scripts/install-markitdown.sh"
 require_executable "bin/opk"
 echo
 
@@ -296,6 +299,40 @@ require_contains "scripts/cleanup-agent-artifacts.sh" "GLOBAL_INSTALL_REPORT"
 require_contains "scripts/cleanup-agent-artifacts.sh" "OPK_VERIFY_REPORT"
 require_contains "scripts/cleanup-agent-artifacts.sh" "OPK_DOCTOR_REPORT"
 require_contains "scripts/cleanup-agent-artifacts.sh" "RELEASE_NOTES_v"
+echo
+
+# ─── v1.6.6: MarkItDown Document Tools ──────────────────────────
+echo "[v1.6.6 MarkItDown Document Tools]"
+require_contains "CHANGELOG.md" "1.6.6"
+require_contains "CHANGELOG.md" "MarkItDown"
+require_file "scripts/install-markitdown.sh"
+require_file "scripts/install-markitdown.ps1"
+require_file "opencode-global/commands/doc-to-md.md"
+require_executable "scripts/install-markitdown.sh"
+# Script content checks
+require_contains "scripts/install-markitdown.sh" "pipx"
+require_contains "scripts/install-markitdown.sh" "markitdown"
+require_contains "scripts/install-markitdown.sh" "--dry-run"
+require_contains "scripts/install-markitdown.ps1" "pipx"
+require_contains "scripts/install-markitdown.ps1" "markitdown"
+require_contains "opencode-global/commands/doc-to-md.md" "md-convert"
+require_contains "opencode-global/commands/doc-to-md.md" "markitdown"
+# bin/opk commands
+require_contains "bin/opk" "markitdown)"
+require_contains "bin/opk" "md-convert|doc-to-md)"
+require_contains "bin/opk" "install-markitdown.sh"
+require_contains "bin/opk" "command -v markitdown"
+# bin/opk.ps1 commands
+require_contains "bin/opk.ps1" "'markitdown'"
+require_contains "bin/opk.ps1" "md-convert"
+require_contains "bin/opk.ps1" "install-markitdown.ps1"
+# README
+require_contains "README.md" "MarkItDown"
+require_contains "README.md" "microsoft/markitdown"
+require_contains "README.md" "md-convert"
+# THIRD_PARTY
+require_contains "THIRD_PARTY.md" "MarkItDown"
+require_contains "THIRD_PARTY.md" "microsoft/markitdown"
 echo
 
 # ─── v1.6.4: Safety & Compatibility Polish ──────────────────────

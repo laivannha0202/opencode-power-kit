@@ -5,6 +5,34 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.6] - 2026-06-10
+
+### MarkItDown Document Tools (Opt-in)
+
+### Added
+
+- **MarkItDown integration** — optional document-to-Markdown conversion using
+  [Microsoft MarkItDown](https://github.com/microsoft/markitdown) (Python).
+  Supports PDF, DOCX, PPTX, XLSX, HTML, CSV, JSON, XML, ZIP.
+  - `opk markitdown install` — install via pipx (preferred) or pip --user
+  - `opk markitdown status` — check if MarkItDown is installed
+  - `opk md-convert <input> <output> [--force]` — convert file to Markdown
+  - `opk doc-to-md <input> <output> [--force]` — alias for md-convert
+- **`scripts/install-markitdown.sh`** — Linux/macOS installer (dry-run, --yes, python3 + pipx/pip)
+- **`scripts/install-markitdown.ps1`** — Windows PowerShell installer (mirrors .sh)
+- **`opencode-global/commands/doc-to-md.md`** — agent command documentation
+  (guides agents to use `opk` wrapper, never self-install packages)
+- **THIRD_PARTY.md** — MarkItDown entry under Opt-in wrapper, section 5
+- **README.md** — MarkItDown section with integration model, usage, format table
+
+### Safety
+
+- MarkItDown scripts never: auto-install, vendored source, sudo, curl|sh, read .env/secrets
+- MarkItDown scripts never overwrite output without `--force`
+- MarkItDown scripts refuse to convert sensitive files (.env, .secret, credential, token)
+- MarkItDown is not installed during `opk up`, bootstrap, or shell startup
+- bin/opk and bin/opk.ps1 reject md-convert if input file doesn't exist or is sensitive
+
 ## [1.6.5] - 2026-06-10
 
 ### One Command Update & Cleanup
@@ -896,6 +924,7 @@ First production-grade release. Bumped from 9.4/10 → 10/10.
 - **Badges** in `README.md`: CI status, version, no-MCP policy,
   safe/no-secrets policy
 
+[1.6.6]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.6
 [1.6.5]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.5
 [1.6.4]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.4
 [1.6.3]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.3

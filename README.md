@@ -1,7 +1,7 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.6.5-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-1.6.6-blue.svg)](./VERSION)
 [![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
@@ -153,6 +153,7 @@ người dùng hiểu rõ ranh giới.
 | Superpowers | obra | Agent skill library — plugin load runtime | Plugin reference | JSON reference in `opencode.json` |
 | BMAD Method | bmad-code-org | Workflow modules, agents, slash commands | Install-time dependency | `install.sh` / `update-bmad.sh` gọi `npx bmad-method` |
 | GSD Core | open-gsd | Optional companion workflow engine | Opt-in wrapper | `scripts/install-gsd-core.sh` |
+| MarkItDown | Microsoft | Document-to-Markdown conversion (PDF/DOCX/PPTX/XLSX/HTML) | Opt-in wrapper | `scripts/install-markitdown.sh`, `scripts/install-markitdown.ps1` |
 | rtk | rtk-ai | Token-saving shell wrapper | Detect-only | `/tooling-doctor` phát hiện |
 | repomix | yamadashy | Context pack generator | Detect-only | `/tooling-doctor` + `/token-pack` |
 | ast-grep | ast-grep | Structural code search | Detect-only | `/tooling-doctor` |
@@ -555,6 +556,70 @@ cd ~/opencode-power-kit && git pull --ff-only
 ```
 Mỗi release mới có thể cập nhật version pin BMAD, templates, và bundled
 configs. Xem `CHANGELOG.md` để biết chi tiết.
+
+---
+
+## MarkItDown Document Tools v1.6.6
+
+opencode-power-kit ships **optional** integration with [Microsoft MarkItDown](https://github.com/microsoft/markitdown)
+— a Python tool that converts PDF, DOCX, PPTX, XLSX, HTML, CSV, JSON, XML, and ZIP
+archives to Markdown.
+
+### Integration model: Opt-in wrapper
+
+- Kit **never installs** MarkItDown automatically.
+- Kit **never vendors** any MarkItDown source code.
+- Kit **never runs** `pip install` during `opk up` or bootstrap.
+- User must explicitly run `opk markitdown install` to install the official PyPI package.
+
+### Usage
+
+```bash
+# Check status
+opk markitdown status
+
+# Install MarkItDown (requires Python 3 + pipx or pip)
+opk markitdown install
+
+# Convert a document to Markdown
+opk md-convert input.pdf output.md
+
+# Overwrite existing output
+opk md-convert input.docx output.md --force
+
+# Alias
+opk doc-to-md input.html output.md
+```
+
+### Supported formats
+
+| Format | Status |
+|--------|--------|
+| PDF | ✅ |
+| DOCX | ✅ |
+| PPTX | ✅ |
+| XLSX | ✅ |
+| HTML | ✅ |
+| CSV | ✅ |
+| JSON | ✅ |
+| XML | ✅ |
+| ZIP (archive) | ✅ |
+
+### Agent command
+
+The `doc-to-md` command in `opencode-global/commands/doc-to-md.md` guides
+agents to use the `opk` wrapper — never to install packages directly.
+
+### Files
+
+| File | Role |
+|------|------|
+| `scripts/install-markitdown.sh` | Linux/macOS installer |
+| `scripts/install-markitdown.ps1` | Windows installer |
+| `opencode-global/commands/doc-to-md.md` | Agent command documentation |
+| `bin/opk` / `bin/opk.ps1` | CLI subcommands: `markitdown`, `md-convert`, `doc-to-md` |
+
+See [`THIRD_PARTY.md`](./THIRD_PARTY.md) for license and update path.
 
 ---
 
