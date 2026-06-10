@@ -1,7 +1,7 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.6.6-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-1.6.7-blue.svg)](./VERSION)
 [![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
@@ -153,6 +153,7 @@ người dùng hiểu rõ ranh giới.
 | Superpowers | obra | Agent skill library — plugin load runtime | Plugin reference | JSON reference in `opencode.json` |
 | BMAD Method | bmad-code-org | Workflow modules, agents, slash commands | Install-time dependency | `install.sh` / `update-bmad.sh` gọi `npx bmad-method` |
 | GSD Core | open-gsd | Optional companion workflow engine | Opt-in wrapper | `scripts/install-gsd-core.sh` |
+| Supermemory | supermemory.ai | Memory/knowledge layer — store, retrieve, and search agent conversations, notes, and context | Opt-in wrapper | `scripts/install-supermemory.sh`, `scripts/install-supermemory.ps1` |
 | MarkItDown | Microsoft | Document-to-Markdown conversion (PDF/DOCX/PPTX/XLSX/HTML) | Opt-in wrapper | `scripts/install-markitdown.sh`, `scripts/install-markitdown.ps1` |
 | rtk | rtk-ai | Token-saving shell wrapper | Detect-only | `/tooling-doctor` phát hiện |
 | repomix | yamadashy | Context pack generator | Detect-only | `/tooling-doctor` + `/token-pack` |
@@ -618,6 +619,51 @@ agents to use the `opk` wrapper — never to install packages directly.
 | `scripts/install-markitdown.ps1` | Windows installer |
 | `opencode-global/commands/doc-to-md.md` | Agent command documentation |
 | `bin/opk` / `bin/opk.ps1` | CLI subcommands: `markitdown`, `md-convert`, `doc-to-md` |
+
+See [`THIRD_PARTY.md`](./THIRD_PARTY.md) for license and update path.
+
+---
+
+## Supermemory Memory API v1.6.7
+
+opencode-power-kit ships **optional** integration with [Supermemory](https://github.com/supermemory/supermemory)
+— a memory/knowledge layer for AI agents that provides persistent storage, retrieval, and
+semantic search of conversations, notes, and project context.
+
+### Integration model: Opt-in wrapper
+
+- Kit **never installs** Supermemory automatically.
+- Kit **never vendors** any Supermemory source code.
+- Kit **never runs** `npm install` during `opk up` or bootstrap.
+- User must explicitly run `opk supermemory install` to install the official
+  [`@supermemory/ai`](https://www.npmjs.com/package/@supermemory/ai) package.
+
+### Usage
+
+```bash
+# Check status
+opk supermemory status
+
+# Install Supermemory (requires Node.js 18+)
+opk supermemory install
+
+# Initialize — set up memory store and API key
+opk supermemory init
+```
+
+### Agent command
+
+The `supermemory-init` command in `opencode-global/commands/supermemory-init.md`
+guides agents to use the `opk` wrapper — never to install packages directly.
+
+### Files
+
+| File | Role |
+|------|------|
+| `scripts/install-supermemory.sh` | Linux/macOS installer |
+| `scripts/install-supermemory.ps1` | Windows installer |
+| `opencode-global/commands/supermemory-init.md` | Agent command documentation |
+| `bin/opk` / `bin/opk.ps1` | CLI subcommands: `supermemory` |
 
 See [`THIRD_PARTY.md`](./THIRD_PARTY.md) for license and update path.
 

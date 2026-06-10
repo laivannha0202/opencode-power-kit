@@ -5,6 +5,33 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.7] - 2026-06-10
+
+### Supermemory Memory API (Opt-in)
+
+### Added
+
+- **Supermemory integration** — optional memory persistence across AI coding
+  sessions using [Supermemory CLI](https://github.com/supermemory/supermemory)
+  (npm).
+  - `opk supermemory install` — install via npm global install
+  - `opk supermemory status` — check if Supermemory is installed
+  - `opk supermemory init` — initialize Supermemory in the current project
+  - `/supermemory-init` — agent command for initialization workflow
+- **`scripts/install-supermemory.sh`** — Linux/macOS installer (dry-run, --yes, npm)
+- **`scripts/install-supermemory.ps1`** — Windows PowerShell installer (mirrors .sh)
+- **`opencode-global/commands/supermemory-init.md`** — agent command documentation
+  (guides agents to use `opk` wrapper, never self-install packages)
+- **THIRD_PARTY.md** — Supermemory entry under Opt-in wrapper, section 6
+- **README.md** — Supermemory section with integration model, quick start
+
+### Safety
+
+- Supermemory scripts never: auto-install, vendored source, sudo, curl|sh
+- Supermemory is not installed during `opk up`, bootstrap, or shell startup
+- bin/opk and bin/opk.ps1 require user confirmation before npm global install
+- Agent command `/supermemory-init` always routes through `opk supermemory` wrapper
+
 ## [1.6.6] - 2026-06-10
 
 ### MarkItDown Document Tools (Opt-in)
@@ -924,6 +951,7 @@ First production-grade release. Bumped from 9.4/10 → 10/10.
 - **Badges** in `README.md`: CI status, version, no-MCP policy,
   safe/no-secrets policy
 
+[1.6.7]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.7
 [1.6.6]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.6
 [1.6.5]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.5
 [1.6.4]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.4

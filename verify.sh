@@ -133,6 +133,8 @@ require_file "scripts/install-gsd-core.sh"
 require_file "scripts/install-gsd-core.ps1"
 require_file "scripts/install-markitdown.sh"
 require_file "scripts/install-markitdown.ps1"
+require_file "scripts/install-supermemory.sh"
+require_file "scripts/install-supermemory.ps1"
 require_file "scripts/install-safety-plugin.sh"
 require_file "scripts/install-safety-plugin.ps1"
 require_file "bin/opk"
@@ -161,6 +163,7 @@ require_executable "scripts/cleanup-agent-artifacts.sh"
 require_executable "scripts/validate-opencode-pack.py"
 require_executable "scripts/install-gsd-core.sh"
 require_executable "scripts/install-markitdown.sh"
+require_executable "scripts/install-supermemory.sh"
 require_executable "bin/opk"
 echo
 
@@ -277,6 +280,8 @@ echo
 # ─── v1.6.5: One Command Update & Cleanup ──────────────────────
 echo "[v1.6.5 One Command Update & Cleanup]"
 require_contains "CHANGELOG.md" "1.6.5"
+require_contains "CHANGELOG.md" "1.6.6"
+require_contains "CHANGELOG.md" "1.6.7"
 require_contains "CHANGELOG.md" "One Command Update & Cleanup"
 require_contains "CHANGELOG.md" "opk up"
 require_contains "CHANGELOG.md" "opk clean"
@@ -299,6 +304,39 @@ require_contains "scripts/cleanup-agent-artifacts.sh" "GLOBAL_INSTALL_REPORT"
 require_contains "scripts/cleanup-agent-artifacts.sh" "OPK_VERIFY_REPORT"
 require_contains "scripts/cleanup-agent-artifacts.sh" "OPK_DOCTOR_REPORT"
 require_contains "scripts/cleanup-agent-artifacts.sh" "RELEASE_NOTES_v"
+echo
+
+# ─── v1.6.7: Supermemory Memory API ───────────────────────────
+echo "[v1.6.7 Supermemory Memory API]"
+require_contains "CHANGELOG.md" "1.6.7"
+require_contains "CHANGELOG.md" "Supermemory"
+require_file "scripts/install-supermemory.sh"
+require_file "scripts/install-supermemory.ps1"
+require_file "opencode-global/commands/supermemory-init.md"
+require_executable "scripts/install-supermemory.sh"
+# Script content checks
+require_contains "scripts/install-supermemory.sh" "@supermemory/ai"
+require_contains "scripts/install-supermemory.sh" "--dry-run"
+require_contains "scripts/install-supermemory.sh" "npm install"
+require_contains "scripts/install-supermemory.ps1" "@supermemory/ai"
+require_contains "scripts/install-supermemory.ps1" "supermemory"
+require_contains "opencode-global/commands/supermemory-init.md" "supermemory"
+require_contains "opencode-global/commands/supermemory-init.md" "opk supermemory"
+# bin/opk commands
+require_contains "bin/opk" "supermemory)"
+require_contains "bin/opk" "install-supermemory.sh"
+require_contains "bin/opk" "supermemory init"
+# bin/opk.ps1 commands
+require_contains "bin/opk.ps1" "'supermemory'"
+require_contains "bin/opk.ps1" "install-supermemory.ps1"
+require_contains "bin/opk.ps1" "supermemory init"
+# README
+require_contains "README.md" "Supermemory"
+require_contains "README.md" "supermemory/supermemory"
+require_contains "README.md" "opk supermemory"
+# THIRD_PARTY
+require_contains "THIRD_PARTY.md" "Supermemory"
+require_contains "THIRD_PARTY.md" "supermemory/supermemory"
 echo
 
 # ─── v1.6.6: MarkItDown Document Tools ──────────────────────────

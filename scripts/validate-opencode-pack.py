@@ -40,7 +40,7 @@ PROFILES_DIR = KIT_ROOT / "profiles"
 TEMPLATES_DIR = KIT_ROOT / "templates"
 
 # ─── version compliance constants ───────────────────────────────────
-EXPECTED_VERSION = "1.6.6"
+EXPECTED_VERSION = "1.6.7"
 
 AUTO_ROUTER_NEEDLES: tuple[tuple[str, str], ...] = (
     ("templates/AGENTS.md", "Natural Language Auto Router"),
@@ -58,6 +58,10 @@ CHANGELOG_NEEDLES: tuple[str, ...] = (
     "1.6.3",
     "1.6.4",
     "1.6.5",
+    "1.6.6",
+    "1.6.7",
+    "MarkItDown",
+    "Supermemory",
     "cleanup-safe",
     "handoff-save",
     "checkpoint",
@@ -392,6 +396,54 @@ def validate_version() -> list[str]:
                 errors.append(f"commands/{name}.md missing Scope Guard")
         else:
             errors.append(f"commands/{name}.md missing")
+
+    # v1.6.6: MarkItDown Document Tools
+    print("[v1.6.6 MarkItDown Document Tools]")
+    v166_checks = [
+        ("CHANGELOG.md", "MarkItDown"),
+        ("scripts/install-markitdown.sh", "pipx"),
+        ("scripts/install-markitdown.sh", "markitdown"),
+        ("scripts/install-markitdown.ps1", "pipx"),
+        ("scripts/install-markitdown.ps1", "markitdown"),
+        ("opencode-global/commands/doc-to-md.md", "md-convert"),
+        ("opencode-global/commands/doc-to-md.md", "markitdown"),
+        ("bin/opk", "markitdown)"),
+        ("bin/opk", "install-markitdown.sh"),
+        ("bin/opk", "md-convert|doc-to-md)"),
+        ("bin/opk.ps1", "'markitdown'"),
+        ("bin/opk.ps1", "install-markitdown.ps1"),
+        ("bin/opk.ps1", "md-convert"),
+        ("THIRD_PARTY.md", "MarkItDown"),
+    ]
+    for rel, needle in v166_checks:
+        p = KIT_ROOT / rel
+        if p.is_file() and needle in p.read_text(encoding="utf-8"):
+            ok(f"{rel} contains: {needle}")
+        else:
+            errors.append(f"{rel} missing needle: {needle}")
+
+    # v1.6.7: Supermemory Memory API
+    print("[v1.6.7 Supermemory Memory API]")
+    v167_checks = [
+        ("CHANGELOG.md", "Supermemory"),
+        ("scripts/install-supermemory.sh", "@supermemory/ai"),
+        ("scripts/install-supermemory.ps1", "@supermemory/ai"),
+        ("opencode-global/commands/supermemory-init.md", "supermemory"),
+        ("opencode-global/commands/supermemory-init.md", "opk supermemory"),
+        ("bin/opk", "supermemory)"),
+        ("bin/opk", "install-supermemory.sh"),
+        ("bin/opk", "supermemory init"),
+        ("bin/opk.ps1", "'supermemory'"),
+        ("bin/opk.ps1", "install-supermemory.ps1"),
+        ("bin/opk.ps1", "supermemory init"),
+        ("THIRD_PARTY.md", "Supermemory"),
+    ]
+    for rel, needle in v167_checks:
+        p = KIT_ROOT / rel
+        if p.is_file() and needle in p.read_text(encoding="utf-8"):
+            ok(f"{rel} contains: {needle}")
+        else:
+            errors.append(f"{rel} missing needle: {needle}")
 
     # v1.6.5: One Command Update & Cleanup
     print("[v1.6.5 One Command Update & Cleanup]")

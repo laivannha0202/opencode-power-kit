@@ -557,6 +557,43 @@ EOF
     esac
     ;;
 
+  # ─── v1.6.7 Supermemory Memory API (opt-in) ──────────────────
+  supermemory)
+    sm_cmd="${1:-status}"
+    shift || true
+    case "$sm_cmd" in
+      install)
+        require_file "$KIT_DIR/scripts/install-supermemory.sh"
+        exec bash "$KIT_DIR/scripts/install-supermemory.sh" "$@"
+        ;;
+      status)
+        if command -v supermemory >/dev/null 2>&1; then
+          echo "opk: ✅ Supermemory installed at $(command -v supermemory)"
+          supermemory --help 2>&1 | head -3
+        else
+          echo "opk: ❌ Supermemory not installed. Run: opk supermemory install"
+        fi
+        ;;
+      init)
+        if ! command -v supermemory >/dev/null 2>&1; then
+          err "Supermemory chưa được cài đặt. Chạy: opk supermemory install"
+        fi
+        echo "opk: Initializing Supermemory in $(pwd)"
+        exec supermemory init "$@"
+        ;;
+      init-help)
+        if ! command -v supermemory >/dev/null 2>&1; then
+          err "Supermemory chưa được cài đặt. Chạy: opk supermemory install"
+        fi
+        exec supermemory init --help "$@"
+        ;;
+      *)
+        echo "opk: supermemory: lệnh không hợp lệ '$sm_cmd'. Dùng: install, status, init, init-help" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+
   md-convert|doc-to-md)
     # opk md-convert <input> <output> [--force]
     # opk doc-to-md <input> <output> [--force]

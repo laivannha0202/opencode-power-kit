@@ -1,6 +1,6 @@
 # Third-Party Components & Credits
 
-> **Version:** opencode-power-kit v1.6.6
+> **Version:** opencode-power-kit v1.6.7
 >
 > This project packages, configures, and documents workflows around
 > [OpenCode](https://github.com/opencode-ai). It credits upstream authors
@@ -46,6 +46,7 @@
 | BMAD Method | bmad-code-org | https://github.com/bmad-code-org/BMAD-METHOD | Workflow modules, agents, slash commands | Install-time dependency | `install.sh` / `update-bmad.sh` calls `npx bmad-method` | MIT |
 | GSD Core | open-gsd | https://github.com/open-gsd/gsd-core | Optional companion workflow engine | Opt-in wrapper | `opk gsd` / `opk update-gsd` | See npm |
 | MarkItDown | Microsoft | https://github.com/microsoft/markitdown | Document-to-Markdown conversion (PDF/DOCX/PPTX/XLSX/HTML) | Opt-in wrapper | `opk markitdown install` (pipx/pip) | MIT |
+| Supermemory | sudomateo / community | https://github.com/supermemory/supermemory | Memory persistence across AI coding sessions | Opt-in wrapper | `opk supermemory install` (npm) | Apache-2.0 |
 | rtk | rtk-ai | https://github.com/rtk-ai/rtk | Token-saving shell wrapper | Detect-only | User installs separately | MIT |
 | tokscale | — | https://github.com/tokscale/tokscale | Token cost visualization | Detect-only | User installs separately | — |
 | repomix | yamadashy | https://github.com/yamadashy/repomix | Context pack generator | Detect-only | User installs separately | MIT |
@@ -191,7 +192,52 @@ Agents never install packages directly.
 
 ---
 
-## 6. Detect-only Tools
+## 6. Supermemory — Opt-in Wrapper
+
+| Field | Value |
+|-------|-------|
+| Role | Memory persistence across AI coding sessions |
+| Integration | **Opt-in wrapper** — never vendored, never auto-installed |
+| Source | https://github.com/supermemory/supermemory |
+| Kit label | `opencode-supermemory` (internal integration name) |
+| npm | `@supermemory/ai` |
+| Installer | `npm install -g @supermemory/ai` |
+| Kit ships | `scripts/install-supermemory.sh` + `scripts/install-supermemory.ps1` — thin wrappers |
+| Update path | `opk supermemory install` (re-runs npm global install) |
+| License | Apache-2.0 (per upstream) |
+
+The kit does **not** bundle Supermemory. The wrapper scripts:
+
+1. Verify `node` and `npm` are on PATH.
+2. Print the planned `npm install -g @supermemory/ai` command.
+3. Ask for confirmation (or accept `--yes` / `-Y`).
+4. Forward to the official npm installer.
+5. Run `supermemory --help` to verify installation.
+
+### Safety guarantees
+
+- **Never vendors** any Supermemory source code.
+- **Never installs** automatically — always requires explicit `opk supermemory install`.
+- **Never runs** `sudo` or `curl|sh`.
+- **Never installs** during `opk up`, bootstrap, or shell startup.
+- **Never reads** `.env`, secrets, or sensitive files.
+
+### Supermemory commands
+
+| CLI | Description |
+|-----|-------------|
+| `opk supermemory install` | Install Supermemory CLI via npm |
+| `opk supermemory status` | Check installation status |
+| `opk supermemory init` | Initialize Supermemory in current project |
+
+### Agent command
+
+`opencode-global/commands/supermemory-init.md` guides agents to use the `opk` wrapper.
+Agents never install packages directly.
+
+---
+
+## 7. Detect-only Tools
 
 The following tools are **never vendored, never auto-installed, and never
 auto-updated**. The `/tooling-doctor` command detects whether they are
@@ -223,7 +269,7 @@ present, but it never installs Playwright itself. Similarly,
 
 ---
 
-## 7. Recommended Ecosystem (Target Stack)
+## 8. Recommended Ecosystem (Target Stack)
 
 The full-stack profile recommends the following stack. These are **not**
 bundled or vendored — they are the target technologies that the profile's
@@ -241,7 +287,7 @@ scaffolding, agents, and commands are designed for.
 
 ---
 
-## 8. Update Policy
+## 9. Update Policy
 
 ### Install-time dependencies (BMAD Method)
 
@@ -249,11 +295,12 @@ scaffolding, agents, and commands are designed for.
 - `BMAD_METHOD_VERSION` env overrides the default version pin.
 - Full log captured to `.opencode-power-bmad-install.log`.
 
-### Opt-in tools (GSD Core, MarkItDown)
+### Opt-in tools (GSD Core, MarkItDown, Supermemory)
 
 - `opk gsd` / `opk update-gsd` — calls `npx @opengsd/gsd-core@latest`.
 - `opk update-all --with-gsd` — pulls kit + updates GSD.
 - `opk markitdown install` — re-runs `pipx install "markitdown[all]"`.
+- `opk supermemory install` — re-runs `npm install -g @supermemory/ai`.
 - No auto-update, no background refresh.
 
 ### Plugin references (Superpowers)
@@ -276,7 +323,7 @@ scaffolding, agents, and commands are designed for.
 
 ---
 
-## 9. License Notes
+## 10. License Notes
 
 - **opencode-power-kit**: [MIT](./LICENSE)
 - **OpenCode**: MIT
@@ -284,6 +331,7 @@ scaffolding, agents, and commands are designed for.
 - **Superpowers**: MIT
 - **GSD Core**: See npm package page
 - **MarkItDown**: MIT
+- **Supermemory**: Apache-2.0
 - **rtk**: MIT
 - **repomix**: MIT
 - **ast-grep**: MIT

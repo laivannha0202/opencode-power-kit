@@ -531,6 +531,50 @@ switch ($Command.ToLower()) {
         }
     }
 
+    # ─── v1.6.7 Supermemory Memory API (opt-in) ─────────────────
+    'supermemory' {
+        $smCmd = if ($Args.Count -gt 0) { $Args[0].ToLower() } else { 'status' }
+        $smArgs = if ($Args.Count -gt 1) { $Args[1..($Args.Count-1)] } else { @() }
+
+        switch ($smCmd) {
+            'install' {
+                $installer = Join-Path $KitDir 'scripts\install-supermemory.ps1'
+                Require-File $installer
+                & powershell -ExecutionPolicy Bypass -File $installer @smArgs
+            }
+            'status' {
+                $sm = Get-Command supermemory -ErrorAction SilentlyContinue
+                if ($sm) {
+                    Write-Host "opk: ✅ Supermemory installed at $($sm.Source)" -ForegroundColor Green
+                    & $sm.Source --help 2>&1 | Select-Object -First 3
+                } else {
+                    Write-Host "opk: ❌ Supermemory not installed. Run: opk supermemory install" -ForegroundColor Yellow
+                }
+            }
+            'init' {
+                if (-not (Get-Command supermemory -ErrorAction SilentlyContinue)) {
+                    Write-Host "opk: Supermemory chua duoc cai dat. Chay: opk supermemory install" -ForegroundColor Red
+                    exit 1
+                }
+                Write-Host "opk: Initializing Supermemory in $((Get-Location).Path)"
+                & supermemory init @smArgs
+                if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            }
+            'init-help' {
+                if (-not (Get-Command supermemory -ErrorAction SilentlyContinue)) {
+                    Write-Host "opk: Supermemory chua duoc cai dat. Chay: opk supermemory install" -ForegroundColor Red
+                    exit 1
+                }
+                & supermemory init --help @smArgs
+                if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            }
+            default {
+                Write-Host "opk: supermemory: lenh khong hop le '$smCmd'. Dung: install, status, init, init-help" -ForegroundColor Red
+                exit 1
+            }
+        }
+    }
+
     { @('md-convert','doc-to-md') -contains $_ } {
         if (-not (Get-Command markitdown -ErrorAction SilentlyContinue)) {
             Write-Host "opk: MarkItDown chua duoc cai dat. Chay: opk markitdown install" -ForegroundColor Red
