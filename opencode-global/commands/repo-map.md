@@ -1,5 +1,6 @@
 ---
 description: Tạo bản đồ project tiết kiệm token
+subtask: true
 ---
 
 Tạo bản đồ project tiết kiệm token.

@@ -1,6 +1,6 @@
 # ─────────────────────────────────────────────────────────────────
 # verify.ps1
-# opencode-power-kit v1.5.0
+# opencode-power-kit v1.6.4
 #
 # PowerShell mirror of verify.sh. Read-only sanity check.
 #
@@ -126,10 +126,15 @@ Require-File 'scripts/opk-command-guard.sh'
 Require-File 'scripts/validate-opencode-pack.py'
 Require-File 'scripts/install-gsd-core.sh'
 Require-File 'scripts/install-gsd-core.ps1'
+Require-File 'scripts/install-safety-plugin.sh'
+Require-File 'scripts/install-safety-plugin.ps1'
 Require-File 'bin/opk'
 Require-File 'templates/AGENTS.md'
 Require-File 'templates/OPENCODE.md'
 Require-File 'templates/AI_HANDOFF.md'
+Require-File 'templates/opencode.safe.json'
+Require-File 'templates/opencode.power.json'
+Require-File 'templates/plugins/opk-safety-guard.js'
 Write-Host ''
 
 # ─── Required dirs ────────────────────────────────────────────────
@@ -138,6 +143,7 @@ Require-Dir 'opencode-global'
 Require-Dir 'opencode-global/commands'
 Require-Dir 'scripts'
 Require-Dir 'templates'
+Require-Dir 'templates/plugins'
 Require-Dir 'bin'
 Write-Host ''
 
@@ -222,6 +228,7 @@ Require-Contains 'CHANGELOG.md' '1.5.0'
 Require-Contains 'CHANGELOG.md' '1.6.0'
 Require-Contains 'CHANGELOG.md' '1.6.2'
 Require-Contains 'CHANGELOG.md' '1.6.3'
+Require-Contains 'CHANGELOG.md' '1.6.4'
 Require-Contains 'CHANGELOG.md' 'build-strong'
 Require-Contains 'CHANGELOG.md' 'fullstack-autopilot'
 Require-Contains 'CHANGELOG.md' 'cleanup-safe'
@@ -235,6 +242,23 @@ Require-Contains 'CHANGELOG.md' 'architect-strong'
 Require-Contains 'CHANGELOG.md' 'opk-command-guard'
 Require-Contains 'THIRD_PARTY.md' 'BMAD'
 Require-Contains 'THIRD_PARTY.md' 'GSD Core'
+
+# ─── v1.6.4: Safety & Compatibility Polish ──────────────────────
+Write-Host '[v1.6.4 Safety & Compatibility Polish]'
+Require-Contains 'VERSION' '1.6.4'
+Require-Contains 'README.md' 'version-1.6.4'
+Require-Contains 'THIRD_PARTY.md' 'v1.6.4'
+Require-Contains 'CHANGELOG.md' 'Power Mode vs Safe Mode'
+Require-Contains 'CHANGELOG.md' 'Safety plugin guard'
+Require-Contains 'CHANGELOG.md' 'opk mode'
+Require-Contains 'templates/opencode.safe.json' '"permission":'
+Require-Contains 'templates/opencode.power.json' '"permission": "allow"'
+Require-Contains 'templates/plugins/opk-safety-guard.js' 'guardCheck'
+Require-Contains 'bin/opk' 'mode)'
+Require-Contains 'bin/opk' 'safety-plugin)'
+Require-Contains 'bin/opk.ps1' "'mode'"
+Require-Contains 'bin/opk.ps1' "'safety-plugin'"
+Write-Host ''
 
 # ─── build-strong.md content ─────────────────────────────────────
 Write-Host '[build-strong agent content]'
@@ -261,6 +285,28 @@ try {
     }
 } catch {
     Fail "verify.ps1 parse threw: $_"
+}
+
+# Parse check for install-safety-plugin.ps1
+$installSafetyPs1 = Join-Path $KitDir 'scripts/install-safety-plugin.ps1'
+if (Test-Path -LiteralPath $installSafetyPs1) {
+    try {
+        $errs = $null
+        $null = [System.Management.Automation.Language.Parser]::ParseFile(
+            $installSafetyPs1,
+            [ref]$null,
+            [ref]$errs
+        )
+        if ($errs -and $errs.Count -gt 0) {
+            Fail "scripts/install-safety-plugin.ps1 has parse errors: $($errs[0].Message)"
+        } else {
+            Ok 'scripts/install-safety-plugin.ps1 parses cleanly'
+        }
+    } catch {
+        Fail "scripts/install-safety-plugin.ps1 parse threw: $_"
+    }
+} else {
+    Warn 'skip pwsh parser: scripts/install-safety-plugin.ps1 not found'
 }
 
 $installPs1 = Join-Path $KitDir 'scripts/install-gsd-core.ps1'

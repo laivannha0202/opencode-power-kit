@@ -1,5 +1,7 @@
 ---
 description: Quét project full-stack (FE/BE/DB/scripts/env/docker) và in bảng tóm tắt
+subtask: true
+agent: plan-lite
 ---
 
 Quét nhanh project full-stack để biết cấu trúc hiện tại.

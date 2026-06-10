@@ -1,5 +1,6 @@
 ---
 description: Kiểm tra migration và DB an toàn trước khi chạy
+agent: plan-lite
 ---
 
 ## ⚠️ Scope Guard — Review an toàn migration, KHÔNG tự thực hiện

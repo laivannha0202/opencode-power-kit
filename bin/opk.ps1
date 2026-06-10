@@ -149,6 +149,13 @@ switch ($Command.ToLower()) {
         Write-Host "  opk quick       Alias: opk global"
         Write-Host "  opk init        Alias: opk install"
         Write-Host ""
+        Write-Host "v1.6.4 — Mode & Safety (moi):"
+        Write-Host "  opk mode show   Xem che do Power/Safe hien tai"
+        Write-Host "  opk mode power  Chuyen sang Power Mode (permission: allow)"
+        Write-Host "  opk mode safe   Chuyen sang Safe Mode (permission object)"
+        Write-Host "  opk safety-plugin install  Cai safety plugin guard"
+        Write-Host "  opk safety-plugin status   Kiem tra trang thai safety plugin"
+        Write-Host ""
         Write-Host "Flags chung (forward cho sub-script):"
         Write-Host "  -Yes   skip confirm"
         Write-Host "  -Help  in tro giup cua sub-script"
@@ -264,6 +271,98 @@ switch ($Command.ToLower()) {
     'quick' {
         Require-File (Join-Path $KitDir 'install-global.ps1')
         & powershell -ExecutionPolicy Bypass -File (Join-Path $KitDir 'install-global.ps1') -Yes
+    }
+
+    # ─── v1.6.4 Mode management (Power/Safe) ────────────────────────
+    'mode' {
+        $modeCmd = if ($Args.Count -gt 0) { $Args[0].ToLower() } else { 'show' }
+        $modeArgs = if ($Args.Count -gt 1) { $Args[1..$($Args.Count-1)] } else { @() }
+
+        switch ($modeCmd) {
+            'show' {
+                $projConfig = Join-Path $KitDir 'templates\opencode.json'
+                if (Test-Path '.opencode\opencode.json') {
+                    $projConfig = (Resolve-Path '.opencode\opencode.json').Path
+                }
+                Write-Host "opk: OpenCode Power Kit mode check"
+                Write-Host ""
+                Write-Host "Template: $(Join-Path $KitDir 'templates\opencode.json')"
+                $projectFile = if (Test-Path '.opencode\opencode.json') { '.opencode\opencode.json' } else { '(none)' }
+                Write-Host "Project:  $projectFile"
+                Write-Host ""
+                $configContent = Get-Content $projConfig -Raw
+                if ($configContent -match '"permission":\s*"allow"') {
+                    Write-Host "Current mode: POWER (permission: allow)" -ForegroundColor Green
+                    Write-Host "  Agent tu dong chay tool, sua file, bash — khong hoi lai."
+                } else {
+                    Write-Host "Current mode: SAFE (permission object)" -ForegroundColor Yellow
+                    Write-Host "  Agent hoi truoc khi write/edit/bash/task."
+                }
+            }
+            'power' {
+                $templateFile = Join-Path $KitDir 'templates\opencode.power.json'
+                Require-File $templateFile
+                $target = if (Test-Path '.opencode\opencode.json') { '.opencode\opencode.json' } else { Join-Path $KitDir 'templates\opencode.json' }
+                $backup = "$target.bak.$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+                Copy-Item $target $backup
+                Write-Host "opk: Backup -> $backup"
+                Copy-Item $templateFile $target
+                Write-Host "opk: ✅ Da chuyen sang POWER MODE (permission: allow)" -ForegroundColor Green
+                Write-Host "opk:   Agent tu dong chay tool, sua file, bash — khong hoi lai."
+                Write-Host "opk:   De quay lai: opk mode safe"
+            }
+            'safe' {
+                $templateFile = Join-Path $KitDir 'templates\opencode.safe.json'
+                Require-File $templateFile
+                $target = if (Test-Path '.opencode\opencode.json') { '.opencode\opencode.json' } else { Join-Path $KitDir 'templates\opencode.json' }
+                $backup = "$target.bak.$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+                Copy-Item $target $backup
+                Write-Host "opk: Backup -> $backup"
+                Copy-Item $templateFile $target
+                Write-Host "opk: ✅ Da chuyen sang SAFE MODE (permission object)" -ForegroundColor Yellow
+                Write-Host "opk:   Read/grep/glob/skill=allow, write/edit/bash/task=ask."
+                Write-Host "opk:   Agent se hoi truoc khi sua file hoac chay lenh."
+                Write-Host "opk:   De quay lai: opk mode power"
+            }
+            default {
+                Write-Host "opk: mode: lenh khong hop le '$modeCmd'. Dung: show, power, safe" -ForegroundColor Red
+                exit 1
+            }
+        }
+    }
+
+    # ─── v1.6.4 Safety plugin management ──────────────────────────
+    'safety-plugin' {
+        $pluginCmd = if ($Args.Count -gt 0) { $Args[0].ToLower() } else { 'status' }
+        $pluginArgs = if ($Args.Count -gt 1) { $Args[1..$($Args.Count-1)] } else { @() }
+
+        switch ($pluginCmd) {
+            'install' {
+                $installer = Join-Path $KitDir 'scripts\install-safety-plugin.sh'
+                Require-File $installer
+                Write-Host "opk: Cai safety plugin guard (can WSL/Git Bash hoac Linux/macOS)..."
+                & bash $installer @pluginArgs
+            }
+            'status' {
+                $pluginFile = '.opencode\plugins\opk-safety-guard.js'
+                if (Test-Path $pluginFile) {
+                    Write-Host "opk: ✅ Safety plugin guard da duoc cai dat." -ForegroundColor Green
+                    Write-Host "   File: $pluginFile"
+                } else {
+                    $templateFile = Join-Path $KitDir 'templates\plugins\opk-safety-guard.js'
+                    if (Test-Path $templateFile) {
+                        Write-Host "opk: ⚠️ Safety plugin guard co san trong template nhung chua cai." -ForegroundColor Yellow
+                        Write-Host "   Chay: opk safety-plugin install"
+                    } else {
+                        Write-Host "opk: ℹ️ Safety plugin guard chua duoc cai dat." -ForegroundColor Gray
+                    }
+                }
+            }
+            default {
+                Write-Host "opk: safety-plugin: lenh khong hop le '$pluginCmd'. Dung: install, status" -ForegroundColor Red
+                exit 1
+            }
+        }
     }
 
     default {

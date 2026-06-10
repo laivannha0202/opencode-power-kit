@@ -1,5 +1,6 @@
 ---
 description: Kiểm tra VERSION, README badge, CHANGELOG, tag trước release
+agent: review-lite
 ---
 
 # /release-check

@@ -5,6 +5,44 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.4] - 2026-06-10
+
+### Safety & Compatibility Polish
+
+### Added
+
+- **Power Mode vs Safe Mode selection** — `templates/opencode.json` (Power Mode,
+  `"permission": "allow"`) giữ nguyên. Thêm `templates/opencode.safe.json`
+  (Safe Mode, permission object với read/grep/glob/skill=allow, còn lại=ask)
+  và `templates/opencode.power.json` (Power Mode, tương đương opencode.json).
+- **`opk mode` CLI subcommand** — `opk mode show` (xem mode hiện tại),
+  `opk mode power` (chuyển sang Power Mode), `opk mode safe` (chuyển sang
+  Safe Mode). Có backup trước khi ghi đè. Hỗ trợ bash (`bin/opk`) và
+  PowerShell (`bin/opk.ps1`).
+- **Safety plugin guard** — `templates/plugins/opk-safety-guard.js`: guard
+  chặn đọc file nhạy cảm (`.env`, `secret`, `private key`) và command nguy
+  hiểm (`rm -rf`, `git reset --hard`, force push, SQL DROP/TRUNCATE/DELETE
+  không WHERE). Scripts cài đặt `scripts/install-safety-plugin.sh` +
+  `scripts/install-safety-plugin.ps1`. CLI: `opk safety-plugin install`,
+  `opk safety-plugin status`.
+- **Verify scripts mở rộng** — `verify.sh` + `verify.ps1`: thêm checks cho
+  safe/power mode templates, safety plugin guard, và `opk mode` CLI subcommand.
+- **Command frontmatter chuẩn hóa** — thêm `subtask:` và `agent:` vào
+  frontmatter các command files trong `opencode-global/commands/` để cải
+  thiện auto-router.
+
+### Changed
+
+- `VERSION`: 1.6.3 → 1.6.4
+- `THIRD_PARTY.md`: v1.6.1 → v1.6.4
+
+### Safety
+
+- Không thêm MCP mặc định
+- Không vendored source từ Claude Code/Codex/OpenCode
+- Không auto install package khi shell start
+- Backward compatible — không phá existing workflows
+
 ## [1.6.3] - 2026-06-09
 
 ### Fixed
@@ -819,6 +857,8 @@ First production-grade release. Bumped from 9.4/10 → 10/10.
 - **Badges** in `README.md`: CI status, version, no-MCP policy,
   safe/no-secrets policy
 
+[1.6.4]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.4
+[1.6.3]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.3
 [1.6.2]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.2
 [1.6.1]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.1
 [1.6.0]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.0

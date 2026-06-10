@@ -1,5 +1,6 @@
 ---
 description: Scan secret pattern với gitleaks/trufflehog, in hướng dẫn cài nếu thiếu
+agent: plan-lite
 ---
 
 Quét project tìm secret / token / API key đã lộ:

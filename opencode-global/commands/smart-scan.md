@@ -1,5 +1,6 @@
 ---
 description: Kiểm tra nhanh project hiện tại
+agent: plan-lite
 ---
 
 Kiểm tra nhanh project hiện tại để nắm context tiết kiệm token.

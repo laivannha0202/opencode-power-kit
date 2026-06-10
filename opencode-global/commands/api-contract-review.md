@@ -1,5 +1,6 @@
 ---
 description: Kiểm tra API contract giữa frontend và backend
+agent: review-lite
 ---
 
 ## ⚠️ Scope Guard — Review contract, KHÔNG tự implement

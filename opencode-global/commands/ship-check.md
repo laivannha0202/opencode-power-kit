@@ -1,5 +1,6 @@
 ---
 description: Checklist trước khi commit và push
+agent: review-lite
 ---
 
 Checklist trước khi commit/push:

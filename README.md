@@ -1,7 +1,7 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.6.3-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-1.6.4-blue.svg)](./VERSION)
 [![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
@@ -129,6 +129,49 @@ người dùng hiểu rõ ranh giới.
 - **`/agent-router`** — định tuyến tác vụ bằng ngôn ngữ tự nhiên tới đúng agent
 - **`/tooling-doctor`** — phát hiện công cụ bên thứ ba (rtk, repomix, semgrep, gitleaks, ...)
 - **100% backward compatible** — mọi thứ từ phiên bản trước vẫn hoạt động không thay đổi
+
+---
+
+## Power Mode vs Safe Mode Selection v1.6.4
+
+Cho phép chuyển giữa **Power Mode** (agent tự động chạy) và **Safe Mode** (agent hỏi trước khi ghi file/bash).
+
+### Cách dùng
+
+```bash
+# Xem mode hiện tại
+opk mode show
+
+# Chuyển sang Power Mode (permission: allow — mặc định)
+opk mode power
+
+# Chuyển sang Safe Mode (permission object — read/glob/grep/skill=allow, write/edit/bash/task=ask)
+opk mode safe
+```
+
+### File config
+
+| File | Mode | Mục đích |
+|------|------|----------|
+| `templates/opencode.json` | Power (`permission: allow`) | Backward compatible — mặc định |
+| `templates/opencode.power.json` | Power | Dùng cho `opk mode power` |
+| `templates/opencode.safe.json` | Safe (permission object) | Dùng cho `opk mode safe` |
+
+### Safety Plugin Guard
+
+Guard intercepts tool call để chặn:
+- **Read file nhạy cảm:** `.env`, `*secret*`, `*private*`, `*key*.*`, `token*`, `*credential*`
+- **Command nguy hiểm:** `rm -rf`, `git reset --hard`, `git clean -fd`, force push, SQL `DROP TABLE`/`TRUNCATE`/`DELETE` không WHERE
+
+```bash
+# Cài đặt safety plugin guard
+opk safety-plugin install
+
+# Kiểm tra trạng thái
+opk safety-plugin status
+```
+
+Tham khảo: `templates/plugins/opk-safety-guard.js`
 
 ---
 

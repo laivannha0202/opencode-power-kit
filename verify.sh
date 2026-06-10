@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────
 # verify.sh
-# opencode-power-kit v1.6.0
+# opencode-power-kit v1.6.4
 #
 # Sanity-check the power-kit. Runs on every CI run and is also safe
 # to run locally: it does not modify anything, it only inspects.
@@ -131,10 +131,15 @@ require_file "scripts/opk-command-guard.sh"
 require_file "scripts/validate-opencode-pack.py"
 require_file "scripts/install-gsd-core.sh"
 require_file "scripts/install-gsd-core.ps1"
+require_file "scripts/install-safety-plugin.sh"
+require_file "scripts/install-safety-plugin.ps1"
 require_file "bin/opk"
 require_file "templates/AGENTS.md"
 require_file "templates/OPENCODE.md"
 require_file "templates/AI_HANDOFF.md"
+require_file "templates/opencode.safe.json"
+require_file "templates/opencode.power.json"
+require_file "templates/plugins/opk-safety-guard.js"
 echo
 
 # ─── Required dirs ────────────────────────────────────────────────
@@ -143,6 +148,7 @@ require_dir "opencode-global"
 require_dir "opencode-global/commands"
 require_dir "scripts"
 require_dir "templates"
+require_dir "templates/plugins"
 require_dir "bin"
 echo
 
@@ -170,6 +176,7 @@ require_contains "CHANGELOG.md" "1.5.0"
 require_contains "CHANGELOG.md" "1.6.0"
 require_contains "CHANGELOG.md" "1.6.2"
 require_contains "CHANGELOG.md" "1.6.3"
+require_contains "CHANGELOG.md" "1.6.4"
 require_contains "CHANGELOG.md" "Full Auto Permission Mode"
 require_contains "CHANGELOG.md" "Vietnamese Language Lock"
 require_contains "CHANGELOG.md" "build-strong"
@@ -183,6 +190,7 @@ require_contains "CHANGELOG.md" "GSD Core"
 require_contains "CHANGELOG.md" "Power Mode"
 require_contains "CHANGELOG.md" "architect-strong"
 require_contains "CHANGELOG.md" "opk-command-guard"
+require_contains "CHANGELOG.md" "Safety & Compatibility Polish"
 require_contains "THIRD_PARTY.md" "BMAD"
 require_contains "THIRD_PARTY.md" "GSD Core"
 
@@ -263,6 +271,20 @@ for cmd_file in "${COMMANDS_WITH_SCOPE_GUARD[@]}"; do
 done
 echo
 
+# ─── v1.6.4: Safety & Compatibility Polish ──────────────────────
+echo "[v1.6.4 Safety & Compatibility Polish]"
+require_contains "CHANGELOG.md" "Power Mode vs Safe Mode"
+require_contains "CHANGELOG.md" "Safety plugin guard"
+require_contains "CHANGELOG.md" "opk mode"
+require_contains "templates/opencode.safe.json" '"permission":'
+require_contains "templates/opencode.power.json" '"permission": "allow"'
+require_contains "templates/plugins/opk-safety-guard.js" "guardCheck"
+require_contains "bin/opk" "mode)"
+require_contains "bin/opk" "safety-plugin)"
+require_contains "bin/opk.ps1" "'mode'"
+require_contains "bin/opk.ps1" "'safety-plugin'"
+echo
+
 # ─── v1.6.0: docs/releases ──────────────────────────────────────
 echo "[v1.6.0 release notes]"
 require_file "docs/releases/v1.6.0.md"
@@ -283,6 +305,7 @@ SCRIPTS_TO_CHECK=(
 	"scripts/cleanup-agent-artifacts.sh"
 	"scripts/opk-command-guard.sh"
 	"scripts/install-gsd-core.sh"
+	"scripts/install-safety-plugin.sh"
 	"verify.sh"
 )
 if [[ -x "bin/opk" ]]; then

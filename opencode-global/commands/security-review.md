@@ -1,5 +1,7 @@
 ---
 description: Review security cho code vừa sửa
+subtask: true
+agent: plan-lite
 ---
 
 Review security cho code vừa sửa:

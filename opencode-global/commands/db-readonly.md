@@ -1,5 +1,6 @@
 ---
 description: Kiểm tra database ở chế độ read-only
+agent: plan-lite
 ---
 
 Kiểm tra database theo chế độ read-only:

@@ -1,5 +1,6 @@
 ---
 description: Review thay đổi hiện tại bằng git diff
+agent: review-lite
 ---
 
 Review thay đổi hiện tại bằng `git diff` và `git diff --stat`.

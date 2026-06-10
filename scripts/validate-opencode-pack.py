@@ -40,7 +40,7 @@ PROFILES_DIR = KIT_ROOT / "profiles"
 TEMPLATES_DIR = KIT_ROOT / "templates"
 
 # ─── version compliance constants ───────────────────────────────────
-EXPECTED_VERSION = "1.6.3"
+EXPECTED_VERSION = "1.6.4"
 
 AUTO_ROUTER_NEEDLES: tuple[tuple[str, str], ...] = (
     ("templates/AGENTS.md", "Natural Language Auto Router"),
@@ -56,6 +56,7 @@ CHANGELOG_NEEDLES: tuple[str, ...] = (
     "1.6.1",
     "1.6.2",
     "1.6.3",
+    "1.6.4",
     "cleanup-safe",
     "handoff-save",
     "checkpoint",
@@ -390,6 +391,47 @@ def validate_version() -> list[str]:
                 errors.append(f"commands/{name}.md missing Scope Guard")
         else:
             errors.append(f"commands/{name}.md missing")
+
+    # v1.6.4: Safety & Compatibility Polish
+    print("[v1.6.4 Safety & Compatibility Polish]")
+    v164_checks = [
+        ("CHANGELOG.md", "Power Mode vs Safe Mode"),
+        ("CHANGELOG.md", "Safety plugin guard"),
+        ("CHANGELOG.md", "opk mode"),
+        ("templates/opencode.safe.json", '"permission"'),
+        ("templates/opencode.power.json", '"permission": "allow"'),
+        ("templates/plugins/opk-safety-guard.js", "guardCheck"),
+    ]
+    for rel, needle in v164_checks:
+        p = KIT_ROOT / rel
+        if p.is_file() and needle in p.read_text(encoding="utf-8"):
+            ok(f"{rel} contains: {needle}")
+        else:
+            errors.append(f"{rel} missing needle: {needle}")
+
+    # bin/opk mode + safety-plugin subcommands
+    opk_path = KIT_ROOT / "bin" / "opk"
+    if opk_path.is_file():
+        opk_text = opk_path.read_text(encoding="utf-8")
+        for needle in ("mode)", "safety-plugin)"):
+            if needle in opk_text:
+                ok(f"bin/opk contains: {needle}")
+            else:
+                errors.append(f"bin/opk missing needle: {needle}")
+    else:
+        errors.append("bin/opk missing")
+
+    # bin/opk.ps1 mode + safety-plugin subcommands
+    opk_ps1_path = KIT_ROOT / "bin" / "opk.ps1"
+    if opk_ps1_path.is_file():
+        opk_ps1_text = opk_ps1_path.read_text(encoding="utf-8")
+        for needle in ("'mode'", "'safety-plugin'"):
+            if needle in opk_ps1_text:
+                ok(f"bin/opk.ps1 contains: {needle}")
+            else:
+                errors.append(f"bin/opk.ps1 missing needle: {needle}")
+    else:
+        errors.append("bin/opk.ps1 missing")
 
     return errors
 

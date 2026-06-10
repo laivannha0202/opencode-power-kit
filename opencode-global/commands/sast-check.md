@@ -1,5 +1,6 @@
 ---
 description: SAST scan với semgrep, in hướng dẫn cài nếu thiếu
+agent: plan-lite
 ---
 
 Static analysis security scan với semgrep:

@@ -1,5 +1,7 @@
 ---
 description: Audit chính opencode-power-kit — cấu trúc, agents, commands, skills, version, best practices
+subtask: true
+agent: plan-lite
 ---
 
 # /kit-audit

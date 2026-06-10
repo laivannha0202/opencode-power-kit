@@ -2,7 +2,7 @@
 # ============================================================================
 # OpenCode Power Kit - opk CLI wrapper
 # Thin wrapper gọi lại các script có sẵn trong kit. Không duplicate logic.
-# v1.3.4: thêm subcommands gsd, update-gsd, update-all (GSD Core opt-in).
+# v1.6.4: thêm subcommands mode (power/safe/show), safety-plugin.
 #
 # Usage:
 #   opk help
@@ -20,6 +20,11 @@
 #   opk bootstrap     # gọi bootstrap.sh
 #   opk one           # alias: bootstrap.sh --all --project-dir "$(pwd)" --yes (all-in-one)
 #   opk go            # alias: opk one
+#   opk mode          # quản lý Power/Safe mode
+#   opk mode show     # xem mode hiện tại
+#   opk mode power    # chuyển sang Power Mode (permission: allow)
+#   opk mode safe     # chuyển sang Safe Mode (permission object)
+#   opk safety-plugin # quản lý safety plugin guard
 # ============================================================================
 set -euo pipefail
 
@@ -131,7 +136,14 @@ opk — OpenCode Power Kit CLI (v$VERSION)
   opk path        In đường dẫn kit
   opk version     In version
 
-  v1.3.4 — GSD Core opt-in (mới):
+  v1.6.4 — Mode & Safety (mới):
+  opk mode show   Xem chế độ Power/Safe hiện tại
+  opk mode power  Chuyển sang Power Mode (permission: allow)
+  opk mode safe   Chuyển sang Safe Mode (permission object)
+  opk safety-plugin install  Cài safety plugin guard
+  opk safety-plugin status   Kiểm tra trạng thái safety plugin
+
+  v1.3.4 — GSD Core opt-in:
   opk gsd         Forward sang official GSD installer (opt-in, --dry-run / --yes)
   opk update-gsd  Tương tự opk gsd, explicit refresh intent
   opk update-all  Pull kit (ff-only) + refresh bmad (+ optional GSD với --with-gsd)
@@ -251,6 +263,95 @@ EOF
   quick)
     require_file "$KIT_DIR/install-global.sh"
     exec bash "$KIT_DIR/install-global.sh" --yes "$@"
+    ;;
+
+  # ─── v1.6.4 Mode management (Power/Safe) ────────────────────────
+  mode)
+    mode_cmd="${1:-show}"
+    shift || true
+    case "$mode_cmd" in
+      show)
+        proj_config="$KIT_DIR/templates/opencode.json"
+        if [ -f ".opencode/opencode.json" ]; then
+          proj_config=".opencode/opencode.json"
+        fi
+        echo "opk: OpenCode Power Kit mode check"
+        echo ""
+        echo "Template: $KIT_DIR/templates/opencode.json"
+        echo "Project:  $(test -f .opencode/opencode.json && echo '.opencode/opencode.json' || echo '(none)')"
+        echo ""
+        if grep -q '"permission": "allow"' "$proj_config" 2>/dev/null; then
+          echo "Current mode: POWER (permission: allow)"
+          echo "  Agent tự động chạy tool, sửa file, bash — không hỏi lại."
+        else
+          echo "Current mode: SAFE (permission object)"
+          echo "  Agent hỏi trước khi write/edit/bash/task."
+        fi
+        ;;
+      power)
+        require_file "$KIT_DIR/templates/opencode.power.json"
+        target=".opencode/opencode.json"
+        if [ ! -f "$target" ]; then
+          target="$KIT_DIR/templates/opencode.json"
+          echo "opk: Không tìm thấy .opencode/opencode.json — cập nhật template mặc định."
+        fi
+        backup="${target}.bak.$(date +%Y%m%d-%H%M%S)"
+        cp "$target" "$backup"
+        echo "opk: Backup -> $backup"
+        cp "$KIT_DIR/templates/opencode.power.json" "$target"
+        echo "opk: ✅ Đã chuyển sang POWER MODE (permission: allow)"
+        echo "opk:   Agent tự động chạy tool, sửa file, bash — không hỏi lại."
+        echo "opk:   Safety rules enforced bằng instruction rules (xem AGENTS.md)."
+        echo "opk:   Để quay lại: opk mode safe"
+        ;;
+      safe)
+        require_file "$KIT_DIR/templates/opencode.safe.json"
+        target=".opencode/opencode.json"
+        if [ ! -f "$target" ]; then
+          target="$KIT_DIR/templates/opencode.json"
+          echo "opk: Không tìm thấy .opencode/opencode.json — cập nhật template mặc định."
+        fi
+        backup="${target}.bak.$(date +%Y%m%d-%H%M%S)"
+        cp "$target" "$backup"
+        echo "opk: Backup -> $backup"
+        cp "$KIT_DIR/templates/opencode.safe.json" "$target"
+        echo "opk: ✅ Đã chuyển sang SAFE MODE (permission object)"
+        echo "opk:   Read/grep/glob/skill=allow, write/edit/bash/task=ask."
+        echo "opk:   Agent sẽ hỏi trước khi sửa file hoặc chạy lệnh."
+        echo "opk:   Để quay lại: opk mode power"
+        ;;
+      *)
+        echo "opk: mode: lệnh không hợp lệ '$mode_cmd'. Dùng: show, power, safe" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+
+  safety-plugin)
+    plugin_cmd="${1:-status}"
+    shift || true
+    case "$plugin_cmd" in
+      install)
+        require_file "$KIT_DIR/scripts/install-safety-plugin.sh"
+        exec bash "$KIT_DIR/scripts/install-safety-plugin.sh" "$@"
+        ;;
+      status)
+        if [ -f ".opencode/plugins/opk-safety-guard.js" ]; then
+          echo "opk: ✅ Safety plugin guard đã được cài đặt."
+          echo "   File: .opencode/plugins/opk-safety-guard.js"
+          wc -l ".opencode/plugins/opk-safety-guard.js" 2>/dev/null | awk '{print "   Dòng: " $1}'
+        elif [ -f "$KIT_DIR/templates/plugins/opk-safety-guard.js" ]; then
+          echo "opk: ⚠️ Safety plugin guard có sẵn trong template nhưng chưa cài."
+          echo "   Chạy: opk safety-plugin install"
+        else
+          echo "opk: ℹ️ Safety plugin guard chưa được cài đặt."
+        fi
+        ;;
+      *)
+        echo "opk: safety-plugin: lệnh không hợp lệ '$plugin_cmd'. Dùng: install, status" >&2
+        exit 1
+        ;;
+    esac
     ;;
 
   # ─── v1.3.4 GSD Core opt-in integration ────────────────────────
