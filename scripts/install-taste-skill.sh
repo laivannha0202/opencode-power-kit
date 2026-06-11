@@ -26,7 +26,7 @@ set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
 MODE="interactive"
-TASTE_PACKAGE="@leonxlnx/taste-skill"
+TASTE_PACKAGE="Leonxlnx/taste-skill"
 OPK_SKIP_TASTE="${OPK_SKIP_TASTE:-}"
 
 # ─── Usage ────────────────────────────────────────────────────────

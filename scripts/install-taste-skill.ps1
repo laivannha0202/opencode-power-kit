@@ -20,7 +20,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $ScriptName = 'install-taste-skill.ps1'
-$TastePackage = '@leonxlnx/taste-skill'
+$TastePackage = 'Leonxlnx/taste-skill'
 $SkipTaste = [System.Environment]::GetEnvironmentVariable('OPK_SKIP_TASTE')
 
 # ─── Helpers ──────────────────────────────────────────────────────
