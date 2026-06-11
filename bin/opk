@@ -189,6 +189,12 @@ opk — OpenCode Power Kit CLI (v$VERSION)
   opk ec [...]      Alias: opk ecc
   opk e [...]       Alias: opk ecc
 
+  v1.9.0 — Hermes-lite (optional, inspired by NousResearch Hermes Agent):
+  opk hermes audit     Self-audit Hermes-lite components (read-only)
+  opk hermes status    Check Hermes-lite installation status
+  opk hermes capsule   Package learnings into capsule file
+  opk hermes off       Remove Hermes-lite components
+
 Flags chung (forward cho sub-script):
   --yes   skip confirm
   --help  in trợ giúp của sub-script
@@ -750,6 +756,66 @@ EOF
   update-ecc)
     require_file "$KIT_DIR/scripts/install-ecc-lite.sh"
     exec bash "$KIT_DIR/scripts/install-ecc-lite.sh" "$@"
+    ;;
+
+  # ─── v1.9.0 Hermes-lite (optional, meta-cognitive self-improvement) ─
+  # Inspired by Hermes Agent (NousResearch) — OPK-native, no full Hermes.
+  hermes|hermes-status|hermes-off)
+    hermes_cmd="${1:-status}"
+    shift || true
+    case "$hermes_cmd" in
+      audit)
+        require_file "$KIT_DIR/scripts/audit-hermes.sh"
+        exec bash "$KIT_DIR/scripts/audit-hermes.sh" "$@"
+        ;;
+      status)
+        require_file "$KIT_DIR/scripts/check-hermes-lite.sh"
+        exec bash "$KIT_DIR/scripts/check-hermes-lite.sh" "$@"
+        ;;
+      capsule)
+        require_file "$KIT_DIR/scripts/hermes-learning-capsule.sh"
+        exec bash "$KIT_DIR/scripts/hermes-learning-capsule.sh" "$@"
+        ;;
+      off)
+        hermes_removed=0
+        if [[ -n "${OPENCODE_CONFIG_DIR:-}" ]]; then
+          HERMES_CONFIG_BASE="${OPENCODE_CONFIG_DIR}"
+        else
+          HERMES_CONFIG_BASE="${HOME}/.config/opencode"
+        fi
+        h_target="${HERMES_CONFIG_BASE}/agents/hermes-lite-strong.md"
+        if [[ -f "$h_target" ]]; then
+          rm -f "$h_target"
+          echo "opk: ✅ Đã xoá agent hermes-lite-strong.md"
+          hermes_removed=1
+        fi
+        for cmd_file in hermes-reflect.md hermes-skill.md hermes-kanban.md hermes-memory.md hermes-budget.md hermes-audit.md hermes-learn.md hermes-research.md; do
+          cmd_path="${HERMES_CONFIG_BASE}/commands/$cmd_file"
+          if [[ -f "$cmd_path" ]]; then
+            rm -f "$cmd_path"
+            echo "opk: ✅ Đã xoá command $cmd_file"
+            hermes_removed=1
+          fi
+        done
+        if [[ $hermes_removed -eq 0 ]]; then
+          echo "opk: ℹ️  Hermes-lite chưa được cài đặt."
+        else
+          echo "opk: ✅ Đã gỡ Hermes-lite hoàn tất."
+        fi
+        exit 0
+        ;;
+      help|--help|-h)
+        echo "opk hermes audit        Self-audit Hermes-lite components"
+        echo "opk hermes status       Check Hermes-lite installation status"
+        echo "opk hermes capsule      Package learnings into capsule (from .hermes/learnings/)"
+        echo "opk hermes off          Remove Hermes-lite components"
+        exit 0
+        ;;
+      *)
+        echo "opk: hermes: lệnh không hợp lệ '$hermes_cmd'. Dùng: audit, status, capsule, off, help" >&2
+        exit 1
+        ;;
+    esac
     ;;
 
   # ─── v1.6.6 MarkItDown Document Tools (opt-in) ─────────────────

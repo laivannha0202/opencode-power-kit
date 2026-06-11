@@ -190,6 +190,12 @@ switch ($Command.ToLower()) {
         Write-Host "  opk ec [...]      Alias: opk ecc"
         Write-Host "  opk e [...]       Alias: opk ecc"
         Write-Host ""
+        Write-Host "v1.9.0 — Hermes-lite (optional, inspired by NousResearch Hermes Agent):"
+        Write-Host "  opk hermes audit     Self-audit Hermes-lite components (read-only)"
+        Write-Host "  opk hermes status    Check Hermes-lite installation status"
+        Write-Host "  opk hermes capsule   Package learnings into capsule file"
+        Write-Host "  opk hermes off       Remove Hermes-lite components"
+        Write-Host ""
         Write-Host "v1.6.4 — Mode & Safety:"
         Write-Host "  opk mode show   Xem che do Power/Safe hien tai"
         Write-Host "  opk mode power  Chuyen sang Power Mode (permission: allow)"
@@ -677,6 +683,62 @@ switch ($Command.ToLower()) {
         $script = Join-Path $KitDir 'scripts\install-ecc-lite.sh'
         Require-File $script
         & bash $script @Args
+    }
+
+    # ─── v1.9.0 Hermes-lite (optional, meta-cognitive self-improvement) ─
+    'hermes' {
+        $hermesCmd = if ($Args.Count -gt 0) { $Args[0].ToLower() } else { 'status' }
+        $hermesArgs = if ($Args.Count -gt 1) { $Args[1..($Args.Count-1)] } else { @() }
+
+        switch ($hermesCmd) {
+            'audit' {
+                $script = Join-Path $KitDir 'scripts\audit-hermes.sh'
+                Require-File $script
+                & bash $script @hermesArgs
+            }
+            'status' {
+                $script = Join-Path $KitDir 'scripts\check-hermes-lite.sh'
+                Require-File $script
+                & bash $script @hermesArgs
+            }
+            'capsule' {
+                $script = Join-Path $KitDir 'scripts\hermes-learning-capsule.sh'
+                Require-File $script
+                & bash $script @hermesArgs
+            }
+            'off' {
+                $hermesAgent = Join-Path $HOME '.config\opencode\agents\hermes-lite-strong.md'
+                $hermesCommands = @(
+                    'hermes-reflect.md','hermes-skill.md','hermes-kanban.md',
+                    'hermes-memory.md','hermes-budget.md','hermes-audit.md',
+                    'hermes-learn.md','hermes-research.md'
+                )
+                $removed = $false
+                if (Test-Path $hermesAgent) {
+                    Remove-Item -Force $hermesAgent
+                    Write-Host "opk: ✅ Đã xoá agent hermes-lite-strong.md" -ForegroundColor Green
+                    $removed = $true
+                }
+                foreach ($cmdFile in $hermesCommands) {
+                    $cmdPath = Join-Path $HOME '.config\opencode\commands' $cmdFile
+                    if (Test-Path $cmdPath) {
+                        Remove-Item -Force $cmdPath
+                        Write-Host "opk: ✅ Đã xoá command $cmdFile" -ForegroundColor Green
+                        $removed = $true
+                    }
+                }
+                if (-not $removed) {
+                    Write-Host 'opk: ℹ️ Hermes-lite chưa được cài đặt.' -ForegroundColor Gray
+                } else {
+                    Write-Host 'opk: ✅ Đã gỡ Hermes-lite hoàn tất.' -ForegroundColor Green
+                }
+                exit 0
+            }
+            default {
+                Write-Host "opk: hermes: lenh khong hop le '$hermesCmd'. Dung: audit, status, capsule, off" -ForegroundColor Red
+                exit 1
+            }
+        }
     }
 
     # ─── v1.6.7 Supermemory Memory API (opt-in) ─────────────────

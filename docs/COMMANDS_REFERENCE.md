@@ -103,6 +103,19 @@
 | `/model-route-review` | `model-route-review.md` | Model-routing review: verify AI model choice for task |
 | `/harness-audit` | `harness-audit.md` | Harness audit: verify constraints, edge cases, invariants |
 
+## Hermes-lite (Meta-Cognitive Self-Improvement)
+
+| Lệnh | File | Mục đích |
+|---------|------|----------|
+| `/hermes-reflect` | `hermes-reflect.md` | Structured reflection on recent work |
+| `/hermes-skill` | `hermes-skill.md` | Propose skill improvements from work patterns |
+| `/hermes-kanban` | `hermes-kanban.md` | Lightweight kanban board for agent tasks |
+| `/hermes-memory` | `hermes-memory.md` | Memory policy review |
+| `/hermes-budget` | `hermes-budget.md` | Context/budget pressure analysis |
+| `/hermes-audit` | `hermes-audit.md` | Tool surface audit |
+| `/hermes-learn` | `hermes-learn.md` | Capture learning from current work |
+| `/hermes-research` | `hermes-research.md` | Research remote backend/dependency improvement |
+
 ## CLI Commands
 
 | Lệnh | Mục đích |

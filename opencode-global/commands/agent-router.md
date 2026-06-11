@@ -34,6 +34,8 @@ hoặc main agent (nếu cần docs/report).
 | Test, QA, coverage, E2E | `qa-strong` | Trước ship |
 | Security audit, SAST, threat model | `security-strong` | Pre-release |
 | Version bump, release, CHANGELOG | `release-strong` | Cuối cùng |
+| Meta-cognition, self-improvement, reflection | `hermes-lite-strong` | Khi cần learning loop, skill improvement |
+| Context/memory audit, kanban, tool audit | `hermes-lite-strong` | Khi cần process optimization |
 
 ## Workflow
 

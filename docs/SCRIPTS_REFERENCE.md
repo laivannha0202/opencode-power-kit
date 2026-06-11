@@ -21,5 +21,8 @@
 | `audit-ecc.sh` | Audit codebase against ECC principles (read-only, clone ECC to .tmp) |
 | `install-ecc-lite.sh` | Cài ECC-lite components (agent + commands, opt-in) |
 | `check-ecc-lite.sh` | Kiểm tra ECC-lite đã cài chưa (không gọi network) |
+| `audit-hermes.sh` | Self-audit Hermes-lite components (read-only) |
+| `check-hermes-lite.sh` | Kiểm tra Hermes-lite đã cài chưa (không gọi network) |
+| `hermes-learning-capsule.sh` | Package learnings vào `.hermes/learnings/` capsule |
 
 Tất cả scripts đều idempotent — an toàn khi chạy nhiều lần.

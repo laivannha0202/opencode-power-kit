@@ -478,6 +478,76 @@ require_contains "THIRD_PARTY.md" "ECC"
 require_contains "THIRD_PARTY.md" "affaan-m"
 echo
 
+# ─── v1.9.0: Hermes-lite (meta-cognitive self-improvement) ─────────
+echo "[v1.9.0 Hermes-lite]"
+# CHANGELOG
+require_contains "CHANGELOG.md" "1.9.0"
+require_contains "CHANGELOG.md" "Hermes-lite"
+require_contains "CHANGELOG.md" "NousResearch"
+# Agent file
+require_file "opencode-global/agents/hermes-lite-strong.md"
+require_contains "opencode-global/agents/hermes-lite-strong.md" "Hermes-lite"
+require_contains "opencode-global/agents/hermes-lite-strong.md" "mode: all"
+# Script files
+require_file "scripts/audit-hermes.sh"
+require_file "scripts/check-hermes-lite.sh"
+require_file "scripts/hermes-learning-capsule.sh"
+require_executable "scripts/audit-hermes.sh"
+require_executable "scripts/check-hermes-lite.sh"
+require_executable "scripts/hermes-learning-capsule.sh"
+# Script content checks
+require_contains "scripts/audit-hermes.sh" "hermes"
+require_contains "scripts/check-hermes-lite.sh" "hermes-lite"
+require_contains "scripts/hermes-learning-capsule.sh" "hermes"
+# Commands (8)
+for hermes_cmd in hermes-reflect hermes-skill hermes-kanban hermes-memory hermes-budget hermes-audit hermes-learn hermes-research; do
+	require_file "opencode-global/commands/${hermes_cmd}.md"
+done
+# bin/opk commands
+require_contains "bin/opk" "hermes|hermes-status|hermes-off)"
+require_contains "bin/opk" "hermes audit"
+require_contains "bin/opk" "hermes status"
+require_contains "bin/opk" "hermes capsule"
+require_contains "bin/opk" "hermes off"
+# bin/opk.ps1 commands
+require_contains "bin/opk.ps1" "'hermes'"
+require_contains "bin/opk.ps1" "hermes audit"
+require_contains "bin/opk.ps1" "hermes status"
+require_contains "bin/opk.ps1" "hermes capsule"
+require_contains "bin/opk.ps1" "hermes off"
+# Docs
+require_file "docs/HERMES_INTEGRATION.md"
+require_file "docs/HERMES_AUDIT.md"
+require_file "docs/LEARNING_LOOP.md"
+require_file "docs/AGENT_KANBAN.md"
+require_contains "docs/HERMES_INTEGRATION.md" "Hermes-lite"
+require_contains "docs/LEARNING_LOOP.md" "Learning Loop"
+require_contains "docs/AGENT_KANBAN.md" "Kanban"
+# README
+require_contains "README.md" "Hermes-lite"
+require_contains "README.md" "NousResearch"
+# THIRD_PARTY
+require_contains "THIRD_PARTY.md" "Hermes"
+require_contains "THIRD_PARTY.md" "NousResearch"
+# No auto-enable in bootstrap / install-global / setup
+if rg -q "hermes" "bootstrap.sh" 2>/dev/null; then
+	fail "bootstrap.sh must NOT auto-enable Hermes-lite"
+fi
+if rg -q "hermes" "install-global.sh" 2>/dev/null; then
+	fail "install-global.sh must NOT auto-enable Hermes-lite"
+fi
+if rg -q "hermes" "setup.sh" 2>/dev/null; then
+	fail "setup.sh must NOT auto-enable Hermes-lite"
+fi
+# No subtask: admin on agent
+if rg "subtask: admin" "opencode-global/agents/hermes-lite-strong.md" >/dev/null 2>&1; then
+	fail "opencode-global/agents/hermes-lite-strong.md must NOT contain subtask: admin"
+fi
+# Build-strong and agent-router integration
+require_contains "opencode-global/agents/build-strong.md" "hermes-lite-strong"
+require_contains "opencode-global/commands/agent-router.md" "hermes-lite-strong"
+echo
+
 # ─── v1.6.6: MarkItDown Document Tools ──────────────────────────
 echo "[v1.6.6 MarkItDown Document Tools]"
 require_contains "CHANGELOG.md" "1.6.6"

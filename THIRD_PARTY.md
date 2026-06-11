@@ -1,6 +1,6 @@
 # Third-Party Components & Credits
 
-> **Version:** opencode-power-kit v1.8.0
+> **Version:** opencode-power-kit v1.9.0
 >
 > This project packages, configures, and documents workflows around
 > [OpenCode](https://github.com/opencode-ai). It credits upstream authors
@@ -50,6 +50,7 @@
 | Supermemory | sudomateo / community | https://github.com/supermemory/supermemory | Memory persistence across AI coding sessions | Opt-in wrapper | `opk supermemory install` (npm) | Apache-2.0 |
 | Taste Skill | Leonxlnx | https://github.com/Leonxlnx/taste-skill | AI-augmented UI/UX design (image-to-code, redesign, polish, brand kit) | Auto-enabled dependency | `opk taste install` / auto on `opk global/go/one` (npx) | MIT |
 | ECC | affaan-m | https://github.com/affaan-m/ECC | Engineering Code Commandments — coding standards, security, engineering rigor | Opt-in wrapper | `opk ecc lite` (kit-native); `opk ecc audit` (read-only clone) | MIT |
+| Hermes Agent | NousResearch | https://github.com/NousResearch/hermes-agent | Meta-cognitive self-improvement — learning loop, skill improvement, memory review, kanban, tool audit | Inspiration-only | `opk hermes status` (local); `git pull` refreshes OPK source | Apache-2.0 |
 | rtk | rtk-ai | https://github.com/rtk-ai/rtk | Token-saving shell wrapper | Detect-only | User installs separately | MIT |
 | tokscale | — | https://github.com/tokscale/tokscale | Token cost visualization | Detect-only | User installs separately | — |
 | repomix | yamadashy | https://github.com/yamadashy/repomix | Context pack generator | Detect-only | User installs separately | MIT |
@@ -367,6 +368,67 @@ cleaning up — no global config changes, no full asset copy.
 
 ---
 
+## 8.5. Hermes Agent — Inspiration-only (Meta-Cognitive Self-Improvement)
+
+| Field | Value |
+|-------|-------|
+| Role | Meta-cognitive self-improvement framework — learning loop, skill improvement, memory policy review, context/budget pressure, lightweight kanban, tool surface audit, remote backend review |
+| Integration | **Inspiration-only** — never vendored, never auto-installed, never enabled by default. Hermes concepts are adapted to OPK-native components, not copied from upstream |
+| Source | https://github.com/NousResearch/hermes-agent |
+| Documentation | https://docs.hermes-agent.nousresearch.com (Self-Evolution section) |
+| License | Apache-2.0 (per upstream) |
+| Kit ships | `scripts/audit-hermes.sh`, `scripts/check-hermes-lite.sh`, `scripts/hermes-learning-capsule.sh` — OPK-native scripts |
+| | `opencode-global/agents/hermes-lite-strong.md` — Hermes-lite agent |
+| | `opencode-global/commands/hermes-reflect.md`, `hermes-skill.md`, `hermes-kanban.md`, `hermes-memory.md`, `hermes-budget.md`, `hermes-audit.md`, `hermes-learn.md`, `hermes-research.md` — 8 commands |
+| | `bin/opk` / `bin/opk.ps1` — CLI subcommands: `hermes` |
+| | `docs/HERMES_INTEGRATION.md`, `docs/HERMES_AUDIT.md`, `docs/LEARNING_LOOP.md`, `docs/AGENT_KANBAN.md` — 4 docs |
+| Update path | `opk hermes status` checks local files; `git pull` refreshes from OPK repo |
+
+Hermes-lite is **not** full Hermes Agent. It ships only OPK-native components:
+
+- **8 concepts** from Hermes Agent adapted to OPK: reflection, skill improvement,
+  lightweight kanban, memory policy review, context/budget pressure, tool
+  surface audit, learning capture, remote backend research.
+- **1 agent** (`hermes-lite-strong.md`) with mode: all for meta-cognitive workflows.
+- **8 slash commands** for key workflows.
+- **3 scripts** for audit, status, and learning capsule.
+- **4 documentation files** covering architecture, audit, learning loop, kanban.
+
+Full Hermes Agent (gateway, Telegram/Discord/Slack, cron, scheduler, memory
+system, self-evolution engine) is never installed by the kit.
+
+### Hermes-lite commands
+
+| CLI | Description |
+|-----|-------------|
+| `opk hermes audit` | Self-audit Hermes-lite components (read-only) |
+| `opk hermes status` | Check Hermes-lite installation status (no network) |
+| `opk hermes capsule` | Package learnings into `.hermes/learnings/*.md` capsule |
+| `opk hermes off` | Remove Hermes-lite from `~/.config/opencode/` |
+
+### Safety guarantees
+
+- **No auto-enable** — never installed during `opk global`, `bootstrap`, `setup`,
+  or `opk up`.
+- **No vendor source** — Hermes Agent source never copied into OPK repo.
+- **No gateway** — no Telegram, Discord, Slack, or webhook integrations.
+- **No scheduler/cron** — no background processes, no daemons, no periodic jobs.
+- **No MCP** — no MCP servers or configs.
+- **No env/secrets** — Hermes-lite never reads sensitive files.
+- **No network in status check** — `check-hermes-lite.sh` only checks local files.
+- **No sudo** — all operations user-scoped (`~/.config/opencode/`).
+- **Read-only audit** — `audit-hermes.sh` only reads local files.
+- **No memory system** — no persistent memory store, no vector DB, no embedding.
+
+### Agent routing
+
+- `opencode-global/agents/hermes-lite-strong.md` — dedicated subagent for
+  meta-cognitive self-improvement workflows
+- 8 slash commands route to hermes-lite-strong for execution
+- Agents never install packages directly
+
+---
+
 ## 9. Detect-only Tools
 
 The following tools are **never vendored, never auto-installed, and never
@@ -425,7 +487,7 @@ scaffolding, agents, and commands are designed for.
 - `BMAD_METHOD_VERSION` env overrides the default version pin.
 - Full log captured to `.opencode-power-bmad-install.log`.
 
-### Opt-in tools (GSD Core, MarkItDown, Supermemory, ECC-lite)
+### Opt-in tools (GSD Core, MarkItDown, Supermemory, ECC-lite, Hermes-lite)
 
 - `opk gsd` / `opk update-gsd` — calls `npx @opengsd/gsd-core@latest`.
 - `opk update-all --with-gsd` — pulls kit + updates GSD.
@@ -434,6 +496,9 @@ scaffolding, agents, and commands are designed for.
 - `opk ecc lite` — installs ECC-lite agent + commands (OPK-native, not full ECC).
 - `opk update-ecc` — refreshes ECC-lite from OPK repo.
 - `opk ecc audit` — read-only audit against ECC principles (clone to .tmp/).
+- `opk hermes status` — checks Hermes-lite installation (local files only).
+- `opk hermes audit` — read-only self-audit of Hermes-lite components.
+- `opk hermes capsule` — package learnings into capsule file.
 - No auto-update, no background refresh.
 
 ### Auto-enabled dependencies (Taste Skill)
@@ -474,6 +539,7 @@ scaffolding, agents, and commands are designed for.
 - **Supermemory**: Apache-2.0
 - **Taste Skill**: MIT
 - **ECC**: MIT
+- **Hermes Agent**: Apache-2.0
 - **rtk**: MIT
 - **repomix**: MIT
 - **ast-grep**: MIT

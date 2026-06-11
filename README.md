@@ -1,7 +1,7 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.8.0-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-1.9.0-blue.svg)](./VERSION)
 [![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
@@ -114,10 +114,10 @@ opk clean --apply  # apply: move vào .opk-trash/<timestamp>/
 | Thành phần | Số lượng | Vị trí |
 |-----------|-------|----------|
 | Core power agents | 14 | `opencode-global/agents/` |
-| Total agent files | 48 | `opencode-global/agents/` (14 core + 33 GSD-style + 1 ECC-lite) |
-| Slash commands | 49 | `opencode-global/commands/` |
+| Total agent files | 49 | `opencode-global/agents/` (14 core + 33 GSD-style + 1 ECC-lite + 1 Hermes-lite) |
+| Slash commands | 57 | `opencode-global/commands/` |
 | Skills | 20 | `opencode-global/skills/` |
-| Helper scripts | 15 | `scripts/` |
+| Helper scripts | 18 | `scripts/` |
 | Root-level scripts | 15 | `*.sh` + `*.ps1` (install, bootstrap, verify, doctor, ...) |
 | Full-stack profile | 1 | `profiles/node-nest-react-mysql/` |
 | Safety scripts | 4 | `verify.sh`, `doctor.sh`, `cleanup-agent-artifacts.sh`, `opk-command-guard.sh` |
@@ -157,6 +157,7 @@ người dùng hiểu rõ ranh giới.
 | Supermemory | supermemory.ai | Memory/knowledge layer — store, retrieve, and search agent conversations, notes, and context | Opt-in wrapper | `scripts/install-supermemory.sh`, `scripts/install-supermemory.ps1` |
 | MarkItDown | Microsoft | Document-to-Markdown conversion (PDF/DOCX/PPTX/XLSX/HTML) | Opt-in wrapper | `scripts/install-markitdown.sh`, `scripts/install-markitdown.ps1` |
 | Taste Skill | Leonxlnx | AI-augmented UI/UX design — image-to-code, redesign, polish, brand kit | Auto-enabled dependency | `scripts/install-taste-skill.sh`, `scripts/install-taste-skill.ps1` |
+| Hermes Agent | NousResearch | Meta-cognitive self-improvement framework — learning loop, skill improvement, memory policy review, context/budget pressure, lightweight kanban, tool surface audit, remote backend review | Inspiration (OPK-native) | `opencode-global/agents/hermes-lite-strong.md`, 8 commands, 3 scripts |
 | rtk | rtk-ai | Token-saving shell wrapper | Detect-only | `/tooling-doctor` phát hiện |
 | repomix | yamadashy | Context pack generator | Detect-only | `/tooling-doctor` + `/token-pack` |
 | ast-grep | ast-grep | Structural code search | Detect-only | `/tooling-doctor` |
@@ -179,8 +180,8 @@ người dùng hiểu rõ ranh giới.
 
 ## Power Mode v1.5.0
 
-- **14 core power agents** + **33 GSD-style agents** + **1 ECC-lite** = **48 total agent files** — mỗi agent chuyên sâu một lĩnh vực
-- **49 commands** — phân loại theo power workflow, safety, build lifecycle, review, DB/API, QA/E2E, DevOps, quality/security, token/tooling
+- **14 core power agents** + **33 GSD-style agents** + **1 ECC-lite** + **1 Hermes-lite** = **49 total agent files** — mỗi agent chuyên sâu một lĩnh vực
+- **57 commands** — phân loại theo power workflow, safety, build lifecycle, review, DB/API, QA/E2E, DevOps, quality/security, token/tooling
 - **`scripts/opk-command-guard.sh`** — lớp bảo vệ: cảnh báo/chặn lệnh shell nguy hiểm (`rm -rf`, `git reset --hard`, force push, `DROP TABLE`, ...)
 - **`build-strong` Agent Delegation** — tự động triệu hồi subagent chuyên biệt dựa trên ngữ cảnh
 - **`/power-build`** — quy trình đầu cuối: spec → architecture → implementation → QA → security → release

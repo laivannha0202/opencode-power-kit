@@ -5,6 +5,74 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-06-11
+
+### Hermes-lite — Meta-Cognitive Self-Improvement (Inspiration-only)
+
+### Added
+
+- **Hermes-lite integration** — optional, OPK-native meta-cognitive
+  self-improvement framework inspired by
+  [Hermes Agent](https://github.com/NousResearch/hermes-agent) by NousResearch.
+  Ships only OPK-native components — no full Hermes Agent install, no gateway,
+  no Telegram/Discord/Slack, no cron/scheduler/memory, no MCP, no auto-enable.
+  - `opk hermes audit` — self-audit Hermes-lite components (read-only)
+  - `opk hermes status` — check Hermes-lite installation status (no network)
+  - `opk hermes capsule` — package learnings into capsule file
+  - `opk hermes off` — remove Hermes-lite components
+- **`opencode-global/agents/hermes-lite-strong.md`** — new subagent for
+  meta-cognitive self-improvement workflows: learning loop, skill improvement,
+  memory policy review, context/budget pressure, lightweight kanban, tool
+  surface audit, remote backend review.
+- **8 slash commands** for Hermes-lite:
+  - `/hermes-reflect` — structured reflection on recent work
+  - `/hermes-skill` — propose skill improvements from work patterns
+  - `/hermes-kanban` — lightweight kanban board for agent tasks
+  - `/hermes-memory` — memory policy review
+  - `/hermes-budget` — context/budget pressure analysis
+  - `/hermes-audit` — tool surface audit
+  - `/hermes-learn` — capture learning from current work
+  - `/hermes-research` — research remote backend/dependency improvement
+- **3 helper scripts**:
+  - `scripts/audit-hermes.sh` — read-only self-audit
+  - `scripts/check-hermes-lite.sh` — read-only status check (no network)
+  - `scripts/hermes-learning-capsule.sh` — package learnings into capsule
+- **4 documentation files**:
+  - `docs/HERMES_INTEGRATION.md` — architecture, component table, safety
+    guarantees, usage guide, comparison with full Hermes Agent
+  - `docs/HERMES_AUDIT.md` — audit methodology and template
+  - `docs/LEARNING_LOOP.md` — learning loop documentation
+  - `docs/AGENT_KANBAN.md` — lightweight kanban for agents
+- **THIRD_PARTY.md** — Hermes Agent entry (section 8.5, Inspiration-only),
+  upstream table row, license notes, update policy.
+- **README.md** — Hermes-lite section with integration model, usage, safety
+  guarantees, component table updated (agents 48→49, commands 49→57,
+  scripts 15→18).
+
+### Safety
+
+- Hermes-lite scripts never: auto-install, vendor source, gateway, hooks, MCP,
+  sudo, curl|sh, read .env/secrets.
+- Hermes-lite is NOT installed during `opk global`, `opk one`, `opk go`,
+  `bootstrap.sh --all`, `setup.sh --global`, `install-global.sh`, or `opk up`.
+- `audit-hermes.sh` is read-only — no modifications to working tree.
+- `check-hermes-lite.sh` is read-only — no network calls.
+- Full Hermes Agent (scheduler, gateway, Telegram/Discord/Slack, cron, memory)
+  is never installed by the kit.
+
+### Changed
+
+- VERSION bumped from 1.8.0 to 1.9.0
+- `bin/opk` — added `hermes` namespace (audit/status/capsule/off)
+- `bin/opk.ps1` — mirror Hermes subcommands for PowerShell
+- `verify.sh` — added required files, executability, bash -n, Hermes-lite
+  section with CHANGELOG/agent/command/CLI/README/THIRD_PARTY content checks
+- `verify.ps1` — added Hermes-lite section with content checks
+- `opencode-global/agents/build-strong.md` — added hermes-lite-strong to
+  Agent Delegation table
+- `opencode-global/commands/agent-router.md` — added Hermes-lite routing entries
+- New version tag reference: `[1.9.0]`
+
 ## [1.8.0] - 2026-06-11
 
 ### ECC-lite — Engineering Code Commandments (Opt-in)
@@ -1070,6 +1138,8 @@ First production-grade release. Bumped from 9.4/10 → 10/10.
 - **Badges** in `README.md`: CI status, version, no-MCP policy,
   safe/no-secrets policy
 
+[1.9.0]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.9.0
+[1.8.0]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.8.0
 [1.6.7]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.7
 [1.6.6]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.6
 [1.6.5]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.5

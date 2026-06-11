@@ -224,6 +224,7 @@ Khi cần chuyên môn sâu, spawn subagent qua `task` tool:
 | QA, test, coverage, E2E | `qa-strong` | Trước ship, cần test suite |
 | Security audit, SAST, threat model | `security-strong` | Pre-release, code có auth/input |
 | Version bump, CHANGELOG, release | `release-strong` | Cuối cùng, trước publish |
+| Meta-cognition, learning loop, reflection | `hermes-lite-strong` | Post-task retro, skill improvement, context audit |
 
 **Workflow mẫu:**
 
