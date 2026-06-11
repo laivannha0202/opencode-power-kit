@@ -23,6 +23,12 @@
 | `review-lite` | Review | Review code/diff tiết kiệm token |
 | `debug-lite` | Debug | Debug tiết kiệm token cho bug đơn giản |
 
+## ECC-lite Agent
+
+| Agent | Loại | Công dụng |
+|-------|------|---------|
+| `ecc-lite-strong` | ECC | Engineering Code Commandments: research-first, quality gate, verification loop, assumption checking, test-before-done, security/reliability review |
+
 ## Autopilot Agent
 
 | Agent | Loại | Công dụng | Cách hoạt động |

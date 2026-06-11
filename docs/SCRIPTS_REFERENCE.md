@@ -18,5 +18,8 @@
 | `opk-command-guard.sh` | Lớp bảo vệ: cảnh báo/chặn lệnh shell nguy hiểm |
 | `cleanup-agent-artifacts.sh` | Dọn dẹp artifact an toàn |
 | `doctor.sh` | Kiểm tra chẩn đoán (read-only) |
+| `audit-ecc.sh` | Audit codebase against ECC principles (read-only, clone ECC to .tmp) |
+| `install-ecc-lite.sh` | Cài ECC-lite components (agent + commands, opt-in) |
+| `check-ecc-lite.sh` | Kiểm tra ECC-lite đã cài chưa (không gọi network) |
 
 Tất cả scripts đều idempotent — an toàn khi chạy nhiều lần.

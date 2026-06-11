@@ -5,6 +5,65 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-06-11
+
+### ECC-lite — Engineering Code Commandments (Opt-in)
+
+### Added
+
+- **ECC-lite integration** — optional, lightweight subset of
+  [ECC (Engineering Code Commandments)](https://github.com/affaan-m/ECC) by
+  affaan.m. Ships only OPK-native components — no full ECC install, no hooks,
+  no MCP, no memory, no auto-enable.
+  - `opk ecc audit` — audit codebase against ECC principles (read-only, clone to .tmp)
+  - `opk ecc lite` — install ECC-lite agent + commands
+  - `opk ecc status` — check ECC-lite installation status (no network)
+  - `opk ecc off` — remove ECC-lite
+  - `opk update-ecc` — refresh ECC-lite installation
+  - Short aliases: `opk ec` / `opk e`
+- **`scripts/audit-ecc.sh`** — read-only audit: clone ECC to .tmp/, analyze
+  codebase, create docs/ECC_AUDIT.md, cleanup. No global config changes,
+  no full asset copy, no vendor source in repo.
+- **`scripts/install-ecc-lite.sh`** — install ECC-lite agent + 6 commands
+  to `~/.config/opencode/`. Dry-run + confirm. OPK-native only.
+- **`scripts/check-ecc-lite.sh`** — read-only status check (no network).
+- **`opencode-global/agents/ecc-lite-strong.md`** — new subagent for ECC-lite
+  engineering discipline workflows (research-first, quality gate, verification
+  loop, assumption checking, test-before-done, security/reliability review).
+- **6 slash commands** for ECC-lite:
+  - `/ecc-audit` — audit codebase against ECC principles
+  - `/quality-gate` — quality gate before merge/release
+  - `/research-first` — research-first approach
+  - `/verify-loop` — verification loop (test-before-done)
+  - `/model-route-review` — AI model routing review
+  - `/harness-audit` — constraints/edge-cases/invariants audit
+- **`docs/ECC_INTEGRATION.md`** — architecture, component table, safety
+  guarantees, usage guide, comparison with full ECC.
+- **THIRD_PARTY.md** — ECC entry (section 8, Opt-in wrapper), upstream table
+  row, license notes, update policy.
+- **README.md** — ECC-lite section with integration model, usage, safety
+  guarantees, files table. Component table updated (agents 46→47, commands
+  34→40, scripts 12→15).
+
+### Safety
+
+- ECC-lite scripts never: auto-install, vendor source, hooks, MCP, sudo,
+  curl|sh, read .env/secrets.
+- ECC-lite is NOT installed during `opk global`, `opk one`, `opk go`,
+  `bootstrap.sh --all`, `setup.sh --global`, `install-global.sh`, or `opk up`.
+- `audit-ecc.sh` is read-only — clones to .tmp/, never modifies working tree.
+- `check-ecc-lite.sh` is read-only — no network calls.
+- Installer requires explicit `--yes` or TTY confirmation.
+
+### Changed
+
+- VERSION bumped from 1.7.0 to 1.8.0
+- `bin/opk` — added `ec|e|ecc` namespace (audit/lite/status/off) + `update-ecc`
+- `bin/opk.ps1` — mirror ECC subcommands for PowerShell
+- `verify.sh` — added required files, executability, bash -n, ECC-lite section
+  with CHANGELOG/script/agent/command/CLI/README/THIRD_PARTY content checks
+- `verify.ps1` — added ECC-lite section with content checks
+
 ## [1.7.0] - 2026-06-10
 
 ### Taste Skill — AI-Augmented UI/UX Design (Auto-Enabled)

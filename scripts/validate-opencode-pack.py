@@ -40,7 +40,7 @@ PROFILES_DIR = KIT_ROOT / "profiles"
 TEMPLATES_DIR = KIT_ROOT / "templates"
 
 # ─── version compliance constants ───────────────────────────────────
-EXPECTED_VERSION = "1.7.0"
+EXPECTED_VERSION = "1.8.0"
 
 AUTO_ROUTER_NEEDLES: tuple[tuple[str, str], ...] = (
     ("templates/AGENTS.md", "Natural Language Auto Router"),

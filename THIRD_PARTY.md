@@ -1,6 +1,6 @@
 # Third-Party Components & Credits
 
-> **Version:** opencode-power-kit v1.7.0
+> **Version:** opencode-power-kit v1.8.0
 >
 > This project packages, configures, and documents workflows around
 > [OpenCode](https://github.com/opencode-ai). It credits upstream authors
@@ -32,7 +32,7 @@
 | **Install-time dependency** | Cài vào project user qua official installer | Via npx | No | BMAD Method |
 | **Auto-enabled dependency** | Cài tự động khi kit install, vẫn dùng official installer | Via npx | Via opk update-* | Taste Skill |
 | **Config-only reference** | Kit chỉ ship template config trỏ đến upstream | No | No | Biome config |
-| **Opt-in wrapper** | Chỉ gọi installer chính thức khi user yêu cầu | No | No | GSD Core, MarkItDown |
+| **Opt-in wrapper** | Chỉ gọi installer chính thức khi user yêu cầu | No | No | GSD Core, MarkItDown, ECC-lite |
 | **Detect-only** | Chỉ phát hiện tool đã cài sẵn trên PATH | No | No | rg, fd, semgrep |
 | **Recommended ecosystem** | Stack mục tiêu / tài liệu hướng dẫn | No | No | NestJS, React, MySQL |
 
@@ -49,6 +49,7 @@
 | MarkItDown | Microsoft | https://github.com/microsoft/markitdown | Document-to-Markdown conversion (PDF/DOCX/PPTX/XLSX/HTML) | Opt-in wrapper | `opk markitdown install` (pipx/pip) | MIT |
 | Supermemory | sudomateo / community | https://github.com/supermemory/supermemory | Memory persistence across AI coding sessions | Opt-in wrapper | `opk supermemory install` (npm) | Apache-2.0 |
 | Taste Skill | Leonxlnx | https://github.com/Leonxlnx/taste-skill | AI-augmented UI/UX design (image-to-code, redesign, polish, brand kit) | Auto-enabled dependency | `opk taste install` / auto on `opk global/go/one` (npx) | MIT |
+| ECC | affaan-m | https://github.com/affaan-m/ECC | Engineering Code Commandments — coding standards, security, engineering rigor | Opt-in wrapper | `opk ecc lite` (kit-native); `opk ecc audit` (read-only clone) | MIT |
 | rtk | rtk-ai | https://github.com/rtk-ai/rtk | Token-saving shell wrapper | Detect-only | User installs separately | MIT |
 | tokscale | — | https://github.com/tokscale/tokscale | Token cost visualization | Detect-only | User installs separately | — |
 | repomix | yamadashy | https://github.com/yamadashy/repomix | Context pack generator | Detect-only | User installs separately | MIT |
@@ -310,7 +311,63 @@ Agents never install packages directly. All installs go through `opk` wrappers.
 
 ---
 
-## 8. Detect-only Tools
+## 8. ECC (Engineering Code Commandments) — Opt-in Wrapper
+
+| Field | Value |
+|-------|-------|
+| Role | Engineering discipline framework — coding standards, security, engineering rigor |
+| Integration | **Opt-in wrapper** — never vendored, never auto-installed, never enabled by default |
+| Source | https://github.com/affaan-m/ECC |
+| License | MIT (per upstream) |
+| Kit ships | `scripts/audit-ecc.sh`, `scripts/install-ecc-lite.sh`, `scripts/check-ecc-lite.sh` — OPK-native scripts |
+| | `opencode-global/agents/ecc-lite-strong.md` — ECC-lite agent (6 core principles) |
+| | `opencode-global/commands/ecc-audit.md`, `quality-gate.md`, `research-first.md`, `verify-loop.md`, `model-route-review.md`, `harness-audit.md` — 6 commands |
+| | `bin/opk` / `bin/opk.ps1` — CLI subcommands: `ec`, `e`, `ecc`, `update-ecc` |
+| Update path | `opk update-ecc` (re-sources from OPK repo, not from ECC upstream) |
+
+ECC-lite is **not** full ECC. It ships only OPK-native components:
+
+- **6 core principles** embedded in `ecc-lite-strong.md` agent
+- **6 slash commands** for key workflows (audit, quality gate, research-first,
+  verify loop, model route review, harness audit)
+- **3 helper scripts** for audit, install, and status check
+
+Full ECC (260+ skills, 80+ commands, hooks, MCP, memory) is never installed
+by the kit. The `audit-ecc.sh` script performs a read-only audit by cloning
+ECC to `.tmp/`, analyzing the codebase, generating `docs/ECC_AUDIT.md`, and
+cleaning up — no global config changes, no full asset copy.
+
+### ECC-lite commands
+
+| CLI | Description |
+|-----|-------------|
+| `opk ecc audit` | Audit codebase against ECC principles (read-only) |
+| `opk ecc lite` | Install ECC-lite agent + commands |
+| `opk ecc status` | Check ECC-lite installation status |
+| `opk ecc off` | Remove ECC-lite |
+| `opk update-ecc` | Refresh ECC-lite installation |
+
+### Safety guarantees
+
+- **No auto-enable** — never installed during `opk global`, `bootstrap`, `setup`,
+  or `opk up`.
+- **No vendor source** — ECC source never copied into OPK repo.
+- **No hooks** — no git hooks, OpenCode hooks, or commit hooks.
+- **No MCP** — no MCP servers or configs.
+- **No env/secrets** — ECC-lite never reads sensitive files.
+- **No network in status check** — `check-ecc-lite.sh` only checks local files.
+- **No sudo** — all operations user-scoped (`~/.config/opencode/`).
+- **Read-only audit** — `audit-ecc.sh` clones to `.tmp/`, audits, then cleans up.
+
+### Agent routing
+
+- `opencode-global/agents/ecc-lite-strong.md` — dedicated subagent for ECC-lite
+- 6 slash commands route to ecc-lite-strong for execution
+- Agents never install packages directly
+
+---
+
+## 9. Detect-only Tools
 
 The following tools are **never vendored, never auto-installed, and never
 auto-updated**. The `/tooling-doctor` command detects whether they are
@@ -342,7 +399,7 @@ present, but it never installs Playwright itself. Similarly,
 
 ---
 
-## 9. Recommended Ecosystem (Target Stack)
+## 10. Recommended Ecosystem (Target Stack)
 
 The full-stack profile recommends the following stack. These are **not**
 bundled or vendored — they are the target technologies that the profile's
@@ -360,7 +417,7 @@ scaffolding, agents, and commands are designed for.
 
 ---
 
-## 10. Update Policy
+## 11. Update Policy
 
 ### Install-time dependencies (BMAD Method)
 
@@ -368,12 +425,15 @@ scaffolding, agents, and commands are designed for.
 - `BMAD_METHOD_VERSION` env overrides the default version pin.
 - Full log captured to `.opencode-power-bmad-install.log`.
 
-### Opt-in tools (GSD Core, MarkItDown, Supermemory)
+### Opt-in tools (GSD Core, MarkItDown, Supermemory, ECC-lite)
 
 - `opk gsd` / `opk update-gsd` — calls `npx @opengsd/gsd-core@latest`.
 - `opk update-all --with-gsd` — pulls kit + updates GSD.
 - `opk markitdown install` — re-runs `pipx install "markitdown[all]"`.
 - `opk supermemory install` — re-runs `npm install -g @supermemory/ai`.
+- `opk ecc lite` — installs ECC-lite agent + commands (OPK-native, not full ECC).
+- `opk update-ecc` — refreshes ECC-lite from OPK repo.
+- `opk ecc audit` — read-only audit against ECC principles (clone to .tmp/).
 - No auto-update, no background refresh.
 
 ### Auto-enabled dependencies (Taste Skill)
@@ -403,7 +463,7 @@ scaffolding, agents, and commands are designed for.
 
 ---
 
-## 11. License Notes
+## 12. License Notes
 
 - **opencode-power-kit**: [MIT](./LICENSE)
 - **OpenCode**: MIT
@@ -413,6 +473,7 @@ scaffolding, agents, and commands are designed for.
 - **MarkItDown**: MIT
 - **Supermemory**: Apache-2.0
 - **Taste Skill**: MIT
+- **ECC**: MIT
 - **rtk**: MIT
 - **repomix**: MIT
 - **ast-grep**: MIT

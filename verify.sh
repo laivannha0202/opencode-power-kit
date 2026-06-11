@@ -137,6 +137,16 @@ require_file "scripts/install-supermemory.sh"
 require_file "scripts/install-supermemory.ps1"
 require_file "scripts/install-safety-plugin.sh"
 require_file "scripts/install-safety-plugin.ps1"
+require_file "scripts/audit-ecc.sh"
+require_file "scripts/install-ecc-lite.sh"
+require_file "scripts/check-ecc-lite.sh"
+require_file "opencode-global/agents/ecc-lite-strong.md"
+require_file "opencode-global/commands/ecc-audit.md"
+require_file "opencode-global/commands/quality-gate.md"
+require_file "opencode-global/commands/research-first.md"
+require_file "opencode-global/commands/verify-loop.md"
+require_file "opencode-global/commands/model-route-review.md"
+require_file "opencode-global/commands/harness-audit.md"
 require_file "bin/opk"
 require_file "templates/AGENTS.md"
 require_file "templates/OPENCODE.md"
@@ -164,6 +174,9 @@ require_executable "scripts/validate-opencode-pack.py"
 require_executable "scripts/install-gsd-core.sh"
 require_executable "scripts/install-markitdown.sh"
 require_executable "scripts/install-supermemory.sh"
+require_executable "scripts/audit-ecc.sh"
+require_executable "scripts/install-ecc-lite.sh"
+require_executable "scripts/check-ecc-lite.sh"
 require_executable "bin/opk"
 echo
 
@@ -385,6 +398,83 @@ require_contains "THIRD_PARTY.md" "Taste Skill"
 require_contains "THIRD_PARTY.md" "Leonxlnx"
 echo
 
+# ─── v1.8.0: ECC-lite (Engineering Code Commandments) ─────────────
+echo "[v1.8.0 ECC-lite]"
+# CHANGELOG
+require_contains "CHANGELOG.md" "1.8.0"
+require_contains "CHANGELOG.md" "ECC-lite"
+require_contains "CHANGELOG.md" "Engineering Code Commandments"
+# Script files
+require_file "scripts/audit-ecc.sh"
+require_file "scripts/install-ecc-lite.sh"
+require_file "scripts/check-ecc-lite.sh"
+require_executable "scripts/audit-ecc.sh"
+require_executable "scripts/install-ecc-lite.sh"
+require_executable "scripts/check-ecc-lite.sh"
+# Agent / command files
+require_file "opencode-global/agents/ecc-lite-strong.md"
+require_file "opencode-global/commands/ecc-audit.md"
+require_file "opencode-global/commands/quality-gate.md"
+require_file "opencode-global/commands/research-first.md"
+require_file "opencode-global/commands/verify-loop.md"
+require_file "opencode-global/commands/model-route-review.md"
+require_file "opencode-global/commands/harness-audit.md"
+# Script content checks
+require_contains "scripts/audit-ecc.sh" "ECC"
+require_contains "scripts/install-ecc-lite.sh" "ecc-lite"
+require_contains "scripts/check-ecc-lite.sh" "ecc-lite"
+require_contains "opencode-global/agents/ecc-lite-strong.md" "ECC-lite"
+# bin/opk commands
+require_contains "bin/opk" "ec|e|ecc)"
+require_contains "bin/opk" "ecc audit"
+require_contains "bin/opk" "ecc lite"
+require_contains "bin/opk" "ecc status"
+require_contains "bin/opk" "ecc off"
+require_contains "bin/opk" "update-ecc)"
+# bin/opk.ps1 commands
+require_contains "bin/opk.ps1" "'ec','e','ecc'"
+require_contains "bin/opk.ps1" "ecc audit"
+require_contains "bin/opk.ps1" "ecc lite"
+require_contains "bin/opk.ps1" "ecc status"
+require_contains "bin/opk.ps1" "ecc off"
+require_contains "bin/opk.ps1" "update-ecc"
+# README
+require_contains "README.md" "ECC-lite"
+require_contains "README.md" "ecc-lite-strong"
+# ECC_INTEGRATION doc
+require_file "docs/ECC_INTEGRATION.md"
+require_contains "docs/ECC_INTEGRATION.md" "ECC-lite"
+require_contains "docs/ECC_INTEGRATION.md" "What is ECC?"
+require_contains "docs/ECC_INTEGRATION.md" "Why not full ECC?"
+require_contains "docs/ECC_INTEGRATION.md" "Safety Guarantees"
+# Command frontmatter checks — subtask: true, no subtask: admin
+for ecc_cmd in ecc-audit quality-gate research-first verify-loop model-route-review harness-audit; do
+	require_contains "opencode-global/commands/${ecc_cmd}.md" "subtask: true"
+	if rg "subtask: admin" "opencode-global/commands/${ecc_cmd}.md" >/dev/null 2>&1; then
+		fail "opencode-global/commands/${ecc_cmd}.md must NOT contain subtask: admin"
+	fi
+done
+# Agent frontmatter checks
+require_contains "opencode-global/agents/ecc-lite-strong.md" "mode: all"
+if rg "subtask: admin" "opencode-global/agents/ecc-lite-strong.md" >/dev/null 2>&1; then
+	fail "opencode-global/agents/ecc-lite-strong.md must NOT contain subtask: admin"
+fi
+# Script --help flags
+require_contains "scripts/audit-ecc.sh" "--help"
+require_contains "scripts/install-ecc-lite.sh" "--help"
+require_contains "scripts/check-ecc-lite.sh" "--help"
+# No auto-enable in bootstrap / install-global
+if rg -q "ecc" "scripts/bootstrap.sh" 2>/dev/null; then
+	fail "bootstrap.sh must NOT auto-enable ECC"
+fi
+if rg -q "ecc" "scripts/install-global.sh" 2>/dev/null; then
+	fail "install-global.sh must NOT auto-enable ECC"
+fi
+# THIRD_PARTY
+require_contains "THIRD_PARTY.md" "ECC"
+require_contains "THIRD_PARTY.md" "affaan-m"
+echo
+
 # ─── v1.6.6: MarkItDown Document Tools ──────────────────────────
 echo "[v1.6.6 MarkItDown Document Tools]"
 require_contains "CHANGELOG.md" "1.6.6"
@@ -454,6 +544,9 @@ SCRIPTS_TO_CHECK=(
 	"scripts/opk-command-guard.sh"
 	"scripts/install-gsd-core.sh"
 	"scripts/install-safety-plugin.sh"
+	"scripts/audit-ecc.sh"
+	"scripts/install-ecc-lite.sh"
+	"scripts/check-ecc-lite.sh"
 	"verify.sh"
 )
 if [[ -x "bin/opk" ]]; then

@@ -1,7 +1,7 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.7.0-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-1.8.0-blue.svg)](./VERSION)
 [![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
@@ -114,10 +114,10 @@ opk clean --apply  # apply: move vào .opk-trash/<timestamp>/
 | Thành phần | Số lượng | Vị trí |
 |-----------|-------|----------|
 | Core power agents | 13 | `opencode-global/agents/` |
-| Total agent files | 46 | `opencode-global/agents/` (13 core + 33 GSD-style companions) |
-| Slash commands | 34 | `opencode-global/commands/` |
+| Total agent files | 47 | `opencode-global/agents/` (13 core + 33 GSD-style + 1 ECC-lite) |
+| Slash commands | 40 | `opencode-global/commands/` |
 | Skills | 20 | `opencode-global/skills/` |
-| Helper scripts | 12 | `scripts/` |
+| Helper scripts | 15 | `scripts/` |
 | Root-level scripts | 15 | `*.sh` + `*.ps1` (install, bootstrap, verify, doctor, ...) |
 | Full-stack profile | 1 | `profiles/node-nest-react-mysql/` |
 | Safety scripts | 4 | `verify.sh`, `doctor.sh`, `cleanup-agent-artifacts.sh`, `opk-command-guard.sh` |
@@ -750,6 +750,108 @@ opk update-taste
 | `bin/opk` / `bin/opk.ps1` | CLI subcommands: `taste`, `taste-status`, `taste-off`, `update-taste` |
 
 See [`THIRD_PARTY.md`](./THIRD_PARTY.md) for license and update path.
+
+---
+
+## ECC-lite — Engineering Code Commandments v1.8.0
+
+opencode-power-kit ships **optional, lightweight** integration with
+[ECC (Engineering Code Commandments)](https://github.com/affaan-m/ECC) by
+affaan.m — an engineering discipline framework enforcing coding standards,
+security practices, and engineering rigor.
+
+### Integration model: Opt-in (not auto-enabled)
+
+| Trigger | Installs? | Skip behavior |
+|---------|:---------:|:-------------:|
+| `opk global` / `opk one` / `opk go` | ❌ No | N/A |
+| `install-global.sh` / `install-global.ps1` | ❌ No | N/A |
+| `bootstrap.sh --all` / `setup.sh --global` | ❌ No | N/A |
+| `opk up` (update) | ❌ No | N/A |
+| `opk ecc lite` | ✅ Yes | Explicit user command only |
+
+### What is ECC-lite?
+
+ECC-lite is NOT full ECC. It is a **lightweight, OPK-native** subset:
+
+- **6 core principles** embedded in `ecc-lite-strong.md` agent
+- **6 slash commands** for key workflows
+- **3 helper scripts** for audit, install, status
+- **No full ECC install** — no 260+ skills, no 80+ commands, no hooks,
+  no MCP, no memory, no auto-enable
+
+### Usage
+
+```bash
+# Check status
+opk ecc status
+
+# Install ECC-lite (agent + 6 commands)
+opk ecc lite
+
+# Audit codebase against ECC principles (read-only)
+opk ecc audit
+
+# Remove ECC-lite
+opk ecc off
+
+# Update
+opk update-ecc
+
+# Short aliases
+opk ec status
+opk e lite
+```
+
+### Slash commands (after install)
+
+| Slash command | Purpose |
+|:-------------:|---------|
+| `/ecc-audit` | Audit codebase against ECC principles (read-only) |
+| `/quality-gate` | Quality gate: verify code meets ECC standards before merge |
+| `/research-first` | Research-first approach: explore before implementing |
+| `/verify-loop` | Verification loop: test-before-done, iterate until passing |
+| `/model-route-review` | Model-routing review: verify AI model choice for task |
+| `/harness-audit` | Harness audit: verify constraints, edge cases, invariants |
+
+### ECC-lite Principles
+
+1. **Research First** — Explore before implementing.
+2. **Quality Gate** — Verify code meets standards before merging.
+3. **Verification Loop** — Test-before-done. Iterate until passing.
+4. **Assumption Checking** — Surface and verify assumptions.
+5. **Test-Before-Done** — Tests alongside implementation.
+6. **Security & Reliability Review** — Audit before shipping.
+
+### Safety guarantees
+
+- **No auto-enable** — never installed during `opk global`, bootstrap, setup.
+- **No vendor source** — ECC source never copied into OPK repo.
+- **No hooks** — no git hooks, OpenCode hooks, or commit hooks.
+- **No MCP** — no MCP servers or configs.
+- **No env/secrets** — ECC-lite never reads sensitive files.
+- **No network in status check** — `check-ecc-lite.sh` only checks local files.
+- **No sudo** — all operations user-scoped.
+- **Read-only audit** — `audit-ecc.sh` clones to `.tmp/`, audits, then cleans up.
+
+### Files
+
+| File | Role |
+|------|------|
+| `scripts/audit-ecc.sh` | Linux/macOS audit script |
+| `scripts/install-ecc-lite.sh` | Linux/macOS installer |
+| `scripts/check-ecc-lite.sh` | Linux/macOS status check |
+| `opencode-global/agents/ecc-lite-strong.md` | ECC-lite agent definition |
+| `opencode-global/commands/ecc-audit.md` | ECC audit command |
+| `opencode-global/commands/quality-gate.md` | Quality gate command |
+| `opencode-global/commands/research-first.md` | Research-first command |
+| `opencode-global/commands/verify-loop.md` | Verification loop command |
+| `opencode-global/commands/model-route-review.md` | Model routing review command |
+| `opencode-global/commands/harness-audit.md` | Harness audit command |
+| `bin/opk` / `bin/opk.ps1` | CLI subcommands: `ec`, `e`, `ecc`, `update-ecc` |
+
+See [`THIRD_PARTY.md`](./THIRD_PARTY.md) and [`docs/ECC_INTEGRATION.md`](./docs/ECC_INTEGRATION.md)
+for license, update path, and architecture details.
 
 ---
 

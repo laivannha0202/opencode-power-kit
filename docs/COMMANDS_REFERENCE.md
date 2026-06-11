@@ -92,6 +92,17 @@
 | `/landing-ui` | `landing-ui.md` | Landing page UI |
 | `/ui-final-pass` | `ui-final-pass.md` | Final UI quality pass |
 
+## ECC-lite (Engineering Code Commandments)
+
+| Lệnh | File | Mục đích |
+|---------|------|----------|
+| `/ecc-audit` | `ecc-audit.md` | Audit codebase against ECC principles (read-only) |
+| `/quality-gate` | `quality-gate.md` | Quality gate: verify code meets ECC standards before merge |
+| `/research-first` | `research-first.md` | Research-first approach: explore before implementing |
+| `/verify-loop` | `verify-loop.md` | Verification loop: test-before-done, iterate until passing |
+| `/model-route-review` | `model-route-review.md` | Model-routing review: verify AI model choice for task |
+| `/harness-audit` | `harness-audit.md` | Harness audit: verify constraints, edge cases, invariants |
+
 ## CLI Commands
 
 | Lệnh | Mục đích |

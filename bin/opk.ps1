@@ -181,6 +181,15 @@ switch ($Command.ToLower()) {
         Write-Host "  opk update-taste           Refresh Taste Skill"
         Write-Host "  opk taste-status           Kiem tra nhanh (shortcut)"
         Write-Host ""
+        Write-Host "v1.8.0 — ECC-lite (optional, based on Engineering Code Commandments):"
+        Write-Host "  opk ecc audit     Audit codebase against ECC principles (read-only)"
+        Write-Host "  opk ecc lite      Install ECC-lite components (agent + commands)"
+        Write-Host "  opk ecc status    Check ECC-lite installation status"
+        Write-Host "  opk ecc off       Remove ECC-lite components"
+        Write-Host "  opk update-ecc    Refresh ECC-lite installation"
+        Write-Host "  opk ec [...]      Alias: opk ecc"
+        Write-Host "  opk e [...]       Alias: opk ecc"
+        Write-Host ""
         Write-Host "v1.6.4 — Mode & Safety:"
         Write-Host "  opk mode show   Xem che do Power/Safe hien tai"
         Write-Host "  opk mode power  Chuyen sang Power Mode (permission: allow)"
@@ -607,6 +616,67 @@ switch ($Command.ToLower()) {
                 }
             }
         }
+    }
+
+    # ─── v1.8.0 ECC-lite (optional) ─────────────────────────────
+    { @('ec','e','ecc') -contains $_ } {
+        $eccCmd = if ($Args.Count -gt 0) { $Args[0].ToLower() } else { 'status' }
+        $eccArgs = if ($Args.Count -gt 1) { $Args[1..($Args.Count-1)] } else { @() }
+
+        switch ($eccCmd) {
+            'audit' {
+                $script = Join-Path $KitDir 'scripts\audit-ecc.sh'
+                Require-File $script
+                & bash $script @eccArgs
+            }
+            'lite' {
+                $script = Join-Path $KitDir 'scripts\install-ecc-lite.sh'
+                Require-File $script
+                & bash $script @eccArgs
+            }
+            'status' {
+                $script = Join-Path $KitDir 'scripts\check-ecc-lite.sh'
+                Require-File $script
+                & bash $script @eccArgs
+            }
+            'off' {
+                $eccAgent = Join-Path $HOME '.config\opencode\agents\ecc-lite-strong.md'
+                $eccCommands = @(
+                    'ecc-audit.md','quality-gate.md','research-first.md',
+                    'verify-loop.md','model-route-review.md','harness-audit.md'
+                )
+                $removed = $false
+                if (Test-Path $eccAgent) {
+                    Remove-Item -Force $eccAgent
+                    Write-Host "opk: ✅ Đã xoá agent ecc-lite-strong.md" -ForegroundColor Green
+                    $removed = $true
+                }
+                foreach ($cmdFile in $eccCommands) {
+                    $cmdPath = Join-Path $HOME '.config\opencode\commands' $cmdFile
+                    if (Test-Path $cmdPath) {
+                        Remove-Item -Force $cmdPath
+                        Write-Host "opk: ✅ Đã xoá command $cmdFile" -ForegroundColor Green
+                        $removed = $true
+                    }
+                }
+                if (-not $removed) {
+                    Write-Host 'opk: ℹ️ ECC-lite chưa được cài đặt.' -ForegroundColor Gray
+                } else {
+                    Write-Host 'opk: ✅ Đã gỡ ECC-lite hoàn tất.' -ForegroundColor Green
+                }
+                exit 0
+            }
+            default {
+                Write-Host "opk: ecc: lenh khong hop le '$eccCmd'. Dung: audit, lite, status, off" -ForegroundColor Red
+                exit 1
+            }
+        }
+    }
+
+    'update-ecc' {
+        $script = Join-Path $KitDir 'scripts\install-ecc-lite.sh'
+        Require-File $script
+        & bash $script @Args
     }
 
     # ─── v1.6.7 Supermemory Memory API (opt-in) ─────────────────
