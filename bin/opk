@@ -187,7 +187,6 @@ opk — OpenCode Power Kit CLI (v$VERSION)
   opk ecc off       Remove ECC-lite components
   opk update-ecc    Refresh ECC-lite installation
   opk ec [...]      Alias: opk ecc
-  opk ec [...]      Alias: opk ecc
   opk e [...]       Alias: opk ecc
 
 Flags chung (forward cho sub-script):
