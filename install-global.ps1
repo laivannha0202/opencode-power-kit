@@ -342,7 +342,7 @@ if ($userPathNow -like "*$UserOpencodeBin*") {
     $packLines += "- **User PATH:** WARN ``$UserOpencodeBin`` chua co trong User PATH. Mo shell moi."
 }
 $packLines += ""
-$packLines += "Lenh kha dung: ``opk help``, ``opk version``, ``opk path``, ``opk global``, ``opk install``, ``opk fullstack``, ``opk all``, ``opk doctor``, ``opk verify``, ``opk tools``, ``opk bootstrap``, ``opk one``, ``opk quick``, ``opk init``."
+$packLines += "Lenh kha dung: ``opk help``, ``opk version``, ``opk path``, ``opk global``, ``opk install``, ``opk fullstack``, ``opk all``, ``opk doctor``, ``opk verify``, ``opk tools``, ``opk bootstrap``, ``opk one``, ``opk quick``, ``opk init``, ``opk taste``."
 $packLines += ""
 $packLines += "## Buoc tiep theo"
 $packLines += ""
@@ -351,7 +351,7 @@ $packLines += '2. `opk help`'
 $packLines += '3. `opk path`'
 $packLines += '4. `opk version`'
 $packLines += '5. `opencode`'
-$packLines += '6. Thu: `/smart-scan`, `/repo-map`, `/bugfix-safe`, `/review-diff`'
+$packLines += '6. Thu: `/taste-polish`, `/smart-scan`, `/repo-map`, `/bugfix-safe`, `/review-diff`'
 $packLines += ""
 $packLines += "## An toan"
 $packLines += ""
@@ -365,6 +365,27 @@ $packLines += "- Backup file cu vao ``$BackupRoot`` neu co."
 $packBody = ($packLines -join "`n")
 Set-Content -Path $PackReport -Value $packBody -Encoding UTF8
 Write-Ok "Tao report: $PackReport"
+
+# --- Optional: Taste Skill auto-install (khong fail neu loi) ---
+$SkipTaste = [System.Environment]::GetEnvironmentVariable('OPK_SKIP_TASTE')
+if ($SkipTaste -ne '1') {
+    $tasteInstaller = Join-Path $KitDir 'scripts\install-taste-skill.ps1'
+    if (Test-Path $tasteInstaller) {
+        Write-Host ""
+        Write-Info "Dang cai Taste Skill (UI/UX design) — set OPK_SKIP_TASTE=1 de bo qua..."
+        try {
+            & powershell -ExecutionPolicy Bypass -File $tasteInstaller -Yes 2>&1 | Out-Null
+            Write-Ok "Taste Skill installed."
+        } catch {
+            Write-Warn "Taste Skill khong cai duoc (node/npx/network?). Chay sau: opk taste install"
+        }
+    } else {
+        Write-Warn "scripts\install-taste-skill.ps1 khong tim thay — bo qua Taste Skill."
+    }
+} else {
+    Write-Host ""
+    Write-Info "OPK_SKIP_TASTE=1 — bo qua Taste Skill."
+}
 
 # --- Final summary ---
 Write-Host ""
@@ -386,5 +407,5 @@ Write-Info "  1) Mo shell moi (de load PATH)"
 Write-Info "  2) opk help"
 Write-Info "  3) opk path"
 Write-Info "  4) opencode"
-Write-Info "  5) Thu /smart-scan  hoac  @plan-lite"
+Write-Info "  5) Thu /taste-polish  hoac  /smart-scan"
 Write-Host ""

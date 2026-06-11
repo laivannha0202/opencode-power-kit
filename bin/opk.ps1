@@ -174,6 +174,13 @@ switch ($Command.ToLower()) {
         Write-Host "  opk supermemory init      Init Supermemory (yeu cau da cai)"
         Write-Host "  opk supermemory init-help Xem upstream init --help (khong can cai)"
         Write-Host ""
+        Write-Host "v1.7.0 — Taste Skill (tu dong bat khi cai global / one / go):"
+        Write-Host "  opk taste install          Cai Taste Skill (npx — dry-run + confirm)"
+        Write-Host "  opk taste status           Kiem tra Taste Skill da cai chua"
+        Write-Host "  opk taste off              Tat Taste Skill (xoa skill file)"
+        Write-Host "  opk update-taste           Refresh Taste Skill"
+        Write-Host "  opk taste-status           Kiem tra nhanh (shortcut)"
+        Write-Host ""
         Write-Host "v1.6.4 — Mode & Safety:"
         Write-Host "  opk mode show   Xem che do Power/Safe hien tai"
         Write-Host "  opk mode power  Chuyen sang Power Mode (permission: allow)"
@@ -533,6 +540,71 @@ switch ($Command.ToLower()) {
             default {
                 Write-Host "opk: markitdown: lenh khong hop le '$mdCmd'. Dung: install, status" -ForegroundColor Red
                 exit 1
+            }
+        }
+    }
+
+    # ─── v1.7.0 Taste Skill (auto-enabled on install) ────────────
+    { @('taste','taste-status','taste-off','update-taste') -contains $_ } {
+        switch ($Command) {
+            'taste-off' {
+                $tasteDir = Join-Path $HOME '.config\opencode\skills\taste-skill'
+                if (Test-Path $tasteDir) {
+                    Write-Host "opk: Xoá Taste Skill tai $tasteDir" -ForegroundColor Yellow
+                    Remove-Item -Recurse -Force $tasteDir
+                    Write-Host 'opk: ✅ Đã xoá Taste Skill.' -ForegroundColor Green
+                } else {
+                    Write-Host 'opk: ℹ️ Taste Skill chua duoc cai dat.'
+                }
+                exit 0
+            }
+            'update-taste' {
+                $installer = Join-Path $KitDir 'scripts\install-taste-skill.ps1'
+                Require-File $installer
+                & powershell -ExecutionPolicy Bypass -File $installer @($Args)
+                exit $LASTEXITCODE
+            }
+            'taste-status' {
+                $tasteDir = Join-Path $HOME '.config\opencode\skills\taste-skill'
+                if (Test-Path (Join-Path $tasteDir 'SKILL.md')) {
+                    Write-Host "opk: ✅ Taste Skill installed at $tasteDir" -ForegroundColor Green
+                } else {
+                    Write-Host 'opk: ❌ Taste Skill not installed. Run: opk taste install' -ForegroundColor Yellow
+                }
+                exit 0
+            }
+            'taste' {
+                $tasteCmd = if ($Args.Count -gt 0) { $Args[0].ToLower() } else { 'status' }
+                $tasteArgs = if ($Args.Count -gt 1) { $Args[1..($Args.Count-1)] } else { @() }
+
+                switch ($tasteCmd) {
+                    'install' {
+                        $installer = Join-Path $KitDir 'scripts\install-taste-skill.ps1'
+                        Require-File $installer
+                        & powershell -ExecutionPolicy Bypass -File $installer @tasteArgs
+                    }
+                    'status' {
+                        $tasteDir = Join-Path $HOME '.config\opencode\skills\taste-skill'
+                        if (Test-Path (Join-Path $tasteDir 'SKILL.md')) {
+                            Write-Host "opk: ✅ Taste Skill installed at $tasteDir" -ForegroundColor Green
+                        } else {
+                            Write-Host 'opk: ❌ Taste Skill not installed. Run: opk taste install' -ForegroundColor Yellow
+                        }
+                    }
+                    'off' {
+                        $tasteDir = Join-Path $HOME '.config\opencode\skills\taste-skill'
+                        if (Test-Path $tasteDir) {
+                            Remove-Item -Recurse -Force $tasteDir
+                            Write-Host 'opk: ✅ Đã xoá Taste Skill.' -ForegroundColor Green
+                        } else {
+                            Write-Host 'opk: ℹ️ Taste Skill chua duoc cai dat.'
+                        }
+                    }
+                    default {
+                        Write-Host "opk: taste: lenh khong hop le '$tasteCmd'. Dung: install, status, off" -ForegroundColor Red
+                        exit 1
+                    }
+                }
             }
         }
     }

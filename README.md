@@ -1,7 +1,7 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.6.7-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-1.7.0-blue.svg)](./VERSION)
 [![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
@@ -140,6 +140,7 @@ người dùng hiểu rõ ranh giới.
 | **Target platform** | Nền tảng mà kit cấu hình workflow | No | No | OpenCode |
 | **Plugin reference** | Plugin được load runtime từ GitHub/npm | Via OpenCode | No | Superpowers |
 | **Install-time dependency** | Cài vào project user qua official installer | Via npx | No | BMAD Method |
+| **Auto-enabled dependency** | Cài tự động khi kit install, vẫn dùng official installer | Via opk update-* | No | Taste Skill |
 | **Config-only reference** | Kit chỉ ship template config trỏ đến upstream | No | No | Biome config |
 | **Opt-in wrapper** | Chỉ gọi installer chính thức khi user yêu cầu | No | No | GSD Core |
 | **Detect-only** | Chỉ phát hiện tool đã cài sẵn trên PATH | No | No | rg, fd, semgrep, gitleaks |
@@ -155,6 +156,7 @@ người dùng hiểu rõ ranh giới.
 | GSD Core | open-gsd | Optional companion workflow engine | Opt-in wrapper | `scripts/install-gsd-core.sh` |
 | Supermemory | supermemory.ai | Memory/knowledge layer — store, retrieve, and search agent conversations, notes, and context | Opt-in wrapper | `scripts/install-supermemory.sh`, `scripts/install-supermemory.ps1` |
 | MarkItDown | Microsoft | Document-to-Markdown conversion (PDF/DOCX/PPTX/XLSX/HTML) | Opt-in wrapper | `scripts/install-markitdown.sh`, `scripts/install-markitdown.ps1` |
+| Taste Skill | Leonxlnx | AI-augmented UI/UX design — image-to-code, redesign, polish, brand kit | Auto-enabled dependency | `scripts/install-taste-skill.sh`, `scripts/install-taste-skill.ps1` |
 | rtk | rtk-ai | Token-saving shell wrapper | Detect-only | `/tooling-doctor` phát hiện |
 | repomix | yamadashy | Context pack generator | Detect-only | `/tooling-doctor` + `/token-pack` |
 | ast-grep | ast-grep | Structural code search | Detect-only | `/tooling-doctor` |
@@ -664,6 +666,88 @@ guides agents to use the `opk` wrapper — never to install packages directly.
 | `scripts/install-supermemory.ps1` | Windows installer |
 | `opencode-global/commands/supermemory-init.md` | Agent command documentation |
 | `bin/opk` / `bin/opk.ps1` | CLI subcommands: `supermemory` |
+
+See [`THIRD_PARTY.md`](./THIRD_PARTY.md) for license and update path.
+
+---
+
+## Taste Skill — AI-Augmented UI/UX Design v1.7.0
+
+opencode-power-kit ships **integrated** support for [Taste Skill](https://github.com/Leonxlnx/taste-skill)
+— an AI-augmented UI/UX design tool for image-to-code conversion, UI redesign,
+visual polish, brand kit generation, landing page design, and mobile UI optimization.
+
+### Integration model: Auto-enabled (graceful degradation)
+
+Unlike opt-in tools, Taste Skill is **automatically enabled** during kit setup:
+
+| Trigger | Installs? | Skip behavior |
+|---------|:---------:|:-------------:|
+| `opk global` / `opk one` / `opk go` | ✅ Yes | Warn if node/npx missing, no failure |
+| `install-global.sh` / `install-global.ps1` | ✅ Yes | Warn if node/npx missing, no failure |
+| `bootstrap.sh --all` / `setup.sh --global` | ✅ Yes | Warn if node/npx missing, no failure |
+| `opk up` (update) | ❌ No | N/A |
+| Shell startup | ❌ No | N/A |
+
+Set `OPK_SKIP_TASTE=1` to completely bypass auto-install.
+
+### Safety guarantees
+
+- **No sudo** — prefers `npx`, never uses `sudo npm`.
+- **No curl|sh** — installer is in-kit bash/PowerShell.
+- **No .env/secrets** — Taste Skill reads no sensitive files.
+- **No core failure** — missing deps produce a warning only.
+- **Fail soft** — if `npx` fails, install continues without error.
+
+### Usage
+
+```bash
+# Check status
+opk taste status
+# or
+opk taste-status
+
+# Install manually
+opk taste install
+
+# Remove
+opk taste off
+# or
+opk taste-off
+
+# Update
+opk update-taste
+```
+
+### Slash commands
+
+| Slash command | Description |
+|:-------------:|-------------|
+| `/taste-polish` | UI polish & refinement on existing components |
+| `/redesign-ui` | Redesign existing UI with taste-augmented suggestions |
+| `/image-to-code` | Convert a design image/mockup to working code |
+| `/brandkit` | Generate a cohesive brand kit (colors, fonts, tokens) |
+| `/mobile-ui` | Mobile-responsive UI optimization |
+| `/landing-ui` | Landing page structure and visual design |
+| `/ui-final-pass` | Final quality pass before shipping UI changes |
+
+### Agent routing
+
+- `opencode-global/agents/taste-ui-strong.md` — dedicated subagent for UI/UX design
+- `opencode-global/agents/build-strong.md` — agent delegation table includes taste-ui-strong
+- `opencode-global/commands/agent-router.md` — routes UI design tasks to taste-ui-strong
+
+### Files
+
+| File | Role |
+|------|------|
+| `scripts/install-taste-skill.sh` | Linux/macOS installer |
+| `scripts/install-taste-skill.ps1` | Windows installer |
+| `scripts/check-taste-skill.sh` | Read-only detection (Linux/macOS) |
+| `scripts/check-taste-skill.ps1` | Read-only detection (Windows) |
+| `opencode-global/agents/taste-ui-strong.md` | Taste UI/UX agent definition |
+| `opencode-global/skills/taste-polish/` | Slash command skills (7 commands) |
+| `bin/opk` / `bin/opk.ps1` | CLI subcommands: `taste`, `taste-status`, `taste-off`, `update-taste` |
 
 See [`THIRD_PARTY.md`](./THIRD_PARTY.md) for license and update path.
 

@@ -80,6 +80,18 @@
 | `/rtk-gain` | `rtk-gain.md` | Chạy `rtk gain` hoặc hướng dẫn cài đặt |
 | `/token-pack` | `token-pack.md` | Đóng gói context qua Repomix |
 
+## UI/UX Design (Taste Skill)
+
+| Lệnh | File | Mục đích |
+|---------|------|----------|
+| `/taste-polish` | `taste-polish.md` | UI polish & refinement |
+| `/redesign-ui` | `redesign-ui.md` | Redesign existing UI |
+| `/image-to-code` | `image-to-code.md` | Convert design image to code |
+| `/brandkit` | `brandkit.md` | Brand kit generation |
+| `/mobile-ui` | `mobile-ui.md` | Mobile UI optimization |
+| `/landing-ui` | `landing-ui.md` | Landing page UI |
+| `/ui-final-pass` | `ui-final-pass.md` | Final UI quality pass |
+
 ## CLI Commands
 
 | Lệnh | Mục đích |

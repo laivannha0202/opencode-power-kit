@@ -8,6 +8,10 @@
 | `verify.ps1` | Kiểm tra cài đặt kit (Windows PowerShell) |
 | `setup.sh` | Script setup đầy đủ (Linux/macOS) |
 | `setup.ps1` | Script setup đầy đủ (Windows PowerShell) |
+| `install-taste-skill.sh` | Cài Taste Skill (npx, Linux/macOS) |
+| `install-taste-skill.ps1` | Cài Taste Skill (npx, Windows PowerShell) |
+| `check-taste-skill.sh` | Kiểm tra Taste Skill đã cài chưa (Linux/macOS, không gọi network) |
+| `check-taste-skill.ps1` | Kiểm tra Taste Skill đã cài chưa (Windows, không gọi network) |
 | `install-global.sh` | Cài thành phần toàn cục (agents/commands/skills) |
 | `install-project.sh` | Cài thành phần cho project |
 | `install-fullstack-profile.sh` | Cài full-stack profile (Node/Nest/React/MySQL) |

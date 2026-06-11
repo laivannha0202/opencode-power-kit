@@ -40,7 +40,7 @@ PROFILES_DIR = KIT_ROOT / "profiles"
 TEMPLATES_DIR = KIT_ROOT / "templates"
 
 # ─── version compliance constants ───────────────────────────────────
-EXPECTED_VERSION = "1.6.7"
+EXPECTED_VERSION = "1.7.0"
 
 AUTO_ROUTER_NEEDLES: tuple[tuple[str, str], ...] = (
     ("templates/AGENTS.md", "Natural Language Auto Router"),
@@ -60,8 +60,10 @@ CHANGELOG_NEEDLES: tuple[str, ...] = (
     "1.6.5",
     "1.6.6",
     "1.6.7",
+    "1.7.0",
     "MarkItDown",
     "Supermemory",
+    "Taste Skill",
     "cleanup-safe",
     "handoff-save",
     "checkpoint",
@@ -439,6 +441,31 @@ def validate_version() -> list[str]:
         ("THIRD_PARTY.md", "Supermemory"),
     ]
     for rel, needle in v167_checks:
+        p = KIT_ROOT / rel
+        if p.is_file() and needle in p.read_text(encoding="utf-8"):
+            ok(f"{rel} contains: {needle}")
+        else:
+            errors.append(f"{rel} missing needle: {needle}")
+
+    # v1.7.0: Taste Skill
+    print("[v1.7.0 Taste Skill]")
+    v170_checks = [
+        ("CHANGELOG.md", "Taste Skill"),
+        ("scripts/install-taste-skill.sh", "taste-skill"),
+        ("scripts/install-taste-skill.ps1", "taste-skill"),
+        ("scripts/check-taste-skill.sh", "taste-skill"),
+        ("scripts/check-taste-skill.ps1", "taste-skill"),
+        ("opencode-global/agents/build-strong.md", "taste-ui-strong"),
+        ("opencode-global/commands/agent-router.md", "taste-ui-strong"),
+        ("bin/opk", "taste|taste-status|taste-off|update-taste)"),
+        ("bin/opk", "taste install"),
+        ("bin/opk", "taste status"),
+        ("bin/opk.ps1", "'taste'"),
+        ("bin/opk.ps1", "taste install"),
+        ("bin/opk.ps1", "taste status"),
+        ("THIRD_PARTY.md", "Taste Skill"),
+    ]
+    for rel, needle in v170_checks:
         p = KIT_ROOT / rel
         if p.is_file() and needle in p.read_text(encoding="utf-8"):
             ok(f"{rel} contains: {needle}")

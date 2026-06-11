@@ -1,6 +1,6 @@
 # Third-Party Components & Credits
 
-> **Version:** opencode-power-kit v1.6.7
+> **Version:** opencode-power-kit v1.7.0
 >
 > This project packages, configures, and documents workflows around
 > [OpenCode](https://github.com/opencode-ai). It credits upstream authors
@@ -30,6 +30,7 @@
 | **Target platform** | Nền tảng mà kit cấu hình / đóng gói workflow | No | No | OpenCode |
 | **Plugin reference** | Plugin được load runtime từ GitHub/npm | Via OpenCode | No | Superpowers |
 | **Install-time dependency** | Cài vào project user qua official installer | Via npx | No | BMAD Method |
+| **Auto-enabled dependency** | Cài tự động khi kit install, vẫn dùng official installer | Via npx | Via opk update-* | Taste Skill |
 | **Config-only reference** | Kit chỉ ship template config trỏ đến upstream | No | No | Biome config |
 | **Opt-in wrapper** | Chỉ gọi installer chính thức khi user yêu cầu | No | No | GSD Core, MarkItDown |
 | **Detect-only** | Chỉ phát hiện tool đã cài sẵn trên PATH | No | No | rg, fd, semgrep |
@@ -47,6 +48,7 @@
 | GSD Core | open-gsd | https://github.com/open-gsd/gsd-core | Optional companion workflow engine | Opt-in wrapper | `opk gsd` / `opk update-gsd` | See npm |
 | MarkItDown | Microsoft | https://github.com/microsoft/markitdown | Document-to-Markdown conversion (PDF/DOCX/PPTX/XLSX/HTML) | Opt-in wrapper | `opk markitdown install` (pipx/pip) | MIT |
 | Supermemory | sudomateo / community | https://github.com/supermemory/supermemory | Memory persistence across AI coding sessions | Opt-in wrapper | `opk supermemory install` (npm) | Apache-2.0 |
+| Taste Skill | Leonxlnx | https://github.com/Leonxlnx/taste-skill | AI-augmented UI/UX design (image-to-code, redesign, polish, brand kit) | Auto-enabled dependency | `opk taste install` / auto on `opk global/go/one` (npx) | MIT |
 | rtk | rtk-ai | https://github.com/rtk-ai/rtk | Token-saving shell wrapper | Detect-only | User installs separately | MIT |
 | tokscale | — | https://github.com/tokscale/tokscale | Token cost visualization | Detect-only | User installs separately | — |
 | repomix | yamadashy | https://github.com/yamadashy/repomix | Context pack generator | Detect-only | User installs separately | MIT |
@@ -237,7 +239,78 @@ Agents never install packages directly.
 
 ---
 
-## 7. Detect-only Tools
+## 7. Taste Skill — Auto-enabled Dependency
+
+| Field | Value |
+|-------|-------|
+| Role | AI-augmented UI/UX design — image-to-code, redesign, polish, brand kit, landing page, mobile UI optimization |
+| Integration | **Auto-enabled dependency** — installed automatically during `opk global`, `opk one`, `opk go`, `bootstrap.sh --all`, `setup.sh --global`, `install-global.sh`. Graceful degradation if node/npx/network missing. |
+| Source | https://github.com/Leonxlnx/taste-skill |
+| Installer | `npx taste-skill` (official npx package) |
+| Kit ships | `scripts/install-taste-skill.sh` + `scripts/install-taste-skill.ps1` — installers |
+| | `scripts/check-taste-skill.sh` + `scripts/check-taste-skill.ps1` — read-only detection |
+| Update path | `opk update-taste` (re-runs npx) |
+| License | MIT (per upstream) |
+
+The kit integrates Taste Skill as an auto-enabled dependency. Unlike opt-in
+wrappers, Taste Skill is installed by default when the user runs global setup
+— but with **graceful degradation**: if `node`, `npx`, or network are
+unavailable, installation is skipped with a warning and does not fail the
+core install.
+
+### Auto-install behavior
+
+| Trigger | Install? | Skip if missing? |
+|---------|:--------:|:----------------:|
+| `opk global` / `opk one` / `opk go` | ✅ Yes (unless `OPK_SKIP_TASTE=1`) | Warn only, no failure |
+| `install-global.sh` / `install-global.ps1` | ✅ Yes (unless `OPK_SKIP_TASTE=1`) | Warn only, no failure |
+| `bootstrap.sh --all` / `setup.sh --global` | ✅ Yes (unless `OPK_SKIP_TASTE=1`) | Warn only, no failure |
+| `opk up` (update) | ❌ No | N/A |
+| Shell startup | ❌ No | N/A |
+
+### Safety guarantees
+
+- **Never vendors** any Taste Skill source code.
+- **No sudo** — prefers `npx`, never uses `sudo npm`.
+- **No curl|sh** — installer is a bash/PowerShell script in the kit.
+- **No .env/secrets modification** — Taste Skill reads no sensitive files.
+- **No core install failure** — missing deps produce a warning only.
+- **`OPK_SKIP_TASTE=1`** completely bypasses auto-install.
+- **Fail soft** — if `npx` fails, install continues without error.
+
+### Taste Skill commands
+
+| CLI | Description |
+|-----|-------------|
+| `opk taste install` | Install Taste Skill via npx |
+| `opk taste status` / `opk taste-status` | Check installation status |
+| `opk taste off` / `opk taste-off` | Remove Taste Skill |
+| `opk update-taste` | Refresh Taste Skill installation |
+| `OPK_SKIP_TASTE=1` | Environment variable to skip auto-install |
+
+### Slash commands
+
+| Slash command | Description |
+|:-------------:|-------------|
+| `/taste-polish` | UI polish & refinement |
+| `/redesign-ui` | Redesign existing UI |
+| `/image-to-code` | Convert design image to code |
+| `/brandkit` | Brand kit generation |
+| `/mobile-ui` | Mobile UI optimization |
+| `/landing-ui` | Landing page UI |
+| `/ui-final-pass` | Final UI quality pass |
+
+### Agent routing
+
+- `opencode-global/agents/taste-ui-strong.md` — AI-augmented UI/UX designer agent
+- `opencode-global/agents/build-strong.md` — Agent Delegation table routes to taste-ui-strong
+- `opencode-global/commands/agent-router.md` — Routing table routes UI design tasks
+
+Agents never install packages directly. All installs go through `opk` wrappers.
+
+---
+
+## 8. Detect-only Tools
 
 The following tools are **never vendored, never auto-installed, and never
 auto-updated**. The `/tooling-doctor` command detects whether they are
@@ -269,7 +342,7 @@ present, but it never installs Playwright itself. Similarly,
 
 ---
 
-## 8. Recommended Ecosystem (Target Stack)
+## 9. Recommended Ecosystem (Target Stack)
 
 The full-stack profile recommends the following stack. These are **not**
 bundled or vendored — they are the target technologies that the profile's
@@ -287,7 +360,7 @@ scaffolding, agents, and commands are designed for.
 
 ---
 
-## 9. Update Policy
+## 10. Update Policy
 
 ### Install-time dependencies (BMAD Method)
 
@@ -302,6 +375,13 @@ scaffolding, agents, and commands are designed for.
 - `opk markitdown install` — re-runs `pipx install "markitdown[all]"`.
 - `opk supermemory install` — re-runs `npm install -g @supermemory/ai`.
 - No auto-update, no background refresh.
+
+### Auto-enabled dependencies (Taste Skill)
+
+- `opk update-taste` — re-runs `npx taste-skill`.
+- Automatically installed during `opk global/go/one` and `install-global.sh`.
+- `OPK_SKIP_TASTE=1` bypasses auto-install.
+- Graceful degradation if node/npx/network missing.
 
 ### Plugin references (Superpowers)
 
@@ -323,7 +403,7 @@ scaffolding, agents, and commands are designed for.
 
 ---
 
-## 10. License Notes
+## 11. License Notes
 
 - **opencode-power-kit**: [MIT](./LICENSE)
 - **OpenCode**: MIT
@@ -332,6 +412,7 @@ scaffolding, agents, and commands are designed for.
 - **GSD Core**: See npm package page
 - **MarkItDown**: MIT
 - **Supermemory**: Apache-2.0
+- **Taste Skill**: MIT
 - **rtk**: MIT
 - **repomix**: MIT
 - **ast-grep**: MIT

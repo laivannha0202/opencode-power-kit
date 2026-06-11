@@ -1,6 +1,6 @@
 ---
 description: Initialize or check Supermemory for memory persistence across coding sessions.
-subtask: admin
+subtask: true
 agent: any
 ---
 

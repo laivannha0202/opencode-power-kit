@@ -172,6 +172,14 @@ opk — OpenCode Power Kit CLI (v$VERSION)
   opk supermemory init      Init Supermemory (yêu cầu đã cài)
   opk supermemory init-help Xem upstream init --help (không cần cài)
 
+  v1.7.0 — Taste Skill (tự động bật khi cài global / one / go / bootstrap --all):
+  opk taste install          Cài Taste Skill (npx — dry-run + confirm)
+  opk taste status           Kiểm tra Taste Skill đã cài chưa
+  opk taste off              Tắt Taste Skill (xóa skill file)
+  opk taste                  Alias: opk taste status
+  opk update-taste           Refresh Taste Skill
+  opk taste-status           Kiểm tra nhanh (shortcut)
+
 Flags chung (forward cho sub-script):
   --yes   skip confirm
   --help  in trợ giúp của sub-script
@@ -600,6 +608,67 @@ EOF
       *)
         echo "opk: supermemory: lệnh không hợp lệ '$sm_cmd'. Dùng: install, status, init, init-help" >&2
         exit 1
+        ;;
+    esac
+    ;;
+
+  # ─── v1.7.0 Taste Skill (auto-enabled on install) ─────────────
+  taste|taste-status|taste-off|update-taste)
+    case "$cmd" in
+      taste-off)
+        taste_skill_dir="${HOME}/.config/opencode/skills/taste-skill"
+        if [[ -d "$taste_skill_dir" ]]; then
+          echo "opk: Xoá Taste Skill tại $taste_skill_dir"
+          rm -rf "$taste_skill_dir"
+          echo "opk: ✅ Đã xoá Taste Skill."
+        else
+          echo "opk: ℹ️ Taste Skill chưa được cài đặt."
+        fi
+        exit 0
+        ;;
+      update-taste)
+        require_file "$KIT_DIR/scripts/install-taste-skill.sh"
+        exec bash "$KIT_DIR/scripts/install-taste-skill.sh" "$@"
+        ;;
+      taste-status)
+        if [[ -d "${HOME}/.config/opencode/skills/taste-skill" ]] && \
+           [[ -f "${HOME}/.config/opencode/skills/taste-skill/SKILL.md" ]]; then
+          echo "opk: ✅ Taste Skill installed at ${HOME}/.config/opencode/skills/taste-skill/"
+        else
+          echo "opk: ❌ Taste Skill not installed. Run: opk taste install"
+        fi
+        exit 0
+        ;;
+      taste)
+        taste_cmd="${1:-status}"
+        shift || true
+        case "$taste_cmd" in
+          install)
+            require_file "$KIT_DIR/scripts/install-taste-skill.sh"
+            exec bash "$KIT_DIR/scripts/install-taste-skill.sh" "$@"
+            ;;
+          status|"")
+            if [[ -d "${HOME}/.config/opencode/skills/taste-skill" ]] && \
+               [[ -f "${HOME}/.config/opencode/skills/taste-skill/SKILL.md" ]]; then
+              echo "opk: ✅ Taste Skill installed at ${HOME}/.config/opencode/skills/taste-skill/"
+            else
+              echo "opk: ❌ Taste Skill not installed. Run: opk taste install"
+            fi
+            ;;
+          off)
+            taste_skill_dir="${HOME}/.config/opencode/skills/taste-skill"
+            if [[ -d "$taste_skill_dir" ]]; then
+              rm -rf "$taste_skill_dir"
+              echo "opk: ✅ Đã xoá Taste Skill."
+            else
+              echo "opk: ℹ️ Taste Skill chưa được cài đặt."
+            fi
+            ;;
+          *)
+            echo "opk: taste: lệnh không hợp lệ '$taste_cmd'. Dùng: install, status, off" >&2
+            exit 1
+            ;;
+        esac
         ;;
     esac
     ;;

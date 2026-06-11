@@ -29,6 +29,7 @@ hoặc main agent (nếu cần docs/report).
 | Database, migration, schema, query | `db-strong` | Khi có migration hoặc schema thay đổi |
 | API contract, OpenAPI, FE/BE type sync | `api-strong` | Khi thay đổi endpoint |
 | UI, component, a11y, responsive | `ui-ux-strong` | Review giao diện |
+| AI-augmented UI design, image-to-code, redesign, polish, brand kit | `taste-ui-strong` | UI design task cần Taste Skill |
 | Docker, CI/CD, deploy, infra | `devops-strong` | Setup/review infrastructure |
 | Test, QA, coverage, E2E | `qa-strong` | Trước ship |
 | Security audit, SAST, threat model | `security-strong` | Pre-release |

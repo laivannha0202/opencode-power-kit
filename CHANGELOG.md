@@ -5,6 +5,66 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-06-10
+
+### Taste Skill — AI-Augmented UI/UX Design (Auto-Enabled)
+
+### Added
+
+- **Taste Skill integration** — [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill)
+  cung cấp khả năng UI/UX design AI-augmented: image-to-code, redesign, polish,
+  brand kit, landing page, mobile UI optimization.
+  - `opk taste install` — install via npx (dry-run + confirm)
+  - `opk taste status` / `opk taste-status` — check installation status
+  - `opk taste off` / `opk taste-off` — remove taste skill
+  - `opk update-taste` — refresh taste skill installation
+  - `OPK_SKIP_TASTE=1` — bỏ qua auto-install (environment variable)
+- **`scripts/install-taste-skill.sh`** — Linux/macOS installer (npx, graceful
+  degradation nếu thiếu node/npx/network)
+- **`scripts/install-taste-skill.ps1`** — Windows PowerShell installer
+- **`scripts/check-taste-skill.sh`** — read-only detection script (no network)
+- **`scripts/check-taste-skill.ps1`** — read-only detection (PowerShell)
+- **`opencode-global/agents/taste-ui-strong.md`** — new subagent for AI-augmented
+  UI/UX design tasks
+- **7 slash commands** cho Taste Skill:
+  - `/taste-polish` — UI polish & refinement
+  - `/redesign-ui` — Redesign existing UI
+  - `/image-to-code` — Convert design image to code
+  - `/brandkit` — Brand kit generation
+  - `/mobile-ui` — Mobile UI optimization
+  - `/landing-ui` — Landing page UI
+  - `/ui-final-pass` — Final UI quality pass
+- **Agent routing** — build-strong.md và agent-router.md: route UI design tasks
+  sang taste-ui-strong
+- **Auto-enabled on install** — Taste Skill được cài tự động khi chạy:
+  `opk global`, `opk one`, `opk go`, `bootstrap.sh --all`, `setup.sh --global`,
+  `install-global.sh`. Không fail core install nếu thiếu node/npx/network.
+- **THIRD_PARTY.md** — Taste Skill entry section 7
+- **README.md** — Taste Skill section với integration model, quick start,
+  slash commands table, OPK_SKIP_TASTE documentation
+
+### Safety
+
+- Taste Skill scripts never: auto-fail on missing deps, sudo, curl|sh
+- Missing node/npx/network → chỉ warn, không fail core install
+- OPK_SKIP_TASTE=1 bỏ qua hoàn toàn auto-install
+- Scripts prefer npx; never use sudo npm
+- No .env/secrets modification
+- Installer requires explicit --yes or TTY confirmation
+- check scripts are read-only, no network calls
+
+### Changed
+
+- VERSION bumped from 1.6.7 to 1.7.0
+- `bin/opk` — added taste, taste-status, taste-off, update-taste subcommands
+- `bin/opk.ps1` — mirror taste subcommands for PowerShell
+- `install-global.sh` — auto-install Taste Skill khi OPK_SKIP_TASTE != 1
+- `install-global.ps1` — auto-install Taste Skill khi OPK_SKIP_TASTE != 1
+- `opencode-global/agents/build-strong.md` — Agent Delegation table: +taste-ui-strong
+- `opencode-global/commands/agent-router.md` — Routing table: +taste-ui-strong
+- `verify.sh` — added required files and CLI checks for Taste Skill
+- `verify.ps1` — added required files and CLI checks for Taste Skill
+
 ## [1.6.7] - 2026-06-10
 
 ### Supermemory Memory API (Opt-in)

@@ -219,6 +219,7 @@ Khi cần chuyên môn sâu, spawn subagent qua `task` tool:
 | Database schema, migration, query optimization | `db-strong` | Schema thay đổi, migration mới |
 | API contract, OpenAPI, FE/BE type sync | `api-strong` | Thay đổi endpoint, new API |
 | UI/UX review, accessibility, responsive | `ui-ux-strong` | Review giao diện |
+| AI-augmented UI design, image-to-code, redesign, polish | `taste-ui-strong` | UI feature mới cần Taste Skill |
 | Docker, CI/CD, deploy, infra | `devops-strong` | Setup/review infrastructure |
 | QA, test, coverage, E2E | `qa-strong` | Trước ship, cần test suite |
 | Security audit, SAST, threat model | `security-strong` | Pre-release, code có auth/input |

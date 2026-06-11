@@ -11,6 +11,7 @@
 | `db-strong` | Database | Thiết kế schema, migration safety, tối ưu query | 1 | plan-lite, review-lite, build-strong (subagents) |
 | `api-strong` | API | OpenAPI contract, đồng bộ FE/BE, sinh type | 1 | build-strong, review-lite (subagents) |
 | `ui-ux-strong` | UI/UX | Accessibility, responsive design, visual review | 1 | explore (subagent) |
+| `taste-ui-strong` | UI/UX | AI-augmented UI/UX design (image-to-code, redesign, polish, brand kit) | 1 | taste-skill CLI |
 | `devops-strong` | DevOps | Docker, CI/CD, deploy, infrastructure | 1 | plan-lite, build-strong (subagents) |
 | `release-strong` | Release | Bump version, CHANGELOG, tag, publish | 1 | plan-lite, review-lite (subagents) |
 

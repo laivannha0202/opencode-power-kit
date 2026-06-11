@@ -339,6 +339,52 @@ require_contains "THIRD_PARTY.md" "Supermemory"
 require_contains "THIRD_PARTY.md" "supermemory/supermemory"
 echo
 
+# ─── v1.7.0: Taste Skill ─────────────────────────────────────────
+echo "[v1.7.0 Taste Skill]"
+# CHANGELOG
+require_contains "CHANGELOG.md" "1.7.0"
+require_contains "CHANGELOG.md" "Taste Skill"
+# Script files
+require_file "scripts/install-taste-skill.sh"
+require_file "scripts/install-taste-skill.ps1"
+require_file "scripts/check-taste-skill.sh"
+require_file "scripts/check-taste-skill.ps1"
+require_executable "scripts/install-taste-skill.sh"
+require_executable "scripts/check-taste-skill.sh"
+# Agent / command files
+require_file "opencode-global/agents/taste-ui-strong.md"
+# Script content checks
+require_contains "scripts/install-taste-skill.sh" "taste-skill"
+require_contains "scripts/install-taste-skill.sh" "npx"
+require_contains "scripts/install-taste-skill.ps1" "taste-skill"
+require_contains "scripts/install-taste-skill.ps1" "npx"
+require_contains "scripts/check-taste-skill.sh" "taste-skill"
+require_contains "scripts/check-taste-skill.ps1" "taste-skill"
+# bin/opk commands
+require_contains "bin/opk" "taste|taste-status|taste-off|update-taste)"
+require_contains "bin/opk" "taste install"
+require_contains "bin/opk" "taste status"
+require_contains "bin/opk" "taste off"
+require_contains "bin/opk" "update-taste"
+# bin/opk.ps1 commands
+require_contains "bin/opk.ps1" "'taste'"
+require_contains "bin/opk.ps1" "taste install"
+require_contains "bin/opk.ps1" "taste status"
+require_contains "bin/opk.ps1" "taste off"
+require_contains "bin/opk.ps1" "update-taste"
+# Agent routing
+require_contains "opencode-global/agents/build-strong.md" "taste-ui-strong"
+require_contains "opencode-global/commands/agent-router.md" "taste-ui-strong"
+# README
+require_contains "README.md" "Taste Skill"
+require_contains "README.md" "Leonxlnx/taste-skill"
+require_contains "README.md" "opk taste"
+require_contains "README.md" "taste-ui-strong"
+# THIRD_PARTY
+require_contains "THIRD_PARTY.md" "Taste Skill"
+require_contains "THIRD_PARTY.md" "Leonxlnx"
+echo
+
 # ─── v1.6.6: MarkItDown Document Tools ──────────────────────────
 echo "[v1.6.6 MarkItDown Document Tools]"
 require_contains "CHANGELOG.md" "1.6.6"
