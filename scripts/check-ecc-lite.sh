@@ -44,12 +44,34 @@ echo ""
 
 # ─── Check ECC-lite agent ─────────────────────────────────────────
 echo "--- Agent ---"
-AGENT_FILE="${HOME}/.config/opencode/agents/ecc-lite-strong.md"
-if [[ -f "${AGENT_FILE}" ]]; then
+AGENT_FILE=""
+# Priority 1: OPENCODE_CONFIG_DIR (if set and file exists)
+if [[ -n "${OPENCODE_CONFIG_DIR:-}" ]]; then
+	candidate="${OPENCODE_CONFIG_DIR}/agents/ecc-lite-strong.md"
+	if [[ -f "${candidate}" ]]; then
+		AGENT_FILE="${candidate}"
+	fi
+fi
+# Priority 2: fallback to ~/.config/opencode
+if [[ -z "${AGENT_FILE}" ]]; then
+	candidate="${HOME}/.config/opencode/agents/ecc-lite-strong.md"
+	if [[ -f "${candidate}" ]]; then
+		AGENT_FILE="${candidate}"
+	fi
+fi
+# Priority 3: fallback to kit bundled
+if [[ -z "${AGENT_FILE}" ]]; then
+	candidate="${KIT_DIR}/opencode-global/agents/ecc-lite-strong.md"
+	if [[ -f "${candidate}" ]]; then
+		AGENT_FILE="${candidate}"
+	fi
+fi
+# ─── Show agent status ──────────────────────────────────────────
+if [[ -n "${AGENT_FILE}" ]]; then
 	echo "  ✅ ecc-lite-strong.md installed at: ${AGENT_FILE}"
 else
 	echo "  ❌ ecc-lite-strong.md not installed"
-	echo "     Install: opk ecc install"
+	echo "     Install: opk ecc lite"
 fi
 echo ""
 
@@ -58,8 +80,30 @@ echo "--- Commands ---"
 COMMANDS_FOUND=0
 COMMANDS_MISSING=0
 for cmd in ecc-audit quality-gate research-first verify-loop model-route-review harness-audit; do
-	path="${KIT_DIR}/opencode-global/commands/${cmd}.md"
-	if [[ -f "${path}" ]]; then
+	path=""
+	# Priority: OPENCODE_CONFIG_DIR/commands
+	if [[ -n "${OPENCODE_CONFIG_DIR:-}" ]]; then
+		candidate="${OPENCODE_CONFIG_DIR}/commands/${cmd}.md"
+		if [[ -f "${candidate}" ]]; then
+			path="${candidate}"
+		fi
+	fi
+	# Fallback: KIT_DIR bundled
+	if [[ -z "${path}" ]]; then
+		candidate="${KIT_DIR}/opencode-global/commands/${cmd}.md"
+		if [[ -f "${candidate}" ]]; then
+			path="${candidate}"
+		fi
+	fi
+	# Fallback: ~/.config/opencode
+	if [[ -z "${path}" ]]; then
+		candidate="${HOME}/.config/opencode/commands/${cmd}.md"
+		if [[ -f "${candidate}" ]]; then
+			path="${candidate}"
+		fi
+	fi
+
+	if [[ -n "${path}" ]]; then
 		echo "  ✅ /${cmd} — ${path}"
 		COMMANDS_FOUND=$((COMMANDS_FOUND + 1))
 	else

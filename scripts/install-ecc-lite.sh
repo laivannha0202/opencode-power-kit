@@ -201,14 +201,25 @@ SKIPPED=0
 
 # Agents already exist in opencode-global/agents/ — they are part of OPK
 # The "install" here means symlink or copy to ~/.config/opencode/agents
-INSTALL_DIR="${HOME}/.config/opencode/agents"
+# Determine install dir: prefer OPENCODE_CONFIG_DIR over ~/.config/opencode
+if [[ -n "${OPENCODE_CONFIG_DIR:-}" ]]; then
+	INSTALL_DIR="${OPENCODE_CONFIG_DIR}/agents"
+else
+	INSTALL_DIR="${HOME}/.config/opencode/agents"
+fi
 mkdir -p "${INSTALL_DIR}"
 
+KIT_GLOBAL_DIR="${KIT_DIR}/opencode-global"
 for f in "${ECC_AGENTS[@]}"; do
 	src="${KIT_DIR}/${f}"
 	dst="${INSTALL_DIR}/$(basename "$f")"
 	if [[ -f "${dst}" ]]; then
 		echo "  ⚠️  Agent already installed: ${dst}"
+		SKIPPED=$((SKIPPED + 1))
+	elif [[ "${OPENCODE_CONFIG_DIR:-}" == "${KIT_GLOBAL_DIR}" ]]; then
+		# OPENCODE_CONFIG_DIR points to the kit's own opencode-global dir,
+		# file is already in place — no need to copy
+		echo "  ✅ Agent already in place: ${dst}"
 		SKIPPED=$((SKIPPED + 1))
 	else
 		cp "${src}" "${dst}"
@@ -219,7 +230,12 @@ done
 
 # Commands are already in opencode-global/commands/ — part of OPK
 # The "install" means copy to global commands dir
-CMD_INSTALL_DIR="${HOME}/.config/opencode/commands"
+# Determine commands install dir: prefer OPENCODE_CONFIG_DIR
+if [[ -n "${OPENCODE_CONFIG_DIR:-}" ]]; then
+	CMD_INSTALL_DIR="${OPENCODE_CONFIG_DIR}/commands"
+else
+	CMD_INSTALL_DIR="${HOME}/.config/opencode/commands"
+fi
 mkdir -p "${CMD_INSTALL_DIR}"
 
 for f in "${ECC_COMMANDS[@]}"; do
@@ -227,6 +243,10 @@ for f in "${ECC_COMMANDS[@]}"; do
 	dst="${CMD_INSTALL_DIR}/$(basename "$f")"
 	if [[ -f "${dst}" ]]; then
 		echo "  ⚠️  Command already installed: ${dst}"
+		SKIPPED=$((SKIPPED + 1))
+	elif [[ "${OPENCODE_CONFIG_DIR:-}" == "${KIT_GLOBAL_DIR}" ]]; then
+		# File already in place in the kit's global dir
+		echo "  ✅ Command already in place: ${dst}"
 		SKIPPED=$((SKIPPED + 1))
 	else
 		cp "${src}" "${dst}"

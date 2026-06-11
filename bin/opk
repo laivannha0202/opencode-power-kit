@@ -704,17 +704,30 @@ EOF
         exec bash "$KIT_DIR/scripts/check-ecc-lite.sh" "$@"
         ;;
       off)
-        # Remove ECC-lite components
-        ecc_target="${HOME}/.config/opencode/agents/ecc-lite-strong.md"
+        # Determine config dir: prefer OPENCODE_CONFIG_DIR
+        if [[ -n "${OPENCODE_CONFIG_DIR:-}" ]]; then
+          ECC_CONFIG_BASE="${OPENCODE_CONFIG_DIR}"
+        else
+          ECC_CONFIG_BASE="${HOME}/.config/opencode"
+        fi
         ecc_removed=0
+        # Remove ECC-lite components
+        ecc_target="${ECC_CONFIG_BASE}/agents/ecc-lite-strong.md"
         if [[ -f "$ecc_target" ]]; then
           rm -f "$ecc_target"
           echo "opk: ✅ Đã xoá agent ecc-lite-strong.md"
           ecc_removed=1
         fi
+        # Also check bundled location if different from config base
+        if [[ "${ECC_CONFIG_BASE}" != "${KIT_DIR}/opencode-global" ]]; then
+          bundled="${KIT_DIR}/opencode-global/agents/ecc-lite-strong.md"
+          if [[ -f "$bundled" ]]; then
+            echo "opk: ℹ️  Agent tồn tại trong kit bundle (không xoá): ${bundled}"
+          fi
+        fi
         # Remove ECC commands
         for cmd_file in ecc-audit.md quality-gate.md research-first.md verify-loop.md model-route-review.md harness-audit.md; do
-          cmd_path="${HOME}/.config/opencode/commands/$cmd_file"
+          cmd_path="${ECC_CONFIG_BASE}/commands/$cmd_file"
           if [[ -f "$cmd_path" ]]; then
             rm -f "$cmd_path"
             echo "opk: ✅ Đã xoá command $cmd_file"

@@ -422,7 +422,9 @@ require_file "opencode-global/commands/harness-audit.md"
 # Script content checks
 require_contains "scripts/audit-ecc.sh" "ECC"
 require_contains "scripts/install-ecc-lite.sh" "ecc-lite"
+require_contains "scripts/install-ecc-lite.sh" "OPENCODE_CONFIG_DIR"
 require_contains "scripts/check-ecc-lite.sh" "ecc-lite"
+require_contains "scripts/check-ecc-lite.sh" "OPENCODE_CONFIG_DIR"
 require_contains "opencode-global/agents/ecc-lite-strong.md" "ECC-lite"
 # bin/opk commands
 require_contains "bin/opk" "ec|e|ecc)"
@@ -430,6 +432,7 @@ require_contains "bin/opk" "ecc audit"
 require_contains "bin/opk" "ecc lite"
 require_contains "bin/opk" "ecc status"
 require_contains "bin/opk" "ecc off"
+require_contains "bin/opk" "OPENCODE_CONFIG_DIR"
 require_contains "bin/opk" "update-ecc)"
 # bin/opk.ps1 commands
 require_contains "bin/opk.ps1" "'ec','e','ecc'"
