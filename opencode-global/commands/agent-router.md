@@ -35,6 +35,9 @@ hoặc main agent (nếu cần docs/report).
 | Security audit, SAST, threat model | `security-strong` | Pre-release |
 | Version bump, release, CHANGELOG | `release-strong` | Cuối cùng |
 | Meta-cognition, self-improvement, reflection | `hermes-lite-strong` | Khi cần learning loop, skill improvement |
+| RAG planning, architecture, component selection | `rag-lite` skill + `/rag-plan` | Khi task liên quan RAG mới |
+| RAG audit, retrieval quality, faithfulness | `rag-lite` skill + `/rag-audit` | Khi cần review hệ thống RAG hiện có |
+| RAG evaluation, metrics, ablation testing | `rag-lite` skill + `/rag-eval` | Khi cần đo chất lượng RAG |
 | Context/memory audit, kanban, tool audit | `hermes-lite-strong` | Khi cần process optimization |
 
 ## Workflow

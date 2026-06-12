@@ -73,6 +73,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `opencode-global/commands/agent-router.md` — added Hermes-lite routing entries
 - New version tag reference: `[1.9.0]`
 
+## [1.9.1] - 2026-06-12
+
+### RAG-lite — Retrieval-Augmented Generation Reference (Inspiration-only)
+
+### Added
+
+- **RAG-lite integration** — optional, OPK-native conceptual reference for
+  Retrieval-Augmented Generation inspired by
+  [NirDiamant/RAG_Techniques](https://github.com/NirDiamant/RAG_Techniques).
+  Ships only OPK-native docs + agent skill + slash commands — no copy of
+  upstream source/notebook, no auto-enable, no runtime dependency.
+  - `docs/RAG_LITE_INTEGRATION.md` — conceptual reference, architecture,
+    component table, evaluation checklist
+  - `opencode-global/skills/rag-lite/SKILL.md` — agent skill for RAG workflow
+    planning, auditing, and evaluation
+  - 3 slash commands for RAG-lite:
+    - `/rag-plan` — plan RAG pipeline (chunking, embedding, retrieval, generation)
+    - `/rag-audit` — audit RAG pipeline health (retrieval quality, latency, coverage)
+    - `/rag-eval` — evaluate RAG pipeline (faithfulness, relevance, robustness)
+- **`opencode-global/agents/build-strong.md`** — added RAG planning row to
+  Agent Delegation table: agent, context, when to use
+- **`opencode-global/commands/agent-router.md`** — added 3 routing entries for
+  rag-plan/rag-audit/rag-eval
+- **THIRD_PARTY.md** — NirDiamant/RAG_Techniques entry (section 8.8,
+  Reference / Learning resource), upstream table row, license notes,
+  update policy.
+- **README.md** — RAG-lite section with integration model, usage, files table.
+  Component table updated (commands 57→60, skills 18→21, agents 49→49).
+  Upstream table updated.
+
+### Safety
+
+- RAG-lite components are entirely docs + agent instructions — no scripts,
+  no network calls, no auto-enable, no runtime code.
+- RAG-lite is NOT installed during `opk global`, `opk one`, `opk go`,
+  `bootstrap.sh --all`, `setup.sh --global`, `install-global.sh`, or `opk up`.
+- All content is OPK-original conceptual guidance — not derived from any
+  single upstream source.
+- License-safe: only reference concept/workflow/checklist — no copy of
+  source/notebook from NirDiamant/RAG_Techniques (which is custom
+  non-commercial license).
+
+### Changed
+
+- VERSION bumped from 1.9.0 to 1.9.1
+- `opencode-global/agents/build-strong.md` — added RAG + vector DB notes in
+  layer section, RAG planning row in delegation table
+- `opencode-global/commands/agent-router.md` — added rag-plan/rag-audit/rag-eval
+  routing entries
+- `THIRD_PARTY.md` — version banner 1.9.0→1.9.1, added NirDiamant/RAG_Techniques
+  in component table + section 8.8 + update policy + license notes
+- `README.md` — version badge 1.9.0→1.9.1, added upstream row for
+  NirDiamant/RAG_Techniques, component counts updated, RAG-lite section added
+- New version tag reference: `[1.9.1]`
+
 ## [1.8.0] - 2026-06-11
 
 ### ECC-lite — Engineering Code Commandments (Opt-in)
@@ -1138,6 +1193,7 @@ First production-grade release. Bumped from 9.4/10 → 10/10.
 - **Badges** in `README.md`: CI status, version, no-MCP policy,
   safe/no-secrets policy
 
+[1.9.1]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.9.1
 [1.9.0]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.9.0
 [1.8.0]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.8.0
 [1.6.7]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.6.7

@@ -548,6 +548,47 @@ require_contains "opencode-global/agents/build-strong.md" "hermes-lite-strong"
 require_contains "opencode-global/commands/agent-router.md" "hermes-lite-strong"
 echo
 
+# ─── v1.9.1: RAG-lite (Retrieval-Augmented Generation reference) ──
+echo "[v1.9.1 RAG-lite]"
+# CHANGELOG
+require_contains "CHANGELOG.md" "1.9.1"
+require_contains "CHANGELOG.md" "RAG-lite"
+require_contains "CHANGELOG.md" "NirDiamant"
+# Doc
+require_file "docs/RAG_LITE_INTEGRATION.md"
+require_contains "docs/RAG_LITE_INTEGRATION.md" "RAG"
+# Skill
+require_file "opencode-global/skills/rag-lite/SKILL.md"
+require_contains "opencode-global/skills/rag-lite/SKILL.md" "RAG"
+require_contains "opencode-global/skills/rag-lite/SKILL.md" "rag-"
+# Commands (3)
+for rag_cmd in rag-plan rag-audit rag-eval; do
+	require_file "opencode-global/commands/${rag_cmd}.md"
+done
+require_contains "opencode-global/commands/rag-plan.md" "RAG"
+require_contains "opencode-global/commands/rag-audit.md" "RAG"
+require_contains "opencode-global/commands/rag-eval.md" "RAG"
+# README
+require_contains "README.md" "RAG-lite"
+require_contains "README.md" "NirDiamant"
+# THIRD_PARTY
+require_contains "THIRD_PARTY.md" "RAG_Techniques"
+require_contains "THIRD_PARTY.md" "NirDiamant"
+# No auto-enable in bootstrap / install-global / setup
+if rg -q "rag-lite" "bootstrap.sh" 2>/dev/null; then
+	fail "bootstrap.sh must NOT auto-enable RAG-lite"
+fi
+if rg -q "rag-lite" "install-global.sh" 2>/dev/null; then
+	fail "install-global.sh must NOT auto-enable RAG-lite"
+fi
+if rg -q "rag-lite" "setup.sh" 2>/dev/null; then
+	fail "setup.sh must NOT auto-enable RAG-lite"
+fi
+# Build-strong and agent-router integration
+require_contains "opencode-global/agents/build-strong.md" "rag-"
+require_contains "opencode-global/commands/agent-router.md" "rag-plan"
+echo
+
 # ─── v1.6.6: MarkItDown Document Tools ──────────────────────────
 echo "[v1.6.6 MarkItDown Document Tools]"
 require_contains "CHANGELOG.md" "1.6.6"

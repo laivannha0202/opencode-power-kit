@@ -172,6 +172,7 @@ Báo cáo theo format:
 - API response format nhất quán: `{ data, message, statusCode }`.
 - Validation: class-validator / zod / joi — không tin input.
 - Auth: guard/interceptor/middleware — kiểm tra role.
+- RAG: Nếu task liên quan RAG → load `rag-lite` skill trước khi code.
 
 ### Frontend (React, Next.js, Vue…)
 - Dùng `rg` tìm component/page đúng.
@@ -187,6 +188,7 @@ Báo cáo theo format:
   - DELETE: luôn `SELECT COUNT(*)` WHERE trước.
   - INDEX: CONCURRENTLY / ONLINE.
 - Backup trước migration > 1GB.
+- Vector DB: Nếu task thêm vector search → dùng `/rag-plan` trước.
 
 ---
 
@@ -224,6 +226,7 @@ Khi cần chuyên môn sâu, spawn subagent qua `task` tool:
 | QA, test, coverage, E2E | `qa-strong` | Trước ship, cần test suite |
 | Security audit, SAST, threat model | `security-strong` | Pre-release, code có auth/input |
 | Version bump, CHANGELOG, release | `release-strong` | Cuối cùng, trước publish |
+| RAG planning, audit, evaluation, retrieval quality | `rag-lite` skill + `/rag-plan`, `/rag-audit`, `/rag-eval` | Task liên quan RAG, vector search, chunking, embedding |
 | Meta-cognition, learning loop, reflection | `hermes-lite-strong` | Post-task retro, skill improvement, context audit |
 
 **Workflow mẫu:**

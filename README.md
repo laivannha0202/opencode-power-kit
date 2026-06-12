@@ -1,7 +1,7 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.9.0-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-1.9.1-blue.svg)](./VERSION)
 [![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
@@ -115,8 +115,8 @@ opk clean --apply  # apply: move vào .opk-trash/<timestamp>/
 |-----------|-------|----------|
 | Core power agents | 14 | `opencode-global/agents/` |
 | Total agent files | 49 | `opencode-global/agents/` (14 core + 33 GSD-style + 1 ECC-lite + 1 Hermes-lite) |
-| Slash commands | 57 | `opencode-global/commands/` |
-| Skills | 20 | `opencode-global/skills/` |
+| Slash commands | 60 | `opencode-global/commands/` (+3 RAG-lite) |
+| Skills | 21 | `opencode-global/skills/` (+1 rag-lite) |
 | Helper scripts | 18 | `scripts/` |
 | Root-level scripts | 15 | `*.sh` + `*.ps1` (install, bootstrap, verify, doctor, ...) |
 | Full-stack profile | 1 | `profiles/node-nest-react-mysql/` |
@@ -158,6 +158,7 @@ người dùng hiểu rõ ranh giới.
 | MarkItDown | Microsoft | Document-to-Markdown conversion (PDF/DOCX/PPTX/XLSX/HTML) | Opt-in wrapper | `scripts/install-markitdown.sh`, `scripts/install-markitdown.ps1` |
 | Taste Skill | Leonxlnx | AI-augmented UI/UX design — image-to-code, redesign, polish, brand kit | Auto-enabled dependency | `scripts/install-taste-skill.sh`, `scripts/install-taste-skill.ps1` |
 | Hermes Agent | NousResearch | Meta-cognitive self-improvement framework — learning loop, skill improvement, memory policy review, context/budget pressure, lightweight kanban, tool surface audit, remote backend review | Inspiration (OPK-native) | `opencode-global/agents/hermes-lite-strong.md`, 8 commands, 3 scripts |
+| NirDiamant/RAG_Techniques | NirDiamant | Comprehensive RAG tutorial collection — conceptual reference for RAG patterns, techniques, and best practices | Reference / Learning resource (OPK-native) | `docs/RAG_LITE_INTEGRATION.md`, `opencode-global/skills/rag-lite/SKILL.md`, 3 commands |
 | rtk | rtk-ai | Token-saving shell wrapper | Detect-only | `/tooling-doctor` phát hiện |
 | repomix | yamadashy | Context pack generator | Detect-only | `/tooling-doctor` + `/token-pack` |
 | ast-grep | ast-grep | Structural code search | Detect-only | `/tooling-doctor` |
@@ -397,6 +398,7 @@ lại**. Phù hợp máy/project cá nhân, workflow nhanh hơn, ít prompt hơn
 | Serena First | `serena-first` |
 | Dependency | `dependency-maintenance` |
 | Nest/React/MySQL | `nest-react-mysql` |
+| RAG / Retrieval-Augmented Generation | `rag-lite` |
 
 ---
 
@@ -853,6 +855,71 @@ opk e lite
 
 See [`THIRD_PARTY.md`](./THIRD_PARTY.md) and [`docs/ECC_INTEGRATION.md`](./docs/ECC_INTEGRATION.md)
 for license, update path, and architecture details.
+
+---
+
+## RAG-lite — Retrieval-Augmented Generation Workflow v1.9.1
+
+opencode-power-kit ships **reference** support for
+[RAG (Retrieval-Augmented Generation)](https://github.com/NirDiamant/RAG_Techniques)
+patterns — a conceptual guidance module for agents working on RAG features.
+
+### Integration model: Reference / Learning resource (OPK-native)
+
+- Kit **never vendors** upstream source code or notebooks.
+- Kit **never installs** RAG frameworks, vector DBs, or embedding models.
+- Kit **never runs** package managers during setup or update.
+- All content is **OPK-original** conceptual guidance — not derived from
+  any single upstream repository.
+- Upstream credit is explicitly given in `THIRD_PARTY.md` and
+  `docs/RAG_LITE_INTEGRATION.md`.
+
+### License safety
+
+[NirDiamant/RAG_Techniques](https://github.com/NirDiamant/RAG_Techniques)
+uses a **custom non-commercial license**. RAG-lite avoids license conflict
+by shipping only:
+
+- Conceptual documentation — no source code, no notebooks
+- Agent skill — teaches agents RAG workflow and best practices
+- Slash commands — structured planning, audit, and evaluation workflows
+
+### Usage
+
+```bash
+# In any OpenCode session, use slash commands:
+/rag-plan "thêm RAG search cho tài liệu kỹ thuật"
+/rag-audit "kiểm tra hệ thống search nội bộ"
+/rag-eval "đánh giá chất lượng RAG"
+```
+
+### Slash commands
+
+| Slash command | Description |
+|:-------------:|-------------|
+| `/rag-plan` | Plan a RAG feature — architecture, components, evaluation |
+| `/rag-audit` | Audit an existing RAG system — retrieval quality, faithfulness, latency |
+| `/rag-eval` | Evaluate RAG quality — metrics, ablation, regression |
+
+### What RAG-lite is NOT
+
+- ❌ Not a RAG runtime — no vector DB, no embedding model, no chunking engine
+- ❌ Not a code library — no Python/TypeScript/Node.js runtime code
+- ❌ Not a tutorial — no step-by-step "build your first RAG" notebook
+- ❌ Not a copy of upstream — all content is OPK-original
+
+### Files
+
+| File | Role |
+|------|------|
+| `docs/RAG_LITE_INTEGRATION.md` | Conceptual reference, architecture, component table, workflow, license-safe design |
+| `opencode-global/skills/rag-lite/SKILL.md` | Agent skill for RAG workflow |
+| `opencode-global/commands/rag-plan.md` | `/rag-plan` — plan a RAG feature |
+| `opencode-global/commands/rag-audit.md` | `/rag-audit` — audit an existing RAG system |
+| `opencode-global/commands/rag-eval.md` | `/rag-eval` — evaluate RAG quality |
+
+See [`docs/RAG_LITE_INTEGRATION.md`](./docs/RAG_LITE_INTEGRATION.md) for
+full architecture, workflow details, and upstream references.
 
 ---
 
