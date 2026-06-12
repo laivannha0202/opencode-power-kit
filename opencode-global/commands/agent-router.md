@@ -38,6 +38,9 @@ hoặc main agent (nếu cần docs/report).
 | RAG planning, architecture, component selection | `rag-lite` skill + `/rag-plan` | Khi task liên quan RAG mới |
 | RAG audit, retrieval quality, faithfulness | `rag-lite` skill + `/rag-audit` | Khi cần review hệ thống RAG hiện có |
 | RAG evaluation, metrics, ablation testing | `rag-lite` skill + `/rag-eval` | Khi cần đo chất lượng RAG |
+| Context compression planning, token budget | `headroom-lite` skill + `/headroom-plan` | Khi cần lên kế hoạch compress context |
+| Context usage audit, compression opportunities | `headroom-lite` skill + `/headroom-audit` | Khi cần audit token consumption |
+| Headroom-lite integration status | `headroom-lite` skill + `/headroom-status` | Kiểm tra Headroom-lite sẵn sàng |
 | Context/memory audit, kanban, tool audit | `hermes-lite-strong` | Khi cần process optimization |
 
 ## Workflow

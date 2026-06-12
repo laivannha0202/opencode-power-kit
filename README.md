@@ -1,7 +1,7 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.9.1-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-1.9.2-blue.svg)](./VERSION)
 [![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
@@ -115,8 +115,8 @@ opk clean --apply  # apply: move vào .opk-trash/<timestamp>/
 |-----------|-------|----------|
 | Core power agents | 14 | `opencode-global/agents/` |
 | Total agent files | 49 | `opencode-global/agents/` (14 core + 33 GSD-style + 1 ECC-lite + 1 Hermes-lite) |
-| Slash commands | 60 | `opencode-global/commands/` (+3 RAG-lite) |
-| Skills | 21 | `opencode-global/skills/` (+1 rag-lite) |
+| Slash commands | 63 | `opencode-global/commands/` (+3 RAG-lite, +3 Headroom-lite) |
+| Skills | 22 | `opencode-global/skills/` (+1 rag-lite, +1 headroom-lite) |
 | Helper scripts | 18 | `scripts/` |
 | Root-level scripts | 15 | `*.sh` + `*.ps1` (install, bootstrap, verify, doctor, ...) |
 | Full-stack profile | 1 | `profiles/node-nest-react-mysql/` |
@@ -159,6 +159,7 @@ người dùng hiểu rõ ranh giới.
 | Taste Skill | Leonxlnx | AI-augmented UI/UX design — image-to-code, redesign, polish, brand kit | Auto-enabled dependency | `scripts/install-taste-skill.sh`, `scripts/install-taste-skill.ps1` |
 | Hermes Agent | NousResearch | Meta-cognitive self-improvement framework — learning loop, skill improvement, memory policy review, context/budget pressure, lightweight kanban, tool surface audit, remote backend review | Inspiration (OPK-native) | `opencode-global/agents/hermes-lite-strong.md`, 8 commands, 3 scripts |
 | NirDiamant/RAG_Techniques | NirDiamant | Comprehensive RAG tutorial collection — conceptual reference for RAG patterns, techniques, and best practices | Reference / Learning resource (OPK-native) | `docs/RAG_LITE_INTEGRATION.md`, `opencode-global/skills/rag-lite/SKILL.md`, 3 commands |
+| chopratejas/headroom | chopratejas | Context/token compression Linux daemon — conceptual reference for context window economics, compression strategies, token budget optimization | Inspiration / Reference (OPK-native) | `docs/HEADROOM_LITE_INTEGRATION.md`, `opencode-global/skills/headroom-lite/SKILL.md`, 3 commands |
 | rtk | rtk-ai | Token-saving shell wrapper | Detect-only | `/tooling-doctor` phát hiện |
 | repomix | yamadashy | Context pack generator | Detect-only | `/tooling-doctor` + `/token-pack` |
 | ast-grep | ast-grep | Structural code search | Detect-only | `/tooling-doctor` |
@@ -182,7 +183,7 @@ người dùng hiểu rõ ranh giới.
 ## Power Mode v1.5.0
 
 - **14 core power agents** + **33 GSD-style agents** + **1 ECC-lite** + **1 Hermes-lite** = **49 total agent files** — mỗi agent chuyên sâu một lĩnh vực
-- **57 commands** — phân loại theo power workflow, safety, build lifecycle, review, DB/API, QA/E2E, DevOps, quality/security, token/tooling
+- **60 commands** — phân loại theo power workflow, safety, build lifecycle, review, DB/API, QA/E2E, DevOps, quality/security, token/tooling, RAG, compression
 - **`scripts/opk-command-guard.sh`** — lớp bảo vệ: cảnh báo/chặn lệnh shell nguy hiểm (`rm -rf`, `git reset --hard`, force push, `DROP TABLE`, ...)
 - **`build-strong` Agent Delegation** — tự động triệu hồi subagent chuyên biệt dựa trên ngữ cảnh
 - **`/power-build`** — quy trình đầu cuối: spec → architecture → implementation → QA → security → release
@@ -920,6 +921,81 @@ by shipping only:
 
 See [`docs/RAG_LITE_INTEGRATION.md`](./docs/RAG_LITE_INTEGRATION.md) for
 full architecture, workflow details, and upstream references.
+
+---
+
+## Headroom-lite — Context/Token Compression Reference v1.9.2
+
+opencode-power-kit ships **reference** support for
+[context/token compression](https://github.com/chopratejas/headroom)
+patterns — a conceptual guidance module for agents managing context budgets.
+
+### Integration model: Inspiration / Reference (OPK-native)
+
+- Kit **never vendors** upstream source code or binaries.
+- Kit **never installs** compression daemons, proxies, or packages.
+- Kit **never runs** package managers during setup or update.
+- All content is **OPK-original** conceptual guidance — not derived from
+  any single upstream repository.
+- Upstream credit is explicitly given in `THIRD_PARTY.md` and
+  `docs/HEADROOM_LITE_INTEGRATION.md`.
+
+### License safety
+
+[chopratejas/headroom](https://github.com/chopratejas/headroom) is
+**Apache-2.0** licensed. Headroom-lite avoids vendoring by shipping only:
+
+- Conceptual documentation — no source code, no binaries, no config files
+- Agent skill — teaches agents context compression workflow and best practices
+- Slash commands — structured planning, audit, and status workflows
+
+### Usage
+
+```bash
+# In any OpenCode session, use slash commands:
+/headroom-plan "tool output quá dài, cần compress để fit context"
+/headroom-audit "kiểm tra token consumption của session hiện tại"
+/headroom-status
+```
+
+### Slash commands
+
+| Slash command | Description |
+|:-------------:|-------------|
+| `/headroom-plan` | Plan a context compression strategy — content classification, budget calculation |
+| `/headroom-audit` | Audit existing context/token usage — consumption, compression opportunities, evidence integrity |
+| `/headroom-status` | Check Headroom-lite integration status — components, routing, related tools |
+
+### What Headroom-lite is NOT
+
+- ❌ Not a compression runtime — no daemon, no proxy, no interceptor
+- ❌ Not a code library — no Python/TypeScript/Rust code shipped
+- ❌ Not a token counter — use `rtk` or `tokscale` for actual token measurement
+- ❌ Not a copy of upstream — all content is OPK-original
+- ❌ Not auto-installed — never enabled by `opk global`, bootstrap, or setup
+
+### Files
+
+| File | Role |
+|------|------|
+| `docs/HEADROOM_LITE_INTEGRATION.md` | Conceptual reference, compression strategies, token budget, evidence-preserving compression, license-safe design |
+| `opencode-global/skills/headroom-lite/SKILL.md` | Agent skill for context compression workflow |
+| `opencode-global/commands/headroom-plan.md` | `/headroom-plan` — plan a compression strategy |
+| `opencode-global/commands/headroom-audit.md` | `/headroom-audit` — audit existing context usage |
+| `opencode-global/commands/headroom-status.md` | `/headroom-status` — check integration status |
+
+### Complementary modules
+
+Headroom-lite works best with:
+
+| Module | Purpose | Integration |
+|--------|---------|:-----------:|
+| **RAG-lite** | Retrieval quality evaluation | Reference (OPK-native) |
+| **rtk** | Token counting and saving | Detect-only |
+| **tokscale** | Token cost visualization | Detect-only |
+
+See [`docs/HEADROOM_LITE_INTEGRATION.md`](./docs/HEADROOM_LITE_INTEGRATION.md) for
+full compression strategies, budget calculation, and upstream references.
 
 ---
 

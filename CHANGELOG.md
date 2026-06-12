@@ -128,6 +128,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   NirDiamant/RAG_Techniques, component counts updated, RAG-lite section added
 - New version tag reference: `[1.9.1]`
 
+## [1.9.2] - 2026-06-12
+
+### Headroom-lite — Context/Token Compression Reference (Inspiration-only)
+
+### Added
+
+- **Headroom-lite integration** — optional, OPK-native conceptual reference
+  for context window and token compression inspired by
+  [chopratejas/headroom](https://github.com/chopratejas/headroom).
+  Ships only OPK-native docs + agent skill + slash commands — no copy of
+  upstream source/binary, no auto-enable, no runtime dependency, no
+  proxy/daemon/config.
+  - `docs/HEADROOM_LITE_INTEGRATION.md` — conceptual reference, compression
+    strategies, token budget management, evidence-preserving compression,
+    license-safe design rationale
+  - `opencode-global/skills/headroom-lite/SKILL.md` — agent skill for
+    context compression workflow planning, auditing, and status monitoring
+  - 3 slash commands for Headroom-lite:
+    - `/headroom-plan` — plan context compression strategy (content
+      classification, budget calculation, evidence preservation)
+    - `/headroom-audit` — audit existing context/token usage (consumption
+      breakdown, compression opportunities, evidence integrity)
+    - `/headroom-status` — check Headroom-lite integration status
+      (component health, routing, related tools)
+- **`opencode-global/agents/build-strong.md`** — added Headroom-lite row to
+  Agent Delegation table
+- **`opencode-global/commands/agent-router.md`** — added 3 routing entries
+  for Headroom-lite
+- **THIRD_PARTY.md** — chopratejas/headroom entry (section 8.9,
+  Inspiration-only / Reference), upstream table row, license notes,
+  update policy.
+- **README.md** — Headroom-lite section with integration model, usage,
+  files table. Component table updated.
+
+### Safety
+
+- Headroom-lite components are entirely docs + agent instructions + commands
+  — no scripts, no network calls, no auto-enable, no runtime code, no
+  proxy/daemon.
+- Headroom-lite is NOT installed during `opk global`, `opk one`, `opk go`,
+  `bootstrap.sh --all`, `setup.sh --global`, `install-global.sh`, or
+  `opk up`.
+- All content is OPK-original conceptual guidance — not derived from any
+  single upstream source.
+- License-safe: only reference concept/workflow/checklist — no copy of
+  source/binary from chopratejas/headroom (Apache-2.0).
+- Combined with RAG-lite and rtk/tokscale for full context management
+  stack — Headroom-lite provides workflow guidance, rtk/tokscale provide
+  token measurement, RAG-lite provides retrieval quality evaluation.
+
+### Changed
+
+- VERSION bumped from 1.9.1 to 1.9.2
+- `opencode-global/agents/build-strong.md` — added Headroom-lite row in
+  delegation table
+- `opencode-global/commands/agent-router.md` — added
+  headroom-plan/headroom-audit/headroom-status routing entries
+- `THIRD_PARTY.md` — version banner 1.9.1→1.9.2, added
+  chopratejas/headroom in component table + section 8.9 + update policy +
+  license notes
+- `README.md` — version badge 1.9.1→1.9.2, added upstream row for
+  chopratejas/headroom, component counts updated, Headroom-lite section
+  added
+- `verify.sh` — added Headroom-lite section with required files,
+  content checks
+- New version tag reference: `[1.9.2]`
+
 ## [1.8.0] - 2026-06-11
 
 ### ECC-lite — Engineering Code Commandments (Opt-in)
@@ -1193,6 +1260,7 @@ First production-grade release. Bumped from 9.4/10 → 10/10.
 - **Badges** in `README.md`: CI status, version, no-MCP policy,
   safe/no-secrets policy
 
+[1.9.2]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.9.2
 [1.9.1]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.9.1
 [1.9.0]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.9.0
 [1.8.0]: https://github.com/laivannha0202/opencode-power-kit/releases/tag/v1.8.0

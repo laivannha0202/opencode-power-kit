@@ -173,6 +173,7 @@ Báo cáo theo format:
 - Validation: class-validator / zod / joi — không tin input.
 - Auth: guard/interceptor/middleware — kiểm tra role.
 - RAG: Nếu task liên quan RAG → load `rag-lite` skill trước khi code.
+- Context compression: Nếu session dài hoặc output nhiều → load `headroom-lite` skill để quản lý token budget và compress output.
 
 ### Frontend (React, Next.js, Vue…)
 - Dùng `rg` tìm component/page đúng.
@@ -227,6 +228,7 @@ Khi cần chuyên môn sâu, spawn subagent qua `task` tool:
 | Security audit, SAST, threat model | `security-strong` | Pre-release, code có auth/input |
 | Version bump, CHANGELOG, release | `release-strong` | Cuối cùng, trước publish |
 | RAG planning, audit, evaluation, retrieval quality | `rag-lite` skill + `/rag-plan`, `/rag-audit`, `/rag-eval` | Task liên quan RAG, vector search, chunking, embedding |
+| Context compression, token budget, output truncation | `headroom-lite` skill + `/headroom-plan`, `/headroom-audit`, `/headroom-status` | Task cần quản lý context window, compress output, tối ưu token |
 | Meta-cognition, learning loop, reflection | `hermes-lite-strong` | Post-task retro, skill improvement, context audit |
 
 **Workflow mẫu:**

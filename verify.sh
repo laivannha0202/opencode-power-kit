@@ -589,6 +589,48 @@ require_contains "opencode-global/agents/build-strong.md" "rag-"
 require_contains "opencode-global/commands/agent-router.md" "rag-plan"
 echo
 
+# ─── v1.9.2: Headroom-lite (Context/Token Compression reference) ──
+echo "[v1.9.2 Headroom-lite]"
+# CHANGELOG
+require_contains "CHANGELOG.md" "1.9.2"
+require_contains "CHANGELOG.md" "Headroom-lite"
+require_contains "CHANGELOG.md" "chopratejas"
+# Doc
+require_file "docs/HEADROOM_LITE_INTEGRATION.md"
+require_contains "docs/HEADROOM_LITE_INTEGRATION.md" "Headroom-lite"
+require_contains "docs/HEADROOM_LITE_INTEGRATION.md" "compression"
+# Skill
+require_file "opencode-global/skills/headroom-lite/SKILL.md"
+require_contains "opencode-global/skills/headroom-lite/SKILL.md" "Headroom-lite"
+require_contains "opencode-global/skills/headroom-lite/SKILL.md" "headroom-"
+# Commands (3)
+for headroom_cmd in headroom-plan headroom-audit headroom-status; do
+	require_file "opencode-global/commands/${headroom_cmd}.md"
+done
+require_contains "opencode-global/commands/headroom-plan.md" "compression"
+require_contains "opencode-global/commands/headroom-audit.md" "audit"
+require_contains "opencode-global/commands/headroom-status.md" "status"
+# README
+require_contains "README.md" "Headroom-lite"
+require_contains "README.md" "chopratejas"
+# THIRD_PARTY
+require_contains "THIRD_PARTY.md" "chopratejas"
+require_contains "THIRD_PARTY.md" "headroom"
+# No auto-enable in bootstrap / install-global / setup
+if rg -q "headroom-lite" "bootstrap.sh" 2>/dev/null; then
+	fail "bootstrap.sh must NOT auto-enable Headroom-lite"
+fi
+if rg -q "headroom-lite" "install-global.sh" 2>/dev/null; then
+	fail "install-global.sh must NOT auto-enable Headroom-lite"
+fi
+if rg -q "headroom-lite" "setup.sh" 2>/dev/null; then
+	fail "setup.sh must NOT auto-enable Headroom-lite"
+fi
+# Build-strong and agent-router integration
+require_contains "opencode-global/agents/build-strong.md" "headroom-lite"
+require_contains "opencode-global/commands/agent-router.md" "headroom-plan"
+echo
+
 # ─── v1.6.6: MarkItDown Document Tools ──────────────────────────
 echo "[v1.6.6 MarkItDown Document Tools]"
 require_contains "CHANGELOG.md" "1.6.6"

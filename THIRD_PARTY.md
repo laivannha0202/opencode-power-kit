@@ -1,6 +1,6 @@
 # Third-Party Components & Credits
 
-> **Version:** opencode-power-kit v1.9.1
+> **Version:** opencode-power-kit v1.9.2
 >
 > This project packages, configures, and documents workflows around
 > [OpenCode](https://github.com/opencode-ai). It credits upstream authors
@@ -52,6 +52,7 @@
 | ECC | affaan-m | https://github.com/affaan-m/ECC | Engineering Code Commandments — coding standards, security, engineering rigor | Opt-in wrapper | `opk ecc lite` (kit-native); `opk ecc audit` (read-only clone) | MIT |
 | Hermes Agent | NousResearch | https://github.com/NousResearch/hermes-agent | Meta-cognitive self-improvement — learning loop, skill improvement, memory review, kanban, tool audit | Inspiration-only | `opk hermes status` (local); `git pull` refreshes OPK source | Apache-2.0 |
 | NirDiamant/RAG_Techniques | NirDiamant | https://github.com/NirDiamant/RAG_Techniques | Comprehensive RAG tutorial collection — reference for conceptual guidance only | Reference / Learning resource | N/A — no code, no auto-update | Custom (non-commercial) |
+| chopratejas/headroom | chopratejas | https://github.com/chopratejas/headroom | Context/token compression Linux daemon — reference for context window economics, compression strategies, token budget optimization | Inspiration-only / Reference | N/A — no code, no auto-update | Apache-2.0 |
 | rtk | rtk-ai | https://github.com/rtk-ai/rtk | Token-saving shell wrapper | Detect-only | User installs separately | MIT |
 | tokscale | — | https://github.com/tokscale/tokscale | Token cost visualization | Detect-only | User installs separately | — |
 | repomix | yamadashy | https://github.com/yamadashy/repomix | Context pack generator | Detect-only | User installs separately | MIT |
@@ -481,6 +482,61 @@ RAG-lite is designed to avoid license conflict with upstream:
 
 ---
 
+## 8.9. chopratejas/headroom — Inspiration-only / Reference (Context/Token Compression)
+
+| Field | Value |
+|-------|-------|
+| Role | Context/token compression Linux daemon — reference for context window economics, compression strategies, token budget optimization |
+| Integration | **Inspiration-only / Reference** — never vendored, never auto-installed, never enabled by default. OPK ships only conceptual docs, skill, and slash commands — no source code, no binaries, no significant text from upstream |
+| Source | https://github.com/chopratejas/headroom |
+| License | Apache-2.0 (per upstream) |
+| Kit ships | `docs/HEADROOM_LITE_INTEGRATION.md` — conceptual reference, compression strategies, workflow, agent guidance, license-safe design rationale |
+| | `opencode-global/skills/headroom-lite/SKILL.md` — agent skill for context compression workflow |
+| | `opencode-global/commands/headroom-plan.md`, `headroom-audit.md`, `headroom-status.md` — 3 slash commands |
+| Update path | `git pull` refreshes from OPK repo. No upstream update mechanism — all content is OPK-original conceptual guidance. |
+
+### License-safe design
+
+Headroom-lite is designed to avoid license conflict with upstream:
+
+1. **No source code** from chopratejas/headroom is shipped.
+2. **No binaries or daemon config** are shipped.
+3. **No significant text** is copied from upstream documentation.
+   Short quotes (≤1 paragraph) for attribution are acceptable.
+4. **All conceptual content** is OPK-original — written from general
+   context window / token budget knowledge, not derived from any single
+   upstream.
+5. **Credit is given** in this document and `docs/HEADROOM_LITE_INTEGRATION.md`.
+6. **Links to upstream** are provided for users who want full details.
+
+### Safety guarantees
+
+- **No auto-enable** — never installed during `opk global`, `bootstrap`,
+  `setup`, or `opk up`.
+- **No vendor source** — upstream source never copied into OPK repo.
+- **No runtime code** — all content is markdown docs + skill + commands.
+- **No dependency** — no npm, pip, cargo, or any package manager.
+- **No MCP** — no MCP servers or configs.
+- **No env/secrets** — Headroom-lite never reads sensitive files.
+- **No network** — all checks are local.
+- **No sudo** — all operations are user-scoped.
+- **No proxy/daemon** — Headroom-lite is a reference workflow, not a
+  runtime service.
+
+### Agent routing
+
+- `opencode-global/skills/headroom-lite/SKILL.md` — skill loaded when
+  task involves context compression, token budget, output truncation,
+  RAG chunk compression, tool output reduction
+- `/headroom-plan`, `/headroom-audit`, `/headroom-status` — 3 slash commands
+- `opencode-global/agents/build-strong.md` — Agent Delegation table
+  routes context/token compression tasks to headroom-lite skill
+- `opencode-global/commands/agent-router.md` — Routing table includes
+  Headroom-lite entries
+- Agents never install packages or vendored code directly
+
+---
+
 ## 9. Detect-only Tools
 
 The following tools are **never vendored, never auto-installed, and never
@@ -539,11 +595,13 @@ scaffolding, agents, and commands are designed for.
 - `BMAD_METHOD_VERSION` env overrides the default version pin.
 - Full log captured to `.opencode-power-bmad-install.log`.
 
-### Reference / Learning resources (RAG-lite)
+### Reference / Learning resources (RAG-lite, Headroom-lite)
 
-- RAG-lite is entirely OPK-native — no upstream code, no install, no update.
-- `git pull` refreshes docs, skill, and commands from OPK repo.
-- Upstream (NirDiamant/RAG_Techniques) is referenced only; never vendored.
+- RAG-lite and Headroom-lite are entirely OPK-native — no upstream code,
+  no install, no update.
+- `git pull` refreshes docs, skills, and commands from OPK repo.
+- Upstream (NirDiamant/RAG_Techniques, chopratejas/headroom) is referenced
+  only; never vendored.
 
 ### Opt-in tools (GSD Core, MarkItDown, Supermemory, ECC-lite, Hermes-lite)
 
@@ -599,6 +657,7 @@ scaffolding, agents, and commands are designed for.
 - **ECC**: MIT
 - **Hermes Agent**: Apache-2.0
 - **NirDiamant/RAG_Techniques**: Custom (non-commercial) — OPK references only, no source/notebook/text copied
+- **chopratejas/headroom**: Apache-2.0 — OPK references only, no source/binary/text copied
 - **rtk**: MIT
 - **repomix**: MIT
 - **ast-grep**: MIT
