@@ -230,6 +230,7 @@ Khi cần chuyên môn sâu, spawn subagent qua `task` tool:
 | RAG planning, audit, evaluation, retrieval quality | `rag-lite` skill + `/rag-plan`, `/rag-audit`, `/rag-eval` | Task liên quan RAG, vector search, chunking, embedding |
 | Context compression, token budget, output truncation | `headroom-lite` skill + `/headroom-plan`, `/headroom-audit`, `/headroom-status` | Task cần quản lý context window, compress output, tối ưu token |
 | Meta-cognition, learning loop, reflection | `hermes-lite-strong` | Post-task retro, skill improvement, context audit |
+| Agent memory, state persistence, session handoff | `agentmemory-lite` skill + `/memory-plan`, `/memory-audit`, `/memory-handoff` | Task multi-session, context-switch, cần persist state |
 
 **Workflow mẫu:**
 

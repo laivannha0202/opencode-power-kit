@@ -589,6 +589,48 @@ require_contains "opencode-global/agents/build-strong.md" "rag-"
 require_contains "opencode-global/commands/agent-router.md" "rag-plan"
 echo
 
+# ─── v1.9.3: AgentMemory-lite (Serverless Memory reference) ──
+echo "[v1.9.3 AgentMemory-lite]"
+# CHANGELOG
+require_contains "CHANGELOG.md" "1.9.3"
+require_contains "CHANGELOG.md" "AgentMemory-lite"
+require_contains "CHANGELOG.md" "rohitg00"
+# Doc
+require_file "docs/AGENTMEMORY_LITE_INTEGRATION.md"
+require_contains "docs/AGENTMEMORY_LITE_INTEGRATION.md" "AgentMemory-lite"
+require_contains "docs/AGENTMEMORY_LITE_INTEGRATION.md" "memory"
+# Skill
+require_file "opencode-global/skills/agentmemory-lite/SKILL.md"
+require_contains "opencode-global/skills/agentmemory-lite/SKILL.md" "AgentMemory-lite"
+require_contains "opencode-global/skills/agentmemory-lite/SKILL.md" "memory-"
+# Commands (3)
+for am_cmd in memory-plan memory-audit memory-handoff; do
+	require_file "opencode-global/commands/${am_cmd}.md"
+done
+require_contains "opencode-global/commands/memory-plan.md" "memory"
+require_contains "opencode-global/commands/memory-audit.md" "audit"
+require_contains "opencode-global/commands/memory-handoff.md" "handoff"
+# README
+require_contains "README.md" "AgentMemory-lite"
+require_contains "README.md" "rohitg00"
+# THIRD_PARTY
+require_contains "THIRD_PARTY.md" "agentmemory"
+require_contains "THIRD_PARTY.md" "rohitg00"
+# No auto-enable in bootstrap / install-global / setup
+if rg -q "agentmemory-lite" "bootstrap.sh" 2>/dev/null; then
+	fail "bootstrap.sh must NOT auto-enable AgentMemory-lite"
+fi
+if rg -q "agentmemory-lite" "install-global.sh" 2>/dev/null; then
+	fail "install-global.sh must NOT auto-enable AgentMemory-lite"
+fi
+if rg -q "agentmemory-lite" "setup.sh" 2>/dev/null; then
+	fail "setup.sh must NOT auto-enable AgentMemory-lite"
+fi
+# Build-strong and agent-router integration
+require_contains "opencode-global/agents/build-strong.md" "agentmemory-lite"
+require_contains "opencode-global/commands/agent-router.md" "memory-plan"
+echo
+
 # ─── v1.9.2: Headroom-lite (Context/Token Compression reference) ──
 echo "[v1.9.2 Headroom-lite]"
 # CHANGELOG

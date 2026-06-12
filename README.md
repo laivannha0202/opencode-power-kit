@@ -1,7 +1,7 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.9.2-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-1.9.3-blue.svg)](./VERSION)
 [![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
@@ -115,8 +115,8 @@ opk clean --apply  # apply: move vào .opk-trash/<timestamp>/
 |-----------|-------|----------|
 | Core power agents | 14 | `opencode-global/agents/` |
 | Total agent files | 49 | `opencode-global/agents/` (14 core + 33 GSD-style + 1 ECC-lite + 1 Hermes-lite) |
-| Slash commands | 63 | `opencode-global/commands/` (+3 RAG-lite, +3 Headroom-lite) |
-| Skills | 22 | `opencode-global/skills/` (+1 rag-lite, +1 headroom-lite) |
+| Slash commands | 66 | `opencode-global/commands/` (+3 RAG-lite, +3 Headroom-lite, +3 AgentMemory-lite) |
+| Skills | 23 | `opencode-global/skills/` (+1 rag-lite, +1 headroom-lite, +1 agentmemory-lite) |
 | Helper scripts | 18 | `scripts/` |
 | Root-level scripts | 15 | `*.sh` + `*.ps1` (install, bootstrap, verify, doctor, ...) |
 | Full-stack profile | 1 | `profiles/node-nest-react-mysql/` |
@@ -160,6 +160,7 @@ người dùng hiểu rõ ranh giới.
 | Hermes Agent | NousResearch | Meta-cognitive self-improvement framework — learning loop, skill improvement, memory policy review, context/budget pressure, lightweight kanban, tool surface audit, remote backend review | Inspiration (OPK-native) | `opencode-global/agents/hermes-lite-strong.md`, 8 commands, 3 scripts |
 | NirDiamant/RAG_Techniques | NirDiamant | Comprehensive RAG tutorial collection — conceptual reference for RAG patterns, techniques, and best practices | Reference / Learning resource (OPK-native) | `docs/RAG_LITE_INTEGRATION.md`, `opencode-global/skills/rag-lite/SKILL.md`, 3 commands |
 | chopratejas/headroom | chopratejas | Context/token compression Linux daemon — conceptual reference for context window economics, compression strategies, token budget optimization | Inspiration / Reference (OPK-native) | `docs/HEADROOM_LITE_INTEGRATION.md`, `opencode-global/skills/headroom-lite/SKILL.md`, 3 commands |
+| rohitg00/agentmemory | rohitg00 | Serverless memory layer for AI agents — conceptual reference for memory strategies, context handoff, state persistence, TTL-based memory, checkpoint protocols | Inspiration / Reference (OPK-native) | `docs/AGENTMEMORY_LITE_INTEGRATION.md`, `opencode-global/skills/agentmemory-lite/SKILL.md`, 3 commands |
 | rtk | rtk-ai | Token-saving shell wrapper | Detect-only | `/tooling-doctor` phát hiện |
 | repomix | yamadashy | Context pack generator | Detect-only | `/tooling-doctor` + `/token-pack` |
 | ast-grep | ast-grep | Structural code search | Detect-only | `/tooling-doctor` |
@@ -183,7 +184,7 @@ người dùng hiểu rõ ranh giới.
 ## Power Mode v1.5.0
 
 - **14 core power agents** + **33 GSD-style agents** + **1 ECC-lite** + **1 Hermes-lite** = **49 total agent files** — mỗi agent chuyên sâu một lĩnh vực
-- **60 commands** — phân loại theo power workflow, safety, build lifecycle, review, DB/API, QA/E2E, DevOps, quality/security, token/tooling, RAG, compression
+- **66 commands** — phân loại theo power workflow, safety, build lifecycle, review, DB/API, QA/E2E, DevOps, quality/security, token/tooling, RAG, compression, memory
 - **`scripts/opk-command-guard.sh`** — lớp bảo vệ: cảnh báo/chặn lệnh shell nguy hiểm (`rm -rf`, `git reset --hard`, force push, `DROP TABLE`, ...)
 - **`build-strong` Agent Delegation** — tự động triệu hồi subagent chuyên biệt dựa trên ngữ cảnh
 - **`/power-build`** — quy trình đầu cuối: spec → architecture → implementation → QA → security → release
@@ -508,7 +509,7 @@ Phù hợp nhất cho project dùng: NestJS backend, React/Vite frontend, MySQL 
 | Tiêu chí | Điểm | Vì sao đạt |
 |----------|:----:|-----------|
 | **Dễ cài** | 10/10 | One-command (`bash -c` / PowerShell) cho Linux/macOS/WSL/Git Bash + Windows. `opk one/go`, `opk doctor`, `opk verify` đều sẵn. |
-| **Mạnh full-stack** | 10/10 | Profile Node/NestJS/React/Vite/MySQL. 14 core agents + 33 GSD-style + 1 ECC-lite. 49 commands. 20 skills. 15 root scripts. |
+| **Mạnh full-stack** | 10/10 | Profile Node/NestJS/React/Vite/MySQL. 14 core agents + 33 GSD-style + 1 ECC-lite. 66 commands. 23 skills. 15 root scripts. |
 | **Workflow agent** | 10/10 | Agent router (`/agent-router`), `build-strong` fullstack autopilot, `power-build` end-to-end, delegation tới 9+ subagent chuyên biệt. |
 | **Safety** | 10/10 cho trusted-local; 8/10 cho power mode mặc định | Guard rules: không `rm -rf`, không `git reset --hard`, không force push, không sửa `.env`/secrets, checkpoint trước thay đổi lớn, `/cleanup-safe` move an toàn, backup trước ghi đè. Tuy nhiên `permission: allow` có nghĩa agent không bị permission prompt — safety dựa vào instruction rules, không phải sandbox tuyệt đối. Khuyến nghị: dùng power mode cho máy/project cá nhân tin cậy. |
 | **Tài liệu** | 10/10 | README, `THIRD_PARTY.md`, `CHANGELOG.md`, `docs/`, credits rõ ràng, update path cho từng nhóm upstream. |
@@ -996,6 +997,82 @@ Headroom-lite works best with:
 
 See [`docs/HEADROOM_LITE_INTEGRATION.md`](./docs/HEADROOM_LITE_INTEGRATION.md) for
 full compression strategies, budget calculation, and upstream references.
+
+---
+
+## AgentMemory-lite — Serverless Memory Reference v1.9.3
+
+opencode-power-kit ships **reference** support for
+[serverless memory](https://github.com/rohitg00/agentmemory)
+patterns — a conceptual guidance module for agents managing multi-session
+state and safe context handoff.
+
+### Integration model: Inspiration / Reference (OPK-native)
+
+- Kit **never vendors** upstream source code, plugins, or hooks.
+- Kit **never installs** memory daemons, databases, or packages.
+- Kit **never runs** package managers during setup or update.
+- All content is **OPK-original** conceptual guidance — not derived from
+  any single upstream repository.
+- Upstream credit is explicitly given in `THIRD_PARTY.md` and
+  `docs/AGENTMEMORY_LITE_INTEGRATION.md`.
+
+### License safety
+
+[rohitg00/agentmemory](https://github.com/rohitg00/agentmemory) is
+**Apache-2.0** licensed. AgentMemory-lite avoids vendoring by shipping only:
+
+- Conceptual documentation — no source code, no plugins, no hooks
+- Agent skill — teaches agents memory planning, audit, and handoff workflows
+- Slash commands — structured memory strategy, audit, and handoff workflows
+
+### Usage
+
+```bash
+# In any OpenCode session, use slash commands:
+/memory-plan "plan memory strategy cho feature dài 3 session"
+/memory-audit "audit memory state — completeness, staleness, integrity"
+/memory-handoff "prepare safe handoff với AI_HANDOFF.md template"
+```
+
+### Slash commands
+
+| Slash command | Description |
+|:-------------:|-------------|
+| `/memory-plan` | Plan memory strategy — scope classification, strategy selection, TTL |
+| `/memory-audit` | Audit memory state — inventory, completeness, staleness, integrity |
+| `/memory-handoff` | Safe memory handoff — state collection, AI_HANDOFF.md, integrity check |
+
+### What AgentMemory-lite is NOT
+
+- ❌ Not a memory runtime — no daemon, no database, no persistence backend
+- ❌ Not a code library — no Python/TypeScript/Rust code shipped
+- ❌ Not a copy of upstream — all content is OPK-original
+- ❌ Not auto-installed — never enabled by `opk global`, bootstrap, or setup
+- ❌ Not a replacement for agent-native memory (Claude Code's own `checkpoint`)
+
+### Files
+
+| File | Role |
+|------|------|
+| `docs/AGENTMEMORY_LITE_INTEGRATION.md` | Conceptual reference, memory strategies, safe handoff protocol, checklist |
+| `opencode-global/skills/agentmemory-lite/SKILL.md` | Agent skill for memory planning, audit, handoff workflows |
+| `opencode-global/commands/memory-plan.md` | `/memory-plan` — plan a memory strategy |
+| `opencode-global/commands/memory-audit.md` | `/memory-audit` — audit memory state |
+| `opencode-global/commands/memory-handoff.md` | `/memory-handoff` — safe memory handoff |
+
+### Complementary modules
+
+AgentMemory-lite works best with:
+
+| Module | Purpose | Integration |
+|--------|---------|:-----------:|
+| **Headroom-lite** | Context compression — fit memory within token budgets | Reference (OPK-native) |
+| **RAG-lite** | Retrieval quality evaluation | Reference (OPK-native) |
+| **Hermes-lite** | Meta-cognitive self-improvement, learning loop | Agent (OPK-native) |
+
+See [`docs/AGENTMEMORY_LITE_INTEGRATION.md`](./docs/AGENTMEMORY_LITE_INTEGRATION.md) for
+full memory strategies, safe handoff protocol, and upstream references.
 
 ---
 

@@ -40,7 +40,7 @@ PROFILES_DIR = KIT_ROOT / "profiles"
 TEMPLATES_DIR = KIT_ROOT / "templates"
 
 # ─── version compliance constants ───────────────────────────────────
-EXPECTED_VERSION = "1.9.2"
+EXPECTED_VERSION = "1.9.3"
 
 AUTO_ROUTER_NEEDLES: tuple[tuple[str, str], ...] = (
     ("templates/AGENTS.md", "Natural Language Auto Router"),
@@ -77,12 +77,14 @@ CHANGELOG_NEEDLES: tuple[str, ...] = (
     "opk-command-guard",
     "Full Auto Permission Mode",
     "Vietnamese Language Lock",
+    "AgentMemory-lite",
 )
 
 THIRD_PARTY_NEEDLES: tuple[tuple[str, str], ...] = (
     ("THIRD_PARTY.md", "BMAD"),
     ("THIRD_PARTY.md", "Superpowers"),
     ("THIRD_PARTY.md", "GSD Core"),
+    ("THIRD_PARTY.md", "rohitg00"),
 )
 
 V134_HINT_FILES: tuple[str, ...] = (
@@ -554,6 +556,28 @@ def validate_version() -> list[str]:
                 errors.append(f"bin/opk.ps1 missing needle: {needle}")
     else:
         errors.append("bin/opk.ps1 missing")
+
+    # v1.9.3: AgentMemory-lite (Serverless Memory reference)
+    print("[v1.9.3 AgentMemory-lite]")
+    v193_checks = [
+        ("CHANGELOG.md", "AgentMemory-lite"),
+        ("docs/AGENTMEMORY_LITE_INTEGRATION.md", "AgentMemory-lite"),
+        ("docs/AGENTMEMORY_LITE_INTEGRATION.md", "memory"),
+        ("opencode-global/skills/agentmemory-lite/SKILL.md", "AgentMemory-lite"),
+        ("opencode-global/skills/agentmemory-lite/SKILL.md", "memory-"),
+        ("opencode-global/commands/memory-plan.md", "memory"),
+        ("opencode-global/commands/memory-audit.md", "audit"),
+        ("opencode-global/commands/memory-handoff.md", "handoff"),
+        ("opencode-global/agents/build-strong.md", "agentmemory-lite"),
+        ("opencode-global/commands/agent-router.md", "memory-plan"),
+        ("THIRD_PARTY.md", "rohitg00"),
+    ]
+    for rel, needle in v193_checks:
+        p = KIT_ROOT / rel
+        if p.is_file() and needle in p.read_text(encoding="utf-8"):
+            ok(f"{rel} contains: {needle}")
+        else:
+            errors.append(f"{rel} missing needle: {needle}")
 
     return errors
 

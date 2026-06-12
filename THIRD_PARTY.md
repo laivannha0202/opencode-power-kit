@@ -1,6 +1,6 @@
 # Third-Party Components & Credits
 
-> **Version:** opencode-power-kit v1.9.2
+> **Version:** opencode-power-kit v1.9.3
 >
 > This project packages, configures, and documents workflows around
 > [OpenCode](https://github.com/opencode-ai). It credits upstream authors
@@ -53,6 +53,7 @@
 | Hermes Agent | NousResearch | https://github.com/NousResearch/hermes-agent | Meta-cognitive self-improvement — learning loop, skill improvement, memory review, kanban, tool audit | Inspiration-only | `opk hermes status` (local); `git pull` refreshes OPK source | Apache-2.0 |
 | NirDiamant/RAG_Techniques | NirDiamant | https://github.com/NirDiamant/RAG_Techniques | Comprehensive RAG tutorial collection — reference for conceptual guidance only | Reference / Learning resource | N/A — no code, no auto-update | Custom (non-commercial) |
 | chopratejas/headroom | chopratejas | https://github.com/chopratejas/headroom | Context/token compression Linux daemon — reference for context window economics, compression strategies, token budget optimization | Inspiration-only / Reference | N/A — no code, no auto-update | Apache-2.0 |
+| rohitg00/agentmemory | rohitg00 | https://github.com/rohitg00/agentmemory | Serverless memory layer for AI agents — reference for memory strategies, context handoff, state persistence, TTL-based memory management | Inspiration-only / Reference | N/A — no code, no auto-update | Apache-2.0 |
 | rtk | rtk-ai | https://github.com/rtk-ai/rtk | Token-saving shell wrapper | Detect-only | User installs separately | MIT |
 | tokscale | — | https://github.com/tokscale/tokscale | Token cost visualization | Detect-only | User installs separately | — |
 | repomix | yamadashy | https://github.com/yamadashy/repomix | Context pack generator | Detect-only | User installs separately | MIT |
@@ -533,6 +534,61 @@ Headroom-lite is designed to avoid license conflict with upstream:
   routes context/token compression tasks to headroom-lite skill
 - `opencode-global/commands/agent-router.md` — Routing table includes
   Headroom-lite entries
+- Agents never install packages or vendored code directly
+
+---
+
+## 8.10. rohitg00/agentmemory — Inspiration-only / Reference (Serverless Memory)
+
+| Field | Value |
+|-------|-------|
+| Role | Serverless memory layer for AI agents — reference for memory strategies, context handoff, state persistence, TTL-based memory management |
+| Integration | **Inspiration-only / Reference** — never vendored, never auto-installed, never enabled by default. OPK ships only conceptual docs, skill, and slash commands — no source code, no binaries, no significant text from upstream |
+| Source | https://github.com/rohitg00/agentmemory |
+| License | Apache-2.0 (per upstream) |
+| Kit ships | `docs/AGENTMEMORY_LITE_INTEGRATION.md` — conceptual reference, memory strategies, safe handoff protocol, checklist, license-safe design rationale |
+| | `opencode-global/skills/agentmemory-lite/SKILL.md` — agent skill for memory planning, audit, handoff workflows |
+| | `opencode-global/commands/memory-plan.md`, `memory-audit.md`, `memory-handoff.md` — 3 slash commands |
+| Update path | `git pull` refreshes from OPK repo. No upstream update mechanism — all content is OPK-original conceptual guidance. |
+
+### License-safe design
+
+AgentMemory-lite is designed to avoid license conflict with upstream:
+
+1. **No source code** from rohitg00/agentmemory is shipped.
+2. **No plugins, MCP servers, or hooks** from upstream are shipped.
+3. **No significant text** is copied from upstream documentation.
+   Short quotes (≤1 paragraph) for attribution are acceptable.
+4. **All conceptual content** is OPK-original — written from general
+   memory layer / state persistence / handoff knowledge, not derived from
+   any single upstream.
+5. **Credit is given** in this document and `docs/AGENTMEMORY_LITE_INTEGRATION.md`.
+6. **Links to upstream** are provided for users who want full details.
+
+### Safety guarantees
+
+- **No auto-enable** — never installed during `opk global`, `bootstrap`,
+  `setup`, or `opk up`.
+- **No vendor source** — upstream source never copied into OPK repo.
+- **No runtime code** — all content is markdown docs + skill + commands.
+- **No dependency** — no npm, pip, cargo, or any package manager.
+- **No MCP** — no MCP servers or configs.
+- **No env/secrets** — AgentMemory-lite never reads sensitive files.
+- **No network** — all checks are local.
+- **No sudo** — all operations are user-scoped.
+- **No proxy/daemon** — AgentMemory-lite is a reference workflow, not a
+  runtime service.
+
+### Agent routing
+
+- `opencode-global/skills/agentmemory-lite/SKILL.md` — skill loaded when
+  task involves memory planning, state persistence, multi-session handoff,
+  context checkpoint
+- `/memory-plan`, `/memory-audit`, `/memory-handoff` — 3 slash commands
+- `opencode-global/agents/build-strong.md` — Agent Delegation table
+  routes memory tasks to agentmemory-lite skill
+- `opencode-global/commands/agent-router.md` — Routing table includes
+  AgentMemory-lite entries
 - Agents never install packages or vendored code directly
 
 ---

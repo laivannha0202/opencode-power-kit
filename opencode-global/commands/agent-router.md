@@ -42,6 +42,9 @@ hoặc main agent (nếu cần docs/report).
 | Context usage audit, compression opportunities | `headroom-lite` skill + `/headroom-audit` | Khi cần audit token consumption |
 | Headroom-lite integration status | `headroom-lite` skill + `/headroom-status` | Kiểm tra Headroom-lite sẵn sàng |
 | Context/memory audit, kanban, tool audit | `hermes-lite-strong` | Khi cần process optimization |
+| Agent memory planning, multi-session strategy | `agentmemory-lite` skill + `/memory-plan` | Khi cần lên kế hoạch memory cho task dài |
+| Agent memory audit, state integrity | `agentmemory-lite` skill + `/memory-audit` | Khi cần audit memory state |
+| Agent memory handoff, checkpoint | `agentmemory-lite` skill + `/memory-handoff` | Khi cần handoff context an toàn |
 
 ## Workflow
 

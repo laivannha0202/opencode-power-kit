@@ -128,6 +128,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   NirDiamant/RAG_Techniques, component counts updated, RAG-lite section added
 - New version tag reference: `[1.9.1]`
 
+## [1.9.3] - 2026-06-12
+
+### AgentMemory-lite — Serverless Memory Reference (Inspiration-only)
+
+### Added
+
+- **AgentMemory-lite integration** — optional, OPK-native conceptual reference
+  for serverless memory for AI agents inspired by
+  [rohitg00/agentmemory](https://github.com/rohitg00/agentmemory).
+  Ships only OPK-native docs + agent skill + slash commands — no copy of
+  upstream source/code/hooks, no auto-enable, no runtime dependency, no
+  package install.
+  - `docs/AGENTMEMORY_LITE_INTEGRATION.md` — conceptual reference, memory
+    strategies, safe handoff protocol, checklist, license-safe design
+  - `opencode-global/skills/agentmemory-lite/SKILL.md` — agent skill for
+    memory planning, audit, handoff workflows
+  - 3 slash commands for AgentMemory-lite:
+    - `/memory-plan` — plan memory strategy (scope classification,
+      strategy selection, content planning, TTL, safety check)
+    - `/memory-audit` — audit memory state (inventory, completeness,
+      staleness, safety, integrity, handoff readiness)
+    - `/memory-handoff` — safe memory handoff (state collection,
+      AI_HANDOFF.md generation, integrity check, safety review, cleanup)
+- **No auto-enable** — AgentMemory-lite never installed during `opk global`,
+  `opk one`, `opk go`, `bootstrap.sh --all`, `setup.sh --global`,
+  `install-global.sh`, or `opk up`.
+- **License-safe** — all content is OPK-original conceptual guidance.
+  No source code, plugins, or hooks from rohitg00/agentmemory are shipped.
+  See `THIRD_PARTY.md` and `docs/AGENTMEMORY_LITE_INTEGRATION.md` for details.
+
+### Changed
+
+- VERSION bumped from 1.9.2 to 1.9.3
+- `opencode-global/agents/build-strong.md` — added AgentMemory-lite row in
+  delegation table
+- `opencode-global/commands/agent-router.md` — added
+  memory-plan/memory-audit/memory-handoff routing entries
+- `THIRD_PARTY.md` — version banner 1.9.2→1.9.3, added
+  rohitg00/agentmemory in component table + section 8.10 + license notes
+- `README.md` — version badge 1.9.2→1.9.3, added upstream row for
+  rohitg00/agentmemory, component counts updated, AgentMemory-lite section
+  added
+- `verify.sh` — added AgentMemory-lite section
+- `verify.ps1` — added AgentMemory-lite section
+- `scripts/validate-opencode-pack.py` — EXPECTED_VERSION → 1.9.3, added
+  AgentMemory-lite needles
+- New version tag reference: `[1.9.3]`
+
 ## [1.9.2] - 2026-06-12
 
 ### Headroom-lite — Context/Token Compression Reference (Inspiration-only)
