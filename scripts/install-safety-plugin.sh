@@ -29,29 +29,33 @@ TARGET_FILE=".opencode/plugins/opk-safety-guard.js"
 SKIP_CONFIRM=0
 
 for a in "$@"; do
-  case "$a" in
-    --yes|-Y|-y) SKIP_CONFIRM=1 ;;
-  esac
+	case "$a" in
+	--yes | -Y | -y) SKIP_CONFIRM=1 ;;
+	esac
 done
 
 # --- Check template exists ---
 if [ ! -f "$TEMPLATE_FILE" ]; then
-  echo "install-safety-plugin: LỖI — không tìm thấy template: $TEMPLATE_FILE" >&2
-  exit 1
+	echo "install-safety-plugin: LỖI — không tìm thấy template: $TEMPLATE_FILE" >&2
+	exit 1
 fi
 
 # --- Check project dir ---
+# shellcheck disable=SC2034
 PWD_REAL="$(pwd -P 2>/dev/null || pwd)"
 if [ ! -f ".opencode/opencode.json" ] && [ ! -f "AGENTS.md" ] && [ ! -f "OPENCODE.md" ]; then
-  echo "install-safety-plugin: CẢNH BÁO — $(pwd) có vẻ không phải project OpenCode." >&2
-  echo "  (Không tìm thấy .opencode/opencode.json, AGENTS.md, hay OPENCODE.md)" >&2
-  if [ "$SKIP_CONFIRM" -eq 0 ]; then
-    read -r -p "  Tiếp tục cài safety plugin? [y/N] " reply
-    case "$reply" in
-      [yY]|[yY][eE][sS]) ;;
-      *) echo "install-safety-plugin: Đã hủy."; exit 0 ;;
-    esac
-  fi
+	echo "install-safety-plugin: CẢNH BÁO — $(pwd) có vẻ không phải project OpenCode." >&2
+	echo "  (Không tìm thấy .opencode/opencode.json, AGENTS.md, hay OPENCODE.md)" >&2
+	if [ "$SKIP_CONFIRM" -eq 0 ]; then
+		read -r -p "  Tiếp tục cài safety plugin? [y/N] " reply
+		case "$reply" in
+		[yY] | [yY][eE][sS]) ;;
+		*)
+			echo "install-safety-plugin: Đã hủy."
+			exit 0
+			;;
+		esac
+	fi
 fi
 
 # --- Confirm ---
@@ -66,11 +70,14 @@ echo "    - SQL DROP TABLE, TRUNCATE, DELETE FROM không WHERE"
 echo ""
 
 if [ "$SKIP_CONFIRM" -eq 0 ]; then
-  read -r -p "Tiếp tục? [y/N] " reply
-  case "$reply" in
-    [yY]|[yY][eE][sS]) ;;
-    *) echo "install-safety-plugin: Đã hủy."; exit 0 ;;
-  esac
+	read -r -p "Tiếp tục? [y/N] " reply
+	case "$reply" in
+	[yY] | [yY][eE][sS]) ;;
+	*)
+		echo "install-safety-plugin: Đã hủy."
+		exit 0
+		;;
+	esac
 fi
 
 # --- Create target dir ---
@@ -78,9 +85,9 @@ mkdir -p "$TARGET_DIR"
 
 # --- Backup if exists ---
 if [ -f "$TARGET_FILE" ]; then
-  BACKUP_FILE="${TARGET_FILE}.bak.$(date +%Y%m%d-%H%M%S)"
-  cp "$TARGET_FILE" "$BACKUP_FILE"
-  echo "install-safety-plugin: Backup -> $BACKUP_FILE"
+	BACKUP_FILE="${TARGET_FILE}.bak.$(date +%Y%m%d-%H%M%S)"
+	cp "$TARGET_FILE" "$BACKUP_FILE"
+	echo "install-safety-plugin: Backup -> $BACKUP_FILE"
 fi
 
 # --- Install ---

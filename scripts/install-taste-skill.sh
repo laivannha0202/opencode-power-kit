@@ -114,8 +114,8 @@ echo ""
 ALREADY_INSTALLED=false
 TASTE_FILE=""
 # Taste Skill typically installs as a skill file — check common locations
-if [[ -d "${HOME}/.config/opencode/skills/taste-skill" ]] || \
-   [[ -f "${HOME}/.config/opencode/skills/taste-skill/SKILL.md" ]]; then
+if [[ -d "${HOME}/.config/opencode/skills/taste-skill" ]] ||
+	[[ -f "${HOME}/.config/opencode/skills/taste-skill/SKILL.md" ]]; then
 	ALREADY_INSTALLED=true
 	TASTE_FILE="${HOME}/.config/opencode/skills/taste-skill/SKILL.md"
 	echo "ℹ️  Taste Skill đã được cài đặt tại: ${TASTE_FILE}"
@@ -172,8 +172,8 @@ fi
 echo ""
 
 # ─── Verify ───────────────────────────────────────────────────────
-if [[ -d "${HOME}/.config/opencode/skills/taste-skill" ]] || \
-   [[ -f "${HOME}/.config/opencode/skills/taste-skill/SKILL.md" ]]; then
+if [[ -d "${HOME}/.config/opencode/skills/taste-skill" ]] ||
+	[[ -f "${HOME}/.config/opencode/skills/taste-skill/SKILL.md" ]]; then
 	echo "✅ Taste Skill installed at: ${HOME}/.config/opencode/skills/taste-skill/"
 	echo ""
 	echo "🎉 Taste Skill is ready. Các lệnh khả dụng:"

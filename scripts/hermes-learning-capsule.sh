@@ -157,7 +157,7 @@ CAPSULE_CONTENT+="*End of capsule — ${#LEARNING_FILES[@]} learnings packaged.*
 # ─── Write or stdout ─────────────────────────────────────────────-
 if [[ -n "${OUTPUT_FILE}" ]]; then
 	mkdir -p "$(dirname "${OUTPUT_FILE}")"
-	printf "%b" "${CAPSULE_CONTENT}" > "${OUTPUT_FILE}"
+	printf "%b" "${CAPSULE_CONTENT}" >"${OUTPUT_FILE}"
 	echo "✅ Capsule written to: ${OUTPUT_FILE}"
 else
 	printf "%b" "${CAPSULE_CONTENT}"

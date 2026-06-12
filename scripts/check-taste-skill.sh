@@ -14,8 +14,8 @@
 set -euo pipefail
 
 # Check 1: skill directory exists
-if [[ -d "${HOME}/.config/opencode/skills/taste-skill" ]] && \
-   [[ -f "${HOME}/.config/opencode/skills/taste-skill/SKILL.md" ]]; then
+if [[ -d "${HOME}/.config/opencode/skills/taste-skill" ]] &&
+	[[ -f "${HOME}/.config/opencode/skills/taste-skill/SKILL.md" ]]; then
 	echo "✅ Taste Skill installed at: ${HOME}/.config/opencode/skills/taste-skill/"
 	exit 0
 fi
