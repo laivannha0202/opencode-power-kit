@@ -735,6 +735,77 @@ require_contains "opencode-global/agents/build-strong.md" "cleanup-safe"
 require_contains "opencode-global/agents/build-strong.md" "Agent Delegation"
 echo
 
+# ─── v2.0.0: OPK Orchestration Lite ──────────────────────────────
+echo "[v2.0.0 OPK Orchestration Lite]"
+# CHANGELOG
+require_contains "CHANGELOG.md" "2.0.0"
+require_contains "CHANGELOG.md" "OPK Orchestration Lite"
+require_contains "CHANGELOG.md" "oh-my-openagent"
+require_contains "CHANGELOG.md" "intent-router"
+require_contains "CHANGELOG.md" "power-work-lite"
+require_contains "CHANGELOG.md" "continue-work"
+require_contains "CHANGELOG.md" "evidence-report"
+require_contains "CHANGELOG.md" "init-deep-lite"
+require_contains "CHANGELOG.md" "no MCP"
+require_contains "CHANGELOG.md" "no telemetry"
+# VERSION
+require_contains "VERSION" "2.0.0"
+# New commands (5)
+require_file "opencode-global/commands/intent-router.md"
+require_file "opencode-global/commands/init-deep-lite.md"
+require_file "opencode-global/commands/power-work-lite.md"
+require_file "opencode-global/commands/continue-work.md"
+require_file "opencode-global/commands/evidence-report.md"
+# Command content checks
+require_contains "opencode-global/commands/intent-router.md" "intent"
+require_contains "opencode-global/commands/intent-router.md" "agent"
+require_contains "opencode-global/commands/power-work-lite.md" "power-work-lite"
+require_contains "opencode-global/commands/power-work-lite.md" "verify"
+require_contains "opencode-global/commands/continue-work.md" "AI_HANDOFF"
+require_contains "opencode-global/commands/evidence-report.md" "evidence"
+require_contains "opencode-global/commands/init-deep-lite.md" "AGENTS.md"
+# Documentation (2)
+require_file "docs/OPK_ORCHESTRATION_LITE.md"
+require_file "docs/INSPIRATION_OH_MY_OPENAGENT.md"
+require_contains "docs/OPK_ORCHESTRATION_LITE.md" "Orchestration Lite"
+require_contains "docs/INSPIRATION_OH_MY_OPENAGENT.md" "oh-my-openagent"
+# README
+require_contains "README.md" "OPK Orchestration Lite"
+require_contains "README.md" "intent-router"
+require_contains "README.md" "power-work-lite"
+require_contains "README.md" "continue-work"
+require_contains "README.md" "evidence-report"
+require_contains "README.md" "init-deep-lite"
+require_contains "README.md" "oh-my-openagent"
+require_contains "README.md" "v2.0.0"
+# THIRD_PARTY
+require_contains "THIRD_PARTY.md" "oh-my-openagent"
+require_contains "THIRD_PARTY.md" "code-yeongyu"
+require_contains "THIRD_PARTY.md" "Inspiration-only"
+# .gitignore
+require_contains ".gitignore" ".opk/work/"
+require_contains ".gitignore" ".opk/tmp/"
+require_contains ".gitignore" ".opk/cache/"
+# No MCP auto-enabled
+if grep -rE '"mcp"\s*:' "templates/" 2>/dev/null; then
+	fail "MCP config detected in templates/ (should not be auto-enabled)"
+else
+	ok "no MCP auto-enabled in templates/"
+fi
+# No telemetry
+if grep -rEi 'posthog|mixpanel|amplitude|segment\.io|heap\.io' "opencode-global/" --include='*.md' --include='*.json' --include='*.js' --exclude-dir='node_modules' 2>/dev/null; then
+	fail "telemetry patterns detected in opencode-global/"
+else
+	ok "no telemetry in opencode-global/"
+fi
+# oh-my-openagent not vendored
+if [ -d "node_modules/oh-my-openagent" ] || [ -d "vendor/oh-my-openagent" ]; then
+	fail "oh-my-openagent appears vendored"
+else
+	ok "oh-my-openagent not vendored"
+fi
+echo
+
 # ─── Script sanity (shellcheck optional, syntax required) ─────────
 echo "[script sanity]"
 SCRIPTS_TO_CHECK=(

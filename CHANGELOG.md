@@ -5,6 +5,63 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-06-14
+
+### OPK Orchestration Lite — Inspired by oh-my-openagent
+
+### Added
+
+- **OPK Orchestration Lite** — streamlined orchestration framework inspired by
+  [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) by code-yeongyu.
+  Ships only OPK-native components — no source code copied, no vendor dependency,
+  no MCP, no telemetry.
+- **`/intent-router`** — classifies user requests into 10 intent types
+  (research, plan, implement, debug, refactor, test, security, release, docs,
+  fullstack-feature) and recommends appropriate agent/workflow. Outputs in Vietnamese.
+- **`/init-deep-lite`** — initializes project context by reading current project
+  and creating/updating AGENTS.md, OPENCODE.md, AI_HANDOFF.md, docs/PROJECT_CONTEXT.md,
+  docs/WORKFLOW.md. Never overwrites user content — uses append with markers.
+- **`/power-work-lite`** — safe, Vietnamese-first long work workflow inspired by
+  ultrawork. 10-step process: git status → read context → define goal → plan →
+  select agent → checkpoint → build slices → verify → save evidence → report.
+- **`/continue-work`** — resumes interrupted tasks from AI_HANDOFF.md and
+  .opk/work/ evidence files. Reads context, runs light verification, continues safely.
+- **`/evidence-report`** — generates comprehensive Vietnamese evidence report
+  from git status, git diff, test results, changed files, and technical decisions.
+- **`doctor --deep`** — extended read-only checks: Orchestration Lite files,
+  permission mode, MCP in templates, telemetry detection, oh-my-openagent not
+  vendored, optional tools detection, .opk/work/ directory.
+- **`/tooling-doctor` expanded** — added detect-only for: shellcheck, shfmt, jq,
+  eslint, prettier, vitest, tsc. Total 21 tools detected.
+- **`.opk/work/` directory** — runtime evidence storage for power-work-lite.
+- **`.gitignore` updated** — added .opk/work/, .opk/tmp/, .opk/cache/.
+- **2 documentation files**:
+  - `docs/OPK_ORCHESTRATION_LITE.md` — architecture, comparison, safety guarantees
+  - `docs/INSPIRATION_OH_MY_OPENAGENT.md` — detailed inspiration notes
+- **THIRD_PARTY.md** — oh-my-openagent entry (section 8.11, Inspiration-only),
+  upstream table row, license notes, what OPK tham khảo vs KHÔNG tham khảo.
+- **README.md** — OPK Orchestration Lite section, new commands table, doctor --deep,
+  rationale for no MCP/telemetry, version badge updated to v2.0.0.
+
+### Safety
+
+- No source code copied from oh-my-openagent.
+- No oh-my-openagent dependency added (npm, pip, cargo, or otherwise).
+- No MCP enabled by default — OPK keeps no MCP policy.
+- No telemetry added — no usage tracking, analytics, or hooks.
+- All orchestration commands follow existing safety rules: no force push,
+  no git reset --hard, no git clean -fd, no file deletion, no .env/secrets access.
+- Every command runs git status before/after and outputs in Vietnamese.
+
+### Changed
+
+- VERSION bumped from 1.9.3 to 2.0.0
+- `doctor.sh` — added --deep flag with extended checks
+- `tooling-doctor.md` — expanded detect list (21 tools)
+- `.gitignore` — added .opk/work/, .opk/tmp/, .opk/cache/
+- `README.md` — version badge, new sections, updated command count
+- `THIRD_PARTY.md` — version header, oh-my-openagent section
+
 ## [1.9.0] - 2026-06-11
 
 ### Hermes-lite — Meta-Cognitive Self-Improvement (Inspiration-only)

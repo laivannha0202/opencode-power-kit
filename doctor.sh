@@ -9,6 +9,14 @@
 #   SC2088: '~/.bashrc' in user-facing messages (intentional display string)
 set -euo pipefail
 
+# --- Parse flags ---
+DEEP_MODE=0
+for arg in "$@"; do
+  case "$arg" in
+    --deep) DEEP_MODE=1 ;;
+  esac
+done
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -37,7 +45,11 @@ GLOBAL_DIR="$KIT_DIR/opencode-global"
 
 echo ""
 echo "=========================================="
-echo "  OpenCode Power Kit - Doctor"
+if [ "$DEEP_MODE" -eq 1 ]; then
+  echo "  OpenCode Power Kit - Doctor --deep"
+else
+  echo "  OpenCode Power Kit - Doctor"
+fi
 echo "  Kit: $KIT_DIR"
 echo "  PWD: $(pwd)"
 echo "=========================================="
@@ -155,6 +167,116 @@ if command -v python3 >/dev/null 2>&1 && [ -f "$KIT_DIR/scripts/validate-opencod
 	fi
 else
 	warn "python3 hoặc validate-opencode-pack.py không có - bỏ qua"
+fi
+
+# --- Deep mode checks ---
+if [ "$DEEP_MODE" -eq 1 ]; then
+  echo ""
+  echo "--- Doctor --deep ---"
+
+  # --- OPK Orchestration Lite files ---
+  echo ""
+  info "OPK Orchestration Lite check"
+  for f in \
+    opencode-global/commands/intent-router.md \
+    opencode-global/commands/init-deep-lite.md \
+    opencode-global/commands/power-work-lite.md \
+    opencode-global/commands/continue-work.md \
+    opencode-global/commands/evidence-report.md \
+    docs/OPK_ORCHESTRATION_LITE.md \
+    docs/INSPIRATION_OH_MY_OPENAGENT.md; do
+    if [ -f "$KIT_DIR/$f" ]; then
+      ok "$f"
+    else
+      err "missing: $f"
+    fi
+  done
+
+  # --- Permission mode check ---
+  echo ""
+  info "Permission mode check"
+  if [ -f "$GLOBAL_DIR/../templates/opencode.json" ]; then
+    if grep -q '"permission": "allow"' "$GLOBAL_DIR/../templates/opencode.json" 2>/dev/null; then
+      ok "Power Mode (permission: allow) detected"
+    elif grep -q '"permission"' "$GLOBAL_DIR/../templates/opencode.json" 2>/dev/null; then
+      ok "Permission mode configured (not Power Mode)"
+    else
+      warn "No explicit permission mode in templates/opencode.json"
+      WARN=$((WARN + 1))
+    fi
+  else
+    warn "templates/opencode.json not found"
+    WARN=$((WARN + 1))
+  fi
+
+  # --- MCP check in templates ---
+  echo ""
+  info "Safety: no MCP auto-enabled in templates"
+  if grep -rE '"mcp"\s*:' "$KIT_DIR/templates" >/dev/null 2>&1; then
+    err "MCP config detected in templates/"
+  else
+    ok "no MCP config in templates/"
+  fi
+
+  # --- Telemetry check ---
+  echo ""
+  info "Safety: no telemetry in kit"
+  if grep -rEi 'posthog|mixpanel|amplitude|segment\.io|heap\.io' \
+    "$GLOBAL_DIR" --include='*.md' --include='*.json' --include='*.js' --exclude-dir='node_modules' >/dev/null 2>&1; then
+    err "telemetry patterns detected in opencode-global/"
+  else
+    ok "no telemetry patterns in opencode-global/"
+  fi
+
+  # --- oh-my-openagent not vendored ---
+  echo ""
+  info "Safety: oh-my-openagent not vendored"
+  if [ -d "$KIT_DIR/node_modules/oh-my-openagent" ] || \
+     [ -d "$KIT_DIR/vendor/oh-my-openagent" ] || \
+     grep -r "oh-my-openagent" "$GLOBAL_DIR" >/dev/null 2>&1; then
+    err "oh-my-openagent appears to be vendored/referenced in kit source"
+  else
+    ok "oh-my-openagent not vendored"
+  fi
+
+  # --- Optional tools detection ---
+  echo ""
+  info "Optional tools detection"
+  OPTIONAL_TOOLS=(
+    "rg:Fast grep:ripgrep"
+    "fd:Fast find:fd-find"
+    "sg:Structural search:ast-grep"
+    "ast-grep:Structural search:ast-grep"
+    "jq:JSON processor:jq"
+    "shellcheck:Bash linter:shellcheck"
+    "shfmt:Bash formatter:shfmt"
+    "node:Node.js:nodejs"
+    "npm:npm:npm"
+    "git:Git:git"
+    "docker:Docker:docker"
+    "python3:Python 3:python3"
+  )
+  for tool_entry in "${OPTIONAL_TOOLS[@]}"; do
+    IFS=':' read -r tool_name purpose install_hint <<< "$tool_entry"
+    if command -v "$tool_name" >/dev/null 2>&1; then
+      ver=$("$tool_name" --version 2>/dev/null | head -1 || echo "?")
+      ok "$tool_name ($ver) — $purpose"
+    else
+      warn "$tool_name not found — install: $install_hint"
+      WARN=$((WARN + 1))
+    fi
+  done
+
+  # --- .opk/work/ directory ---
+  echo ""
+  info "Runtime directory check"
+  if [ -d ".opk/work" ]; then
+    work_count=$(find ".opk/work" -maxdepth 1 -type f 2>/dev/null | wc -l)
+    ok ".opk/work/ exists ($work_count files)"
+  else
+    warn ".opk/work/ not found (will be created on first /power-work-lite)"
+    WARN=$((WARN + 1))
+  fi
 fi
 
 # --- Summary ---

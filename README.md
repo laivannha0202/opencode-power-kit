@@ -1,7 +1,7 @@
 # OpenCode Power Kit
 
 [![CI](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.9.3-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](./VERSION)
 [![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
@@ -20,6 +20,7 @@ bash -c 'PROJECT="$PWD"; KIT="$HOME/opencode-power-kit"; if [ -d "$KIT/.git" ]; 
 ```
 
 Sau đó tải lại profile và kiểm tra:
+
 ```bash
 source ~/.bashrc    # or source ~/.zshrc
 opk one             # chạy lại all-in-one bất cứ lúc nào
@@ -34,6 +35,7 @@ powershell -ExecutionPolicy Bypass -Command "$Project=(Get-Location).Path; $KIT=
 ```
 
 Mở cửa sổ **PowerShell mới**, sau đó:
+
 ```powershell
 opk one
 opk.cmd path
@@ -70,7 +72,7 @@ opk up
 opk update
 opk upgrade
 
-# Update + cleanup artifact apply luon
+# Update + cleanup artifact apply luôn
 opk up --clean
 ```
 
@@ -271,6 +273,50 @@ lại**. Phù hợp máy/project cá nhân, workflow nhanh hơn, ít prompt hơn
 
 ---
 
+## OPK Orchestration Lite v2.0.0
+
+Phiên bản gọn, an toàn, Vietnamese-first của khả năng orchestration,
+lấy cảm hứng từ [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)
+nhưng **KHÔNG copy code**, **KHÔNG vendor**, **KHÔNG bật MCP**, **KHÔNG thêm telemetry**.
+
+### Commands mới
+
+| Lệnh | Công dụng |
+|------|----------|
+| `/intent-router` | Phân loại request thành intent, đề xuất agent/workflow phù hợp |
+| `/init-deep-lite` | Khởi tạo project context (AGENTS.md, OPENCODE.md, AI_HANDOFF.md, ...) |
+| `/power-work-lite` | Workflow làm việc dài an toàn: plan → build → verify → evidence |
+| `/continue-work` | Tiếp tục task dang dở từ AI_HANDOFF.md |
+| `/evidence-report` | Tổng hợp evidence report tiếng Việt |
+
+### Khi nào dùng
+
+| Tình huống | Lệnh gợi ý |
+|-----------|-----------|
+| Task > 3 files hoặc > 30 phút | `/power-work-lite` |
+| Request mơ hồ, không biết route đâu | `/intent-router` |
+| Muốn tiếp tục task cũ | `/continue-work` |
+| Cần báo cáo thay đổi | `/evidence-report` |
+| Project mới, cần setup context | `/init-deep-lite` |
+
+### Doctor --deep
+
+```bash
+opk doctor --deep
+```
+
+Mở rộng kiểm tra: Orchestration Lite files, permission mode, MCP, telemetry, optional tools.
+
+### Tại sao KHÔNG auto-enable MCP/telemetry
+
+- **MCP** thêm complexity và security surface — OPK giữ simple
+- **Telemetry** vi phạm privacy — OPK local-first
+- Cả hai đều có thể opt-in riêng nếu user cần
+
+Xem chi tiết: `docs/OPK_ORCHESTRATION_LITE.md`
+
+---
+
 ## Danh sách Agent
 
 ### Core Power Agents
@@ -306,7 +352,12 @@ lại**. Phù hợp máy/project cá nhân, workflow nhanh hơn, ít prompt hơn
 | Lệnh | Công dụng |
 |---------|---------|
 | `/agent-router` | Định tuyến tác vụ tới agent chuyên biệt phù hợp |
+| `/intent-router` | Phân loại request thành intent, đề xuất agent/workflow |
 | `/power-build` | Build đầu cuối: spec → architecture → build → QA → security → release |
+| `/power-work-lite` | Workflow làm việc dài an toàn (plan → build → verify → evidence) |
+| `/continue-work` | Tiếp tục task dang dở từ AI_HANDOFF.md |
+| `/evidence-report` | Tổng hợp evidence report tiếng Việt |
+| `/init-deep-lite` | Khởi tạo project context |
 | `/tooling-doctor` | Phát hiện công cụ bên thứ ba có sẵn |
 
 ### An toàn
@@ -527,6 +578,7 @@ Phù hợp nhất cho project dùng: NestJS backend, React/Vite frontend, MySQL 
 ## How to Update Upstreams
 
 ### Install-time dependencies (BMAD Method)
+
 ```bash
 bash ~/opencode-power-kit/update-bmad.sh
 # Hoặc:
@@ -536,6 +588,7 @@ Cài lại BMAD Method từ npm với version pin hiện tại. Log đầy đủ
 `.opencode-power-bmad-install.log`.
 
 ### Opt-in tools (GSD Core)
+
 ```bash
 opk gsd              # Cài lần đầu
 opk update-gsd       # Cập nhật
@@ -550,6 +603,7 @@ hoặc theo dõi upstream docs. Kit không quản lý Superpowers updates.
 ### Detect-only tools
 Kit không tự cài hay cập nhật detect-only tools. User tự cài bằng
 package manager riêng:
+
 ```bash
 # Ví dụ:
 cargo install ripgrep fd ast-grep
@@ -559,6 +613,7 @@ brew install gitleaks trufflehog semgrep
 `/tooling-doctor` chỉ phát hiện tool nào đã có và gợi ý lệnh cài nếu thiếu.
 
 ### Kit itself
+
 ```bash
 cd ~/opencode-power-kit && git pull --ff-only
 ```

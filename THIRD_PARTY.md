@@ -1,6 +1,6 @@
 # Third-Party Components & Credits
 
-> **Version:** opencode-power-kit v1.9.3
+> **Version:** opencode-power-kit v2.0.0
 >
 > This project packages, configures, and documents workflows around
 > [OpenCode](https://github.com/opencode-ai). It credits upstream authors
@@ -54,6 +54,7 @@
 | NirDiamant/RAG_Techniques | NirDiamant | https://github.com/NirDiamant/RAG_Techniques | Comprehensive RAG tutorial collection — reference for conceptual guidance only | Reference / Learning resource | N/A — no code, no auto-update | Custom (non-commercial) |
 | chopratejas/headroom | chopratejas | https://github.com/chopratejas/headroom | Context/token compression Linux daemon — reference for context window economics, compression strategies, token budget optimization | Inspiration-only / Reference | N/A — no code, no auto-update | Apache-2.0 |
 | rohitg00/agentmemory | rohitg00 | https://github.com/rohitg00/agentmemory | Serverless memory layer for AI agents — reference for memory strategies, context handoff, state persistence, TTL-based memory management | Inspiration-only / Reference | N/A — no code, no auto-update | Apache-2.0 |
+| oh-my-openagent | code-yeongyu | https://github.com/code-yeongyu/oh-my-openagent | Multi-agent orchestration — IntentGate, ultrawork, Prometheus/Atlas, evidence trail | Inspiration-only (concepts) | N/A — no code, no vendor, no dependency | MIT |
 | rtk | rtk-ai | https://github.com/rtk-ai/rtk | Token-saving shell wrapper | Detect-only | User installs separately | MIT |
 | tokscale | — | https://github.com/tokscale/tokscale | Token cost visualization | Detect-only | User installs separately | — |
 | repomix | yamadashy | https://github.com/yamadashy/repomix | Context pack generator | Detect-only | User installs separately | MIT |
@@ -590,6 +591,64 @@ AgentMemory-lite is designed to avoid license conflict with upstream:
 - `opencode-global/commands/agent-router.md` — Routing table includes
   AgentMemory-lite entries
 - Agents never install packages or vendored code directly
+
+---
+
+## 8.11. code-yeongyu/oh-my-openagent — Inspiration-only (Orchestration Concepts)
+
+| Field | Value |
+|-------|-------|
+| Role | Multi-agent orchestration framework — reference for orchestration concepts: IntentGate, ultrawork/ulw-loop, Prometheus/Atlas planning/execution split, evidence trail, deep doctor |
+| Integration | **Inspiration-only (concepts)** — never vendored, never auto-installed, never enabled by default. OPK ships only conceptual docs and OPK-native commands inspired by orchestration patterns — no source code, no binaries, no plugins, no MCP from upstream |
+| Source | https://github.com/code-yeongyu/oh-my-openagent |
+| License | MIT (per upstream) |
+| Kit ships | `docs/OPK_ORCHESTRATION_LITE.md` — OPK Orchestration Lite architecture, comparison table, safety guarantees |
+| | `docs/INSPIRATION_OH_MY_OPENAGENT.md` — detailed inspiration notes, what OPK tham khảo vs KHÔNG tham khảo |
+| | `opencode-global/commands/intent-router.md` — intent classification (inspired by IntentGate) |
+| | `opencode-global/commands/power-work-lite.md` — long work workflow (inspired by ultrawork) |
+| | `opencode-global/commands/continue-work.md` — work continuation (inspired by evidence trail) |
+| | `opencode-global/commands/evidence-report.md` — evidence reporting |
+| | `opencode-global/commands/init-deep-lite.md` — project context initialization |
+| Update path | `git pull` refreshes from OPK repo. No upstream update mechanism — all content is OPK-original. |
+
+### What OPK tham khảo (inspired by)
+
+1. **Intent routing** — classify request before dispatch (from IntentGate)
+2. **Long work loop** — iterate until verify passes (from ultrawork)
+3. **Planning vs execution split** — plan first, then build (from Prometheus/Atlas)
+4. **Evidence trail** — persist state across sessions (from work continuation)
+5. **Deep doctor** — extended system checks (from doctor system)
+
+### What OPK KHÔNG tham khảo
+
+1. Multi-model routing — OPK uses single model
+2. MCP integration — OPK keeps no MCP by default
+3. Gateway/server — OPK is local-first
+4. Team Mode/background agents — OPK uses single agent
+5. Telegram/Discord/Slack — no external integrations
+6. Telemetry — OPK has no usage tracking
+
+### License-safe design
+
+oh-my-openagent-lite is designed to avoid license conflict with upstream:
+
+1. **No source code** from code-yeongyu/oh-my-openagent is shipped.
+2. **No plugins, MCP servers, or hooks** from upstream are shipped.
+3. **No significant text** is copied from upstream documentation.
+4. **All content** is OPK-original — written from general orchestration knowledge.
+5. **Credit is given** in this document and `docs/INSPIRATION_OH_MY_OPENAGENT.md`.
+
+### Safety guarantees
+
+- **No auto-enable** — never installed during any OPK command.
+- **No vendor source** — upstream source never copied into OPK repo.
+- **No runtime code** — all content is markdown docs + OPK-native commands.
+- **No dependency** — no npm, pip, cargo, or any package manager.
+- **No MCP** — no MCP servers or configs.
+- **No telemetry** — no usage tracking or analytics.
+- **No env/secrets** — orchestration commands never read sensitive files.
+- **No network** — all operations are local.
+- **No sudo** — all operations are user-scoped.
 
 ---
 
