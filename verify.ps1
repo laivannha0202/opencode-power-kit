@@ -541,6 +541,50 @@ foreach ($f in @('README.md', 'THIRD_PARTY.md')) {
 }
 Write-Host ''
 
+# ─── v2.0.0: Permission hardening & audit report consistency ─────
+Write-Host '[v2.0.0 Permission & Audit Report Checks]'
+
+# Default template must NOT have bare "permission": "allow"
+$ocJson = Join-Path $KitDir 'templates/opencode.json'
+if (Test-Path -LiteralPath $ocJson -PathType Leaf) {
+    $jsonContent = Get-Content -LiteralPath $ocJson -Raw -ErrorAction SilentlyContinue
+    if ($null -ne $jsonContent -and $jsonContent.Contains('"permission": "allow"')) {
+        Fail 'templates/opencode.json still has bare "permission": "allow"'
+    } else {
+        Ok 'templates/opencode.json: no bare "permission": "allow"'
+    }
+} else {
+    Fail 'templates/opencode.json missing'
+}
+
+# UPSTREAM_AUDIT.md must not have absolute local paths
+$auditPath = Join-Path $KitDir 'docs/UPSTREAM_AUDIT.md'
+if (Test-Path -LiteralPath $auditPath -PathType Leaf) {
+    $auditContent = Get-Content -LiteralPath $auditPath -Raw -ErrorAction SilentlyContinue
+    if ($null -ne $auditContent -and ($auditContent.Contains('/home/') -or $auditContent.Contains('/Users/') -or $auditContent.Contains('C:\'))) {
+        Fail 'docs/UPSTREAM_AUDIT.md contains absolute local path'
+    } else {
+        Ok 'docs/UPSTREAM_AUDIT.md: no absolute local paths'
+    }
+} else {
+    Fail 'docs/UPSTREAM_AUDIT.md missing'
+}
+
+# audit-upstreams.py must have --root, --check, --write
+$auditScript = Join-Path $KitDir 'scripts/audit-upstreams.py'
+if (Test-Path -LiteralPath $auditScript) {
+    $auditHelp = & python3 $auditScript --help 2>&1
+    foreach ($flag in @('--root', '--check', '--write')) {
+        if ($auditHelp -match [regex]::Escape($flag)) {
+            Ok "audit-upstreams.py has $flag flag"
+        } else {
+            Fail "audit-upstreams.py missing $flag flag"
+        }
+    }
+}
+
+Write-Host ''
+
 # ─── v1.6.6: MarkItDown Document Tools ──────────────────────────
 Write-Host '[v1.6.6 MarkItDown Document Tools]'
 Require-Contains 'CHANGELOG.md' '1.6.6'
@@ -606,46 +650,42 @@ try {
 }
 
 # Parse check for install-safety-plugin.ps1
-$installSafetyPs1 = Join-Path $KitDir 'scripts/install-safety-plugin.ps1'
-if (Test-Path -LiteralPath $installSafetyPs1) {
-    try {
-        $errs = $null
-        $null = [System.Management.Automation.Language.Parser]::ParseFile(
-            $installSafetyPs1,
-            [ref]$null,
-            [ref]$errs
-        )
-        if ($errs -and $errs.Count -gt 0) {
-            Fail "scripts/install-safety-plugin.ps1 has parse errors: $($errs[0].Message)"
-        } else {
-            Ok 'scripts/install-safety-plugin.ps1 parses cleanly'
+$psParseFiles = @(
+    'scripts/install-safety-plugin.ps1',
+    'scripts/install-gsd-core.ps1',
+    'scripts/install-markitdown.ps1',
+    'scripts/install-supermemory.ps1',
+    'scripts/install-taste-skill.ps1',
+    'scripts/check-taste-skill.ps1',
+    'scripts/install-fullstack-profile.ps1',
+    'bin/opk.ps1',
+    'install-global.ps1',
+    'bootstrap.ps1',
+    'setup.ps1',
+    'install.ps1',
+    'update-bmad.ps1'
+)
+foreach ($psFile in $psParseFiles) {
+    $psFullPath = Join-Path $KitDir $psFile
+    if (Test-Path -LiteralPath $psFullPath) {
+        try {
+            $errs = $null
+            $null = [System.Management.Automation.Language.Parser]::ParseFile(
+                $psFullPath,
+                [ref]$null,
+                [ref]$errs
+            )
+            if ($errs -and $errs.Count -gt 0) {
+                Fail "$psFile has parse errors: $($errs[0].Message)"
+            } else {
+                Ok "$psFile parses cleanly"
+            }
+        } catch {
+            Fail "$psFile parse threw: $_"
         }
-    } catch {
-        Fail "scripts/install-safety-plugin.ps1 parse threw: $_"
+    } else {
+        Warn "skip pwsh parser: $psFile not found"
     }
-} else {
-    Warn 'skip pwsh parser: scripts/install-safety-plugin.ps1 not found'
-}
-
-$installPs1 = Join-Path $KitDir 'scripts/install-gsd-core.ps1'
-if (Test-Path -LiteralPath $installPs1) {
-    try {
-        $errs = $null
-        $null = [System.Management.Automation.Language.Parser]::ParseFile(
-            $installPs1,
-            [ref]$null,
-            [ref]$errs
-        )
-        if ($errs -and $errs.Count -gt 0) {
-            Fail "scripts/install-gsd-core.ps1 has parse errors: $($errs[0].Message)"
-        } else {
-            Ok 'scripts/install-gsd-core.ps1 parses cleanly'
-        }
-    } catch {
-        Fail "scripts/install-gsd-core.ps1 parse threw: $_"
-    }
-} else {
-    Warn 'skip pwsh parser: scripts/install-gsd-core.ps1 not found'
 }
 Write-Host ''
 

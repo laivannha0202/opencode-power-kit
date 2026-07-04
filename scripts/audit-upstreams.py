@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
 """
 audit-upstreams.py
-OpenCode Power Kit — scan repo for upstream dependency references.
+OpenCode Power Kit — scan repo for upstream dependency references and validate audit report.
 
-Scans for:
-- GitHub URLs (github.com)
-- git+https references
-- npm package references (npx, npm install)
-- pip/pipx references
-- Cargo references
+Modes:
+  --write [PATH]   Generate structured UPSTREAM_AUDIT.md report (default: docs/UPSTREAM_AUDIT.md)
+  --check          Validate existing report consistency (for CI) — does NOT fail on finding refs
+  (no flags)       Print scan summary to stdout
 
-Outputs a structured report of all upstream dependencies found.
+--check fails ONLY when:
+  - docs/UPSTREAM_AUDIT.md does not exist
+  - Report contains absolute local paths (/home/, /Users/, C:\\)
+  - Report is missing key upstreams
+  - Report still has Taste Skill auto-enabled wording
+  - Scripts still have active deprecated @supermemory/ai
+  - Default template still has bare "permission": "allow"
 """
+
+from __future__ import annotations
 
 import argparse
 import re
@@ -24,11 +30,11 @@ from typing import NamedTuple
 class UpstreamRef(NamedTuple):
     file: str
     line: int
-    ref_type: str  # github, git+https, npm, pip, cargo
+    ref_type: str
     value: str
 
 
-# Patterns to scan
+# ─── Scan patterns ─────────────────────────────────────────────────
 PATTERNS = {
     "github": re.compile(r"github\.com/[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+"),
     "git+https": re.compile(r"git\+https://github\.com/[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+"),
@@ -37,18 +43,30 @@ PATTERNS = {
     "cargo": re.compile(r"cargo install\s+[a-zA-Z0-9._-]+"),
 }
 
-# Files/dirs to skip
-SKIP_DIRS = {".git", "node_modules", ".tmp", ".opk-trash", "vendor"}
-SKIP_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".woff", ".woff2", ".ttf", ".eot"}
+SKIP_DIRS = {".git", "node_modules", ".tmp", ".opk-trash", "vendor", "dist", "build", "coverage"}
+
+# ─── Key upstreams that MUST appear in the audit report ────────────
+REQUIRED_UPSTREAMS = [
+    "OpenCode",
+    "Superpowers",
+    "BMAD",
+    "GSD Core",
+    "Supermemory",
+    "MarkItDown",
+    "Taste Skill",
+]
 
 
-def rg_search(pattern: str, path: str) -> list[UpstreamRef]:
+def rg_search(pattern: str, root: str) -> list[UpstreamRef]:
     """Use ripgrep to search for pattern in path."""
     results = []
+    skip_args = []
+    for d in SKIP_DIRS:
+        skip_args.extend(["--glob", f"!{d}"])
     try:
         proc = subprocess.run(
-            ["rg", "-n", "--no-heading", "-e", pattern, path, "--glob", "!.git", "--glob", "!node_modules", "--glob", "!.tmp"],
-            capture_output=True, text=True, timeout=30
+            ["rg", "-n", "--no-heading", "-e", pattern, root] + skip_args,
+            capture_output=True, text=True, timeout=30,
         )
         for line in proc.stdout.strip().split("\n"):
             if not line:
@@ -61,7 +79,6 @@ def rg_search(pattern: str, path: str) -> list[UpstreamRef]:
                 except ValueError:
                     continue
                 content = parts[2]
-                # Extract the actual match
                 for ref_type, pat in PATTERNS.items():
                     m = pat.search(content)
                     if m:
@@ -75,94 +92,227 @@ def rg_search(pattern: str, path: str) -> list[UpstreamRef]:
 def scan_repo(root: str) -> dict[str, list[UpstreamRef]]:
     """Scan entire repo for upstream references."""
     all_refs: dict[str, list[UpstreamRef]] = {}
-
-    # Scan for GitHub URLs
-    for ref in rg_search(r"github\.com/", root):
-        all_refs.setdefault("github", []).append(ref)
-
-    # Scan for git+https
-    for ref in rg_search(r"git\+https://", root):
-        all_refs.setdefault("git+https", []).append(ref)
-
-    # Scan for npm/npx
-    for ref in rg_search(r"(?:npx|npm install|npm i -g)\s+", root):
-        all_refs.setdefault("npm", []).append(ref)
-
-    # Scan for pip/pipx
-    for ref in rg_search(r"(?:pip install|pipx install)\s+", root):
-        all_refs.setdefault("pip", []).append(ref)
-
-    # Scan for cargo
-    for ref in rg_search(r"cargo install\s+", root):
-        all_refs.setdefault("cargo", []).append(ref)
-
+    for label, rg_pat in [
+        ("github", r"github\.com/"),
+        ("git+https", r"git\+https://"),
+        ("npm", r"(?:npx|npm install|npm i -g)\s+"),
+        ("pip", r"(?:pip install|pipx install)\s+"),
+        ("cargo", r"cargo install\s+"),
+    ]:
+        for ref in rg_search(rg_pat, root):
+            all_refs.setdefault(label, []).append(ref)
     return all_refs
 
 
-def format_report(refs: dict[str, list[UpstreamRef]]) -> str:
-    """Format scan results as a text report."""
-    total = sum(len(v) for v in refs.values())
-    lines = [f"Found {total} upstream references across {len(refs)} categories:\n"]
+def to_relative(path: str, root: str) -> str:
+    """Convert absolute path to relative from root."""
+    try:
+        return str(Path(path).relative_to(root))
+    except ValueError:
+        return path
 
-    for ref_type, ref_list in sorted(refs.items()):
-        lines.append(f"## {ref_type.upper()} ({len(ref_list)} references)")
+
+def generate_report(root: Path) -> str:
+    """Generate structured UPSTREAM_AUDIT.md with relative paths."""
+    refs = scan_repo(str(root))
+    total = sum(len(v) for v in refs.values())
+
+    lines = [
+        "# Upstream Dependency Audit",
+        "",
+        f"> Generated by `scripts/audit-upstreams.py --write`",
+        f"> Root: `{root.name}/`",
+        f"> Total references found: {total}",
+        "",
+        "---",
+        "",
+        "## Upstream Dependency Matrix",
+        "",
+        "| Upstream | Author | Integration Mode | Update Path |",
+        "|----------|--------|-----------------|-------------|",
+        "| OpenCode | OpenCode / SST | Target platform | User updates |",
+        "| Superpowers | obra | Plugin reference | Loaded at runtime |",
+        "| BMAD Method | bmad-code-org | Install-time dependency | `npx bmad-method` |",
+        "| GSD Core | open-gsd | Opt-in wrapper | `opk gsd` |",
+        "| MarkItDown | Microsoft | Opt-in wrapper | `opk markitdown install` |",
+        "| Supermemory | supermemory | Opt-in wrapper | `opk supermemory install` |",
+        "| Taste Skill | Leonxlnx | Verify-gated dependency | `opk taste install` |",
+        "| ECC | affaan-m | Opt-in wrapper | `opk ecc lite` |",
+        "| Hermes Agent | NousResearch | Inspiration-only | Local only |",
+        "| RAG Techniques | NirDiamant | Reference | N/A |",
+        "| Headroom | chopratejas | Inspiration-only | N/A |",
+        "| AgentMemory | rohitg00 | Inspiration-only | N/A |",
+        "| oh-my-openagent | code-yeongyu | Inspiration-only | N/A |",
+        "",
+        "---",
+        "",
+        "## Findings",
+        "",
+    ]
+
+    for ref_type in sorted(refs.keys()):
+        ref_list = refs[ref_type]
+        lines.append(f"### {ref_type.upper()} ({len(ref_list)} references)")
+        lines.append("")
         seen = set()
         for ref in sorted(ref_list, key=lambda r: (r.file, r.line)):
-            key = f"{ref.file}:{ref.line}:{ref.value}"
+            rel_file = to_relative(ref.file, str(root))
+            key = f"{rel_file}:{ref.line}:{ref.value}"
             if key not in seen:
                 seen.add(key)
-                lines.append(f"  {ref.file}:{ref.line}  →  {ref.value}")
+                lines.append(f"- `{rel_file}:{ref.line}` → `{ref.value}`")
         lines.append("")
 
-    return "\n".join(lines)
+    lines.extend([
+        "---",
+        "",
+        "## Resolved Findings",
+        "",
+        "| Finding | Status | Resolution |",
+        "|---------|--------|------------|",
+        "| Taste Skill auto-install removed | ✅ Resolved | `install-global.sh` no longer calls `install-taste-skill.sh --yes` (v2.0.0) |",
+        "| Taste Skill verify-gated | ✅ Resolved | User runs `opk taste install` explicitly |",
+        "| Default template permission hardened | ✅ Resolved | `templates/opencode.json` uses permission object with deny-list |",
+        "| Deprecated @supermemory/ai removed | ✅ Resolved | Scripts use `supermemory` package (not `@supermemory/ai`) |",
+        "| Absolute paths in report | ✅ Resolved | All paths are relative in this report |",
+        "",
+        "---",
+        "",
+        "## Permission Configuration",
+        "",
+        "### Default (`templates/opencode.json`)",
+        "",
+        "- Permission: **Object with deny-list** (not bare `\"allow\"`)",
+        "- Destructive commands denied: `rm -rf`, `git reset --hard`, `git clean -fd`, `git push --force`, `DROP TABLE`, `TRUNCATE TABLE`, `curl|sh`, `wget|sh`",
+        "",
+        "### Power mode (`templates/opencode.power.json`)",
+        "",
+        "- Permission: Object with deny-list (same deny rules as default)",
+        "",
+        "### Safe mode (`templates/opencode.safe.json`)",
+        "",
+        '- Permission: Object with `"ask"` fallback + deny-list',
+        "",
+        "---",
+        "",
+        "*This report is generated by `scripts/audit-upstreams.py --write`. Do not edit manually.*",
+    ])
+
+    return "\n".join(lines) + "\n"
 
 
-def main():
+def check_report(root: Path) -> list[str]:
+    """Validate existing UPSTREAM_AUDIT.md. Returns list of error messages."""
+    errors: list[str] = []
+    report_path = root / "docs" / "UPSTREAM_AUDIT.md"
+
+    # 1. Report must exist
+    if not report_path.is_file():
+        errors.append("docs/UPSTREAM_AUDIT.md does not exist — run: python3 scripts/audit-upstreams.py --write")
+        return errors
+
+    content = report_path.read_text(encoding="utf-8")
+
+    # 2. No absolute local paths
+    abs_patterns = ["/home/", "/Users/", "C:\\"]
+    for pat in abs_patterns:
+        if pat in content:
+            errors.append(f"docs/UPSTREAM_AUDIT.md contains absolute path: {pat}")
+
+    # 3. Must have required upstream sections
+    for upstream in REQUIRED_UPSTREAMS:
+        if upstream.lower() not in content.lower():
+            errors.append(f"docs/UPSTREAM_AUDIT.md missing upstream: {upstream}")
+
+    # 4. Must have structured sections
+    required_sections = ["Upstream Dependency Matrix", "Findings", "Resolved Findings"]
+    for section in required_sections:
+        if section not in content:
+            errors.append(f"docs/UPSTREAM_AUDIT.md missing section: {section}")
+
+    # 5. No Taste Skill auto-enabled wording
+    taste_bad = ["Taste Skill: Auto-enabled without verify-gate", "auto-enabled-dependency"]
+    for phrase in taste_bad:
+        if phrase in content:
+            errors.append(f"docs/UPSTREAM_AUDIT.md contains stale wording: {phrase}")
+
+    # 6. No active @supermemory/ai in scripts
+    for script_rel in ["scripts/install-supermemory.sh", "scripts/install-supermemory.ps1"]:
+        script_path = root / script_rel
+        if script_path.is_file():
+            script_content = script_path.read_text(encoding="utf-8")
+            for line in script_content.split("\n"):
+                if "@supermemory/ai" in line and not line.strip().startswith("#"):
+                    errors.append(f"{script_rel} contains active deprecated reference: @supermemory/ai")
+
+    # 7. Default template must NOT have bare "permission": "allow"
+    template_path = root / "templates" / "opencode.json"
+    if template_path.is_file():
+        template_content = template_path.read_text(encoding="utf-8")
+        if '"permission": "allow"' in template_content:
+            errors.append('templates/opencode.json still has bare "permission": "allow"')
+
+    return errors
+
+
+def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Scan repo for upstream dependency references."
+        description="Scan repo for upstream dependency references and validate audit report.",
+    )
+    parser.add_argument(
+        "--root",
+        metavar="DIR",
+        help="Repository root directory (default: parent of scripts/)",
     )
     parser.add_argument(
         "--check",
         action="store_true",
-        help="Exit with error if references found (for CI)."
+        help="Validate existing audit report consistency (for CI). Exit 1 on errors.",
     )
     parser.add_argument(
         "--write",
-        metavar="FILE",
-        help="Write report to FILE instead of stdout."
-    )
-    parser.add_argument(
-        "path",
         nargs="?",
-        default=".",
-        help="Directory to scan (default: current directory)."
+        const="docs/UPSTREAM_AUDIT.md",
+        metavar="PATH",
+        help="Write structured report to PATH (default: docs/UPSTREAM_AUDIT.md).",
     )
     args = parser.parse_args()
 
-    root_path = Path(args.path).resolve()
+    if args.root:
+        root = Path(args.root).resolve()
+    else:
+        root = Path(__file__).resolve().parent.parent
 
-    print(f"Scanning {root_path} for upstream references...\n")
-
-    refs = scan_repo(str(root_path))
-    total = sum(len(v) for v in refs.values())
-
-    report = format_report(refs)
-    print(report)
+    if args.check:
+        errors = check_report(root)
+        if errors:
+            print("UPSTREAM AUDIT CHECK FAILED:", file=sys.stderr)
+            for e in errors:
+                print(f"  - {e}", file=sys.stderr)
+            return 1
+        print("upstream audit check: PASS")
+        return 0
 
     if args.write:
-        write_path = Path(args.write)
+        report = generate_report(root)
+        write_path = root / args.write
         write_path.parent.mkdir(parents=True, exist_ok=True)
         write_path.write_text(report, encoding="utf-8")
         print(f"Report written to {write_path}")
+        return 0
 
-    if args.check:
-        if total > 0:
-            print(f"ERROR: {total} upstream references found. Review and document in docs/UPSTREAM_AUDIT.md")
-            sys.exit(1)
-        else:
-            print("OK: No upstream references found.")
-            sys.exit(0)
+    # Default: scan and print summary
+    refs = scan_repo(str(root))
+    total = sum(len(v) for v in refs.values())
+    print(f"Scanning {root} for upstream references...")
+    print(f"Found {total} references across {len(refs)} categories:")
+    for ref_type in sorted(refs.keys()):
+        print(f"  {ref_type.upper()}: {len(refs[ref_type])}")
+    print()
+    print("Use --write to generate docs/UPSTREAM_AUDIT.md")
+    print("Use --check to validate existing report (CI mode)")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

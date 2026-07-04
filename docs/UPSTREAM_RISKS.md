@@ -7,22 +7,23 @@
 
 ### 1. Permission Risk
 
-**Risk Level:** HIGH
+**Risk Level:** MEDIUM (mitigated)
 
-**Description:** `templates/opencode.json` uses `"permission": "allow"` which grants agent full access without prompts.
+**Description:** `templates/opencode.json` uses a permission object with deny-list. Default mode grants broad access but denies destructive commands.
 
 **Impact:**
-- Agent can execute any bash command without user confirmation
-- Agent can modify any file without permission prompt
-- No sandboxing for destructive operations
+- Agent can execute most bash commands without user confirmation
+- Destructive commands (rm -rf, git reset --hard, etc.) are denied
+- Safe mode available with granular `"ask"` fallback
 
 **Mitigation:**
+- Permission object with deny-list in all templates (default, power, safe)
+- Destructive commands denied: `rm -rf`, `git reset --hard`, `git clean -fd`, `git push --force`, `DROP TABLE`, `TRUNCATE TABLE`, `curl|sh`, `wget|sh`
 - Safety rules enforced via instruction rules (AGENTS.md)
 - Safety plugin guard available (`opk safety-plugin install`)
-- Power mode recommended only for trusted-local environments
-- Safe mode available with granular permission object
+- Safe mode (`opencode.safe.json`) uses `"ask"` fallback for write/edit/bash
 
-**Recommendation:** Add deny-list for destructive commands even in power mode.
+**Recommendation:** Use safe mode in shared environments. Default mode suitable for trusted-local use only.
 
 ### 2. Auto-Install Risk
 

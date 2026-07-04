@@ -769,6 +769,52 @@ def validate_version() -> list[str]:
             else:
                 ok(f"{rel}: no current-state auto-enabled wording '{phrase}'")
 
+    # v2.0.0: Permission hardening — no bare "permission": "allow" in default template
+    print("[v2.0.0 Permission hardening]")
+    default_template = KIT_ROOT / "templates" / "opencode.json"
+    if default_template.is_file():
+        dt_content = default_template.read_text(encoding="utf-8")
+        if '"permission": "allow"' in dt_content:
+            errors.append('templates/opencode.json still has bare "permission": "allow"')
+        else:
+            ok('templates/opencode.json: no bare "permission": "allow"')
+    else:
+        errors.append("templates/opencode.json missing")
+
+    # v2.0.0: UPSTREAM_AUDIT.md — no absolute local paths
+    print("[v2.0.0 UPSTREAM_AUDIT absolute paths]")
+    audit_path = KIT_ROOT / "docs" / "UPSTREAM_AUDIT.md"
+    if audit_path.is_file():
+        audit_content = audit_path.read_text(encoding="utf-8")
+        abs_found = False
+        for pat in ("/home/", "/Users/", "C:\\"):
+            if pat in audit_content:
+                errors.append(f"docs/UPSTREAM_AUDIT.md contains absolute path: {pat}")
+                abs_found = True
+        if not abs_found:
+            ok("docs/UPSTREAM_AUDIT.md: no absolute local paths")
+        # Must have structured sections
+        for section in ("Upstream Dependency Matrix", "Findings", "Resolved Findings"):
+            if section in audit_content:
+                ok(f"docs/UPSTREAM_AUDIT.md has section: {section}")
+            else:
+                errors.append(f"docs/UPSTREAM_AUDIT.md missing section: {section}")
+    else:
+        errors.append("docs/UPSTREAM_AUDIT.md missing")
+
+    # v2.0.0: audit-upstreams.py must have proper argparse flags
+    print("[v2.0.0 audit-upstreams.py argparse]")
+    audit_script = KIT_ROOT / "scripts" / "audit-upstreams.py"
+    if audit_script.is_file():
+        script_content = audit_script.read_text(encoding="utf-8")
+        for flag in ("--root", "--check", "--write"):
+            if flag in script_content:
+                ok(f"audit-upstreams.py has {flag} flag")
+            else:
+                errors.append(f"audit-upstreams.py missing {flag} flag")
+    else:
+        errors.append("scripts/audit-upstreams.py missing")
+
     return errors
 
 

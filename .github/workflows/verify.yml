@@ -67,7 +67,24 @@ jobs:
         run: |
           set -euo pipefail
           pwsh -NoProfile -Command "
-            foreach (\$f in @('verify.ps1', 'scripts/install-gsd-core.ps1')) {
+            \$psFiles = @(
+              'verify.ps1',
+              'bin/opk.ps1',
+              'install-global.ps1',
+              'bootstrap.ps1',
+              'setup.ps1',
+              'install.ps1',
+              'update-bmad.ps1',
+              'scripts/install-gsd-core.ps1',
+              'scripts/install-markitdown.ps1',
+              'scripts/install-supermemory.ps1',
+              'scripts/install-taste-skill.ps1',
+              'scripts/check-taste-skill.ps1',
+              'scripts/install-safety-plugin.ps1',
+              'scripts/install-fullstack-profile.ps1'
+            )
+            foreach (\$f in \$psFiles) {
+              if (-not (Test-Path \$f)) { continue }
               \$errs = \$null
               [System.Management.Automation.Language.Parser]::ParseFile(\$f, [ref]\$null, [ref]\$errs) | Out-Null
               if (\$errs -and \$errs.Count -gt 0) {

@@ -885,6 +885,50 @@ fi
 
 echo
 
+# ─── v2.0.0: Permission hardening & audit report consistency ──────
+echo "[v2.0.0 Permission & Audit Report Checks]"
+
+# Default template must NOT have bare "permission": "allow"
+if grep -q '"permission": "allow"' "templates/opencode.json"; then
+	fail 'templates/opencode.json still has bare "permission": "allow"'
+else
+	ok 'templates/opencode.json: no bare "permission": "allow"'
+fi
+
+# UPSTREAM_AUDIT.md must not have absolute local paths
+if grep -q '/home/' "docs/UPSTREAM_AUDIT.md" 2>/dev/null || grep -q '/Users/' "docs/UPSTREAM_AUDIT.md" 2>/dev/null || grep -q "C:\\" "docs/UPSTREAM_AUDIT.md" 2>/dev/null; then
+	fail "docs/UPSTREAM_AUDIT.md contains absolute local path"
+else
+	ok "docs/UPSTREAM_AUDIT.md: no absolute local paths"
+fi
+
+# audit-upstreams.py must have --root, --check, --write
+if python3 scripts/audit-upstreams.py --help 2>&1 | grep -q '\-\-root'; then
+	ok "audit-upstreams.py has --root flag"
+else
+	fail "audit-upstreams.py missing --root flag"
+fi
+if python3 scripts/audit-upstreams.py --help 2>&1 | grep -q '\-\-check'; then
+	ok "audit-upstreams.py has --check flag"
+else
+	fail "audit-upstreams.py missing --check flag"
+fi
+if python3 scripts/audit-upstreams.py --help 2>&1 | grep -q '\-\-write'; then
+	ok "audit-upstreams.py has --write flag"
+else
+	fail "audit-upstreams.py missing --write flag"
+fi
+
+# audit-upstreams.py --check must NOT fail just because refs exist
+# (it should only fail for report consistency issues)
+if python3 scripts/audit-upstreams.py --check 2>&1 | grep -q "PASS"; then
+	ok "audit-upstreams.py --check passes (does not fail on upstream refs)"
+else
+	fail "audit-upstreams.py --check should pass when report is consistent"
+fi
+
+echo
+
 # ─── Script sanity (shellcheck optional, syntax required) ─────────
 echo "[script sanity]"
 SCRIPTS_TO_CHECK=(
@@ -938,7 +982,19 @@ echo "[powershell parser]"
 if command -v pwsh >/dev/null 2>&1; then
 	PS_FILES=(
 		"verify.ps1"
+		"bin/opk.ps1"
+		"install-global.ps1"
+		"bootstrap.ps1"
+		"setup.ps1"
+		"install.ps1"
+		"update-bmad.ps1"
 		"scripts/install-gsd-core.ps1"
+		"scripts/install-markitdown.ps1"
+		"scripts/install-supermemory.ps1"
+		"scripts/install-taste-skill.ps1"
+		"scripts/check-taste-skill.ps1"
+		"scripts/install-safety-plugin.ps1"
+		"scripts/install-fullstack-profile.ps1"
 	)
 	for ps in "${PS_FILES[@]}"; do
 		if [[ -f "${ps}" ]]; then
