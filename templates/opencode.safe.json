@@ -8,6 +8,7 @@
     "OPENCODE.md"
   ],
   "permission": {
+    "*": "ask",
     "read": "allow",
     "grep": "allow",
     "glob": "allow",
@@ -15,7 +16,32 @@
     "search": "allow",
     "write": "ask",
     "edit": "ask",
-    "bash": "ask",
+    "bash": {
+      "pwd": "allow",
+      "ls *": "allow",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "rg *": "allow",
+      "fd *": "allow",
+      "cat *": "ask",
+      "npm test*": "ask",
+      "npm run test*": "ask",
+      "npm run lint*": "ask",
+      "npm run typecheck*": "ask",
+      "python3 scripts/validate-opencode-pack.py*": "allow",
+      "bash verify.sh*": "ask",
+      "bash doctor.sh*": "ask",
+      "rm -rf*": "deny",
+      "git reset --hard*": "deny",
+      "git clean -fd*": "deny",
+      "git push --force*": "deny",
+      "DROP TABLE*": "deny",
+      "TRUNCATE TABLE*": "deny",
+      "curl *| sh": "deny",
+      "wget *| sh": "deny",
+      "*": "ask"
+    },
     "task": "ask"
   }
 }

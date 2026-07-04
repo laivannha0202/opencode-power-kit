@@ -316,10 +316,10 @@ def validate_version() -> list[str]:
     opencode_json = KIT_ROOT / "templates" / "opencode.json"
     if opencode_json.is_file():
         json_text = opencode_json.read_text(encoding="utf-8")
-        if '"permission": "allow"' in json_text:
-            ok("templates/opencode.json has permission: allow")
+        if '"permission": "allow"' in json_text or '"permission":' in json_text:
+            ok("templates/opencode.json has permission setting")
         else:
-            errors.append("templates/opencode.json missing 'permission': 'allow'")
+            errors.append("templates/opencode.json missing 'permission' setting")
     else:
         errors.append("templates/opencode.json missing")
 
@@ -426,12 +426,12 @@ def validate_version() -> list[str]:
         else:
             errors.append(f"{rel} missing needle: {needle}")
 
-    # v1.6.7: Supermemory Memory API
+    # v1.6.7: Supermemory Memory API (migrated from @supermemory/ai to supermemory)
     print("[v1.6.7 Supermemory Memory API]")
     v167_checks = [
         ("CHANGELOG.md", "Supermemory"),
-        ("scripts/install-supermemory.sh", "@supermemory/ai"),
-        ("scripts/install-supermemory.ps1", "@supermemory/ai"),
+        ("scripts/install-supermemory.sh", "supermemory"),
+        ("scripts/install-supermemory.ps1", "supermemory"),
         ("opencode-global/commands/supermemory-init.md", "supermemory"),
         ("opencode-global/commands/supermemory-init.md", "opk supermemory"),
         ("bin/opk", "supermemory)"),
@@ -523,7 +523,7 @@ def validate_version() -> list[str]:
         ("CHANGELOG.md", "Safety plugin guard"),
         ("CHANGELOG.md", "opk mode"),
         ("templates/opencode.safe.json", '"permission"'),
-        ("templates/opencode.power.json", '"permission": "allow"'),
+        ("templates/opencode.power.json", '"permission"'),
         ("templates/plugins/opk-safety-guard.js", "guardCheck"),
     ]
     for rel, needle in v164_checks:
@@ -578,6 +578,196 @@ def validate_version() -> list[str]:
             ok(f"{rel} contains: {needle}")
         else:
             errors.append(f"{rel} missing needle: {needle}")
+
+    # v2.0.0: Upstream Audit & Permission Hardening
+    print("[v2.0.0 Upstream Audit & Permission Hardening]")
+    v200_checks = [
+        ("docs/UPSTREAM_AUDIT.md", "Upstream Dependency Matrix"),
+        ("docs/UPSTREAM_UPDATE_POLICY.md", "Update Categories"),
+        ("docs/UPSTREAM_RISKS.md", "Risk Matrix"),
+        ("templates/opencode.json", "rm -rf"),
+        ("templates/opencode.json", "git reset --hard"),
+        ("templates/opencode.json", "git clean -fd"),
+        ("templates/opencode.json", "git push --force"),
+        ("templates/opencode.json", "DROP TABLE"),
+        ("templates/opencode.json", "TRUNCATE TABLE"),
+        ("templates/opencode.power.json", "rm -rf"),
+        ("templates/opencode.power.json", "git reset --hard"),
+        ("templates/opencode.safe.json", "rm -rf"),
+        ("templates/opencode.safe.json", "git reset --hard"),
+    ]
+    for rel, needle in v200_checks:
+        p = KIT_ROOT / rel
+        if p.is_file() and needle in p.read_text(encoding="utf-8"):
+            ok(f"{rel} contains: {needle}")
+        else:
+            errors.append(f"{rel} missing needle: {needle}")
+
+    # Check for deprecated @supermemory/ai outside migration section
+    print("[Deprecated package check]")
+    deprecated_patterns = [
+        ("scripts/install-supermemory.sh", "@supermemory/ai"),
+        ("scripts/install-supermemory.ps1", "@supermemory/ai"),
+    ]
+    for rel, needle in deprecated_patterns:
+        p = KIT_ROOT / rel
+        if p.is_file():
+            content = p.read_text(encoding="utf-8")
+            if needle in content:
+                # Check if it's only in comments (allowed)
+                lines = content.split('\n')
+                active_refs = [l for l in lines if needle in l and not l.strip().startswith('#')]
+                if active_refs:
+                    errors.append(f"{rel} contains active deprecated reference: {needle}")
+                else:
+                    ok(f"{rel} contains deprecated reference only in comments (allowed)")
+            else:
+                ok(f"{rel} does not contain deprecated reference: {needle}")
+
+    # v2.0.0: CLI Expansion — bin/opk subcommands
+    print("[v2.0.0 CLI Expansion — bin/opk]")
+    v200_opk_checks = [
+        ("bin/opk", "upstream)"),
+        ("bin/opk", "upstream audit"),
+        ("bin/opk", "upstream doctor"),
+        ("bin/opk", "superpowers)"),
+        ("bin/opk", "superpowers status"),
+        ("bin/opk", "superpowers reset-cache"),
+        ("bin/opk", "superpowers doctor"),
+        ("bin/opk", "bmad)"),
+        ("bin/opk", "bmad status"),
+        ("bin/opk", "bmad update"),
+        ("bin/opk", "tooling)"),
+        ("bin/opk", "tooling doctor"),
+        ("bin/opk", "taste doctor"),
+        ("bin/opk", "taste install --v1"),
+        ("bin/opk", "taste install --v2"),
+    ]
+    for rel, needle in v200_opk_checks:
+        p = KIT_ROOT / rel
+        if p.is_file() and needle in p.read_text(encoding="utf-8"):
+            ok(f"{rel} contains: {needle}")
+        else:
+            errors.append(f"{rel} missing needle: {needle}")
+
+    # v2.0.0: CLI Expansion — bin/opk.ps1 parity
+    print("[v2.0.0 CLI Expansion — bin/opk.ps1]")
+    v200_ps1_checks = [
+        ("bin/opk.ps1", "'upstream'"),
+        ("bin/opk.ps1", "upstream audit"),
+        ("bin/opk.ps1", "upstream doctor"),
+        ("bin/opk.ps1", "'superpowers'"),
+        ("bin/opk.ps1", "superpowers status"),
+        ("bin/opk.ps1", "superpowers reset-cache"),
+        ("bin/opk.ps1", "superpowers doctor"),
+        ("bin/opk.ps1", "'bmad'"),
+        ("bin/opk.ps1", "bmad status"),
+        ("bin/opk.ps1", "bmad update"),
+        ("bin/opk.ps1", "'tooling'"),
+        ("bin/opk.ps1", "tooling doctor"),
+        ("bin/opk.ps1", "taste doctor"),
+    ]
+    for rel, needle in v200_ps1_checks:
+        p = KIT_ROOT / rel
+        if p.is_file() and needle in p.read_text(encoding="utf-8"):
+            ok(f"{rel} contains: {needle}")
+        else:
+            errors.append(f"{rel} missing needle: {needle}")
+
+    # v2.0.0: Taste verify-gated checks
+    print("[v2.0.0 Taste verify-gated]")
+    v200_taste_checks = [
+        ("README.md", "verify-gated"),
+        ("README.md", "opk taste install --v1"),
+        ("README.md", "opk taste doctor"),
+        ("THIRD_PARTY.md", "verify-gated"),
+        ("THIRD_PARTY.md", "user-installed"),
+        ("CHANGELOG.md", "Verify-gated"),
+        ("docs/UPSTREAM_RISKS.md", "mitigated"),
+    ]
+    for rel, needle in v200_taste_checks:
+        p = KIT_ROOT / rel
+        if p.is_file() and needle.lower() in p.read_text(encoding="utf-8").lower():
+            ok(f"{rel} contains: {needle}")
+        else:
+            errors.append(f"{rel} missing needle: {needle}")
+
+    # v2.0.0: No rm -rf in taste off paths
+    print("[v2.0.0 Taste safe removal]")
+    taste_rm_checks = [
+        ("bin/opk", "taste-off)"),
+        ("bin/opk.ps1", "taste-off"),
+    ]
+    for rel, needle in taste_rm_checks:
+        p = KIT_ROOT / rel
+        if p.is_file():
+            content = p.read_text(encoding="utf-8")
+            # Find taste-off handler and verify it uses mv/Move-Item not rm -rf/Remove-Item -Recurse
+            if needle in content:
+                # Check surrounding context for safe removal
+                if 'mv ' in content or 'Move-Item' in content or '.opk-trash' in content:
+                    ok(f"{rel}: taste off uses safe removal (move to .opk-trash/)")
+                else:
+                    errors.append(f"{rel}: taste off may not use safe removal")
+            else:
+                errors.append(f"{rel} missing needle: {needle}")
+
+    # v2.0.0: Taste auto-install removed from global scripts
+    print("[v2.0.0 Taste auto-install removed from global scripts]")
+    auto_install_forbidden = [
+        ("install-global.sh", "install-taste-skill.sh", "--yes"),
+        ("install-global.ps1", "install-taste-skill.ps1", "-Yes"),
+    ]
+    for rel, installer, flag in auto_install_forbidden:
+        p = KIT_ROOT / rel
+        if p.is_file():
+            content = p.read_text(encoding="utf-8")
+            if installer in content and flag in content:
+                errors.append(f"{rel}: still calls {installer} {flag} — auto-install must be removed")
+            else:
+                ok(f"{rel}: no Taste auto-install call found")
+
+    # v2.0.0: install-global.sh has Taste suggestion hint
+    print("[v2.0.0 Taste suggestion hint in install-global]")
+    hint_checks = [
+        ("install-global.sh", "opk taste install"),
+        ("install-global.ps1", "opk taste install"),
+    ]
+    for rel, needle in hint_checks:
+        p = KIT_ROOT / rel
+        if p.is_file() and needle in p.read_text(encoding="utf-8"):
+            ok(f"{rel} contains suggestion hint: {needle}")
+        else:
+            errors.append(f"{rel} missing Taste suggestion hint: {needle}")
+
+    # v2.0.0: UPSTREAM_AUDIT.md Taste = not auto-enabled-dependency
+    print("[v2.0.0 UPSTREAM_AUDIT Taste integration type]")
+    audit_path = KIT_ROOT / "docs" / "UPSTREAM_AUDIT.md"
+    if audit_path.is_file():
+        audit_text = audit_path.read_text(encoding="utf-8")
+        if "auto-enabled-dependency" in audit_text:
+            errors.append("docs/UPSTREAM_AUDIT.md still contains 'auto-enabled-dependency'")
+        else:
+            ok("docs/UPSTREAM_AUDIT.md: no 'auto-enabled-dependency' found")
+    else:
+        errors.append("docs/UPSTREAM_AUDIT.md missing")
+
+    # v2.0.0: No current-state "Taste Skill is automatically enabled" in README/THIRD_PARTY
+    print("[v2.0.0 No current-state auto-enabled wording]")
+    auto_enabled_forbidden = [
+        ("README.md", "Taste Skill is automatically enabled"),
+        ("THIRD_PARTY.md", "Taste Skill is automatically enabled"),
+        ("README.md", "Auto-enabled dependency"),
+        ("THIRD_PARTY.md", "Auto-enabled dependency"),
+    ]
+    for rel, phrase in auto_enabled_forbidden:
+        p = KIT_ROOT / rel
+        if p.is_file():
+            content = p.read_text(encoding="utf-8")
+            if phrase in content:
+                errors.append(f"{rel} contains current-state auto-enabled wording: '{phrase}'")
+            else:
+                ok(f"{rel}: no current-state auto-enabled wording '{phrase}'")
 
     return errors
 

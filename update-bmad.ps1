@@ -3,7 +3,7 @@
 # Mirror update-bmad.sh: cài lại / cập nhật BMAD Method cho project hiện tại.
 #
 # Env overrides:
-#   $env:BMAD_METHOD_VERSION  Pin version BMAD (mặc định: 6.8.0)
+#   $env:BMAD_METHOD_VERSION  Pin version BMAD (mặc định: 6.9.0)
 #   $env:OPK_USER_NAME        Tên user cho BMAD output
 #                             (fallback: git config user.name -> USERNAME -> 'User')
 # ============================================================================
@@ -12,9 +12,9 @@ param()
 
 $ErrorActionPreference = 'Stop'
 
-# --- BMAD Method version (env override, default 6.8.0) ---
+# --- BMAD Method version (env override, default 6.9.0) ---
 if (-not $env:BMAD_METHOD_VERSION -or [string]::IsNullOrWhiteSpace($env:BMAD_METHOD_VERSION)) {
-    $env:BMAD_METHOD_VERSION = '6.8.0'
+    $env:BMAD_METHOD_VERSION = '6.9.0'
 }
 $BmadVersion = $env:BMAD_METHOD_VERSION
 

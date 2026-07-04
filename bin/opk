@@ -2,7 +2,7 @@
 # ============================================================================
 # OpenCode Power Kit - opk CLI wrapper
 # Thin wrapper gọi lại các script có sẵn trong kit. Không duplicate logic.
-# v1.6.5: thêm subcommands up/update/upgrade/clean (One Command Update & Cleanup).
+# v2.0.0: thêm upstream/superpowers/bmad/tooling/taste subcommands.
 #
 # Usage:
 #   opk help
@@ -30,6 +30,11 @@
 #   opk mode power    # chuyển sang Power Mode (permission: allow)
 #   opk mode safe     # chuyển sang Safe Mode (permission object)
 #   opk safety-plugin # quản lý safety plugin guard
+#   opk upstream      # upstream audit/doctor
+#   opk superpowers   # superpowers status/reset-cache/doctor
+#   opk bmad          # bmad status/update
+#   opk tooling       # tooling doctor
+#   opk taste         # taste install/status/doctor
 # ============================================================================
 set -euo pipefail
 
@@ -172,10 +177,13 @@ opk — OpenCode Power Kit CLI (v$VERSION)
   opk supermemory init      Init Supermemory (yêu cầu đã cài)
   opk supermemory init-help Xem upstream init --help (không cần cài)
 
-  v1.7.0 — Taste Skill (tự động bật khi cài global / one / go / bootstrap --all):
+  v1.7.0 — Taste Skill (optional, verify-gated):
   opk taste install          Cài Taste Skill (npx — dry-run + confirm)
+  opk taste install --v1     Cài Taste Skill v1 (legacy)
+  opk taste install --v2     Cài Taste Skill v2 (default)
   opk taste status           Kiểm tra Taste Skill đã cài chưa
-  opk taste off              Tắt Taste Skill (xóa skill file)
+  opk taste doctor           Kiểm tra runtime dependencies
+  opk taste off              Gỡ Taste Skill (an toàn: move to .opk-trash/)
   opk taste                  Alias: opk taste status
   opk update-taste           Refresh Taste Skill
   opk taste-status           Kiểm tra nhanh (shortcut)
@@ -194,6 +202,21 @@ opk — OpenCode Power Kit CLI (v$VERSION)
   opk hermes status    Check Hermes-lite installation status
   opk hermes capsule   Package learnings into capsule file
   opk hermes off       Remove Hermes-lite components
+
+  v2.0.0 — Upstream Audit & Tooling:
+  opk upstream audit         Scan repo for upstream refs (audit-upstreams.py)
+  opk upstream audit --check CI mode (exit 1 if issues found)
+  opk upstream audit --write Write docs/UPSTREAM_AUDIT.md
+  opk upstream doctor        Run audit + validator + check docs
+  opk superpowers status     Check superpowers plugin status
+  opk superpowers reset-cache Clear superpowers cache (manual instructions)
+  opk superpowers reset-cache --yes  Auto-clear (safe: move to .opk-trash/)
+  opk superpowers doctor     Full superpowers diagnosis + Windows fallback
+  opk bmad status            Show BMAD version pin + runtime check
+  opk bmad update --stable   Update BMAD (pinned: 6.9.0)
+  opk bmad update --next     Update BMAD (experimental)
+  opk bmad update --version X.Y.Z  Pin BMAD to specific version
+  opk tooling doctor         Detect + suggest install for dev tools
 
 Flags chung (forward cho sub-script):
   --yes   skip confirm
@@ -627,15 +650,294 @@ EOF
     esac
     ;;
 
-  # ─── v1.7.0 Taste Skill (auto-enabled on install) ─────────────
+  # ─── v2.0.0 Upstream Audit & Management ──────────────────────────
+  upstream)
+    up_cmd="${1:-audit}"
+    shift || true
+    case "$up_cmd" in
+      audit)
+        audit_py="$KIT_DIR/scripts/audit-upstreams.py"
+        require_file "$audit_py"
+        if [[ "${1:-}" == "--check" ]]; then
+          exec python3 "$audit_py" --check
+        elif [[ "${1:-}" == "--write" ]]; then
+          shift || true
+          outfile="${1:-docs/UPSTREAM_AUDIT.md}"
+          echo "opk: Writing upstream audit to $outfile"
+          exec python3 "$audit_py" --write "$outfile"
+        else
+          exec python3 "$audit_py"
+        fi
+        ;;
+      doctor)
+        echo "opk: === Upstream Doctor ==="
+        echo ""
+        # Run audit check
+        audit_py="$KIT_DIR/scripts/audit-upstreams.py"
+        if [ -f "$audit_py" ]; then
+          echo "opk: [1/2] Running upstream audit..."
+          python3 "$audit_py" --check && echo "opk: ✅ Audit check passed" || echo "opk: ⚠️ Audit check found issues"
+          echo ""
+        fi
+        # Run validator
+        validator="$KIT_DIR/scripts/validate-opencode-pack.py"
+        if [ -f "$validator" ]; then
+          echo "opk: [2/2] Running pack validator..."
+          python3 "$validator" && echo "opk: ✅ Validator passed" || echo "opk: ⚠️ Validator found issues"
+          echo ""
+        fi
+        # Summary
+        echo "opk: Upstream docs:"
+        for doc in UPSTREAM_AUDIT.md UPSTREAM_UPDATE_POLICY.md UPSTREAM_RISKS.md; do
+          if [ -f "$KIT_DIR/docs/$doc" ]; then
+            echo "opk:   ✅ docs/$doc"
+          else
+            echo "opk:   ❌ docs/$doc missing"
+          fi
+        done
+        ;;
+      *)
+        echo "opk: upstream: lệnh không hợp lệ '$up_cmd'. Dùng: audit, audit --check, doctor" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+
+  # ─── v2.0.0 Superpowers Status & Cache ──────────────────────────
+  superpowers)
+    sp_cmd="${1:-status}"
+    shift || true
+    case "$sp_cmd" in
+      status)
+        echo "opk: === Superpowers Status ==="
+        echo ""
+        # Check template plugin reference
+        template_file="$KIT_DIR/templates/opencode.json"
+        if [ -f "$template_file" ] && grep -q "superpowers@git+https://github.com/obra/superpowers.git" "$template_file" 2>/dev/null; then
+          echo "opk: ✅ Template plugin reference: superpowers@git+https://github.com/obra/superpowers.git"
+        else
+          echo "opk: ❌ Template missing superpowers plugin reference"
+        fi
+        # Check project config
+        proj_config=""
+        if [ -f ".opencode/opencode.json" ]; then
+          proj_config=".opencode/opencode.json"
+        elif [ -f "opencode.json" ]; then
+          proj_config="opencode.json"
+        fi
+        if [ -n "$proj_config" ] && grep -q "superpowers@git+https://github.com/obra/superpowers.git" "$proj_config" 2>/dev/null; then
+          echo "opk: ✅ Project config ($proj_config) has superpowers plugin"
+        elif [ -n "$proj_config" ]; then
+          echo "opk: ⚠️ Project config ($proj_config) missing superpowers plugin"
+        else
+          echo "opk: ℹ️ No project opencode.json found (using template defaults)"
+        fi
+        # Check opencode on PATH
+        if command -v opencode >/dev/null 2>&1; then
+          echo "opk: ✅ opencode found on PATH: $(command -v opencode)"
+        else
+          echo "opk: ⚠️ opencode not found on PATH"
+        fi
+        echo ""
+        echo "opk: Superpowers is loaded at runtime by OpenCode plugin system."
+        echo "opk: To update, update OpenCode or follow upstream docs."
+        ;;
+      reset-cache)
+        echo "opk: === Superpowers Cache Reset ==="
+        echo ""
+        echo "Superpowers cache is managed by OpenCode's plugin system."
+        echo "To reset the cache manually:"
+        echo ""
+        echo "  1. Find the OpenCode cache directory:"
+        echo "     ls ~/.cache/opencode/packages/ 2>/dev/null || ls ~/.local/share/opencode/packages/ 2>/dev/null"
+        echo ""
+        echo "  2. Remove the superpowers package cache:"
+        echo "     rm -rf ~/.cache/opencode/packages/superpowers*"
+        echo ""
+        echo "  3. Or use OpenCode's built-in cache management if available."
+        echo ""
+        if [[ "${1:-}" == "--yes" ]]; then
+          echo "opk: --yes specified, attempting safe cache clear..."
+          cache_dir="${HOME}/.cache/opencode/packages"
+          if [ -d "$cache_dir" ]; then
+            trash_dir="${KIT_DIR}/.opk-trash/cache-reset-$(date +%Y%m%d-%H%M%S)"
+            mkdir -p "$trash_dir"
+            for d in "$cache_dir"/superpowers*; do
+              if [ -d "$d" ]; then
+                mv "$d" "$trash_dir/" 2>/dev/null && echo "opk: Moved $(basename "$d") -> $trash_dir/" || echo "opk: Could not move $(basename "$d")"
+              fi
+            done
+            echo "opk: ✅ Cache cleared (moved to $trash_dir)"
+          else
+            echo "opk: No OpenCode cache directory found at $cache_dir"
+          fi
+        else
+          echo "opk: Run with --yes to auto-clear (safe: moves to .opk-trash/)"
+        fi
+        ;;
+      doctor)
+        echo "opk: === Superpowers Doctor ==="
+        echo ""
+        # Run status check
+        "$0" superpowers status
+        echo ""
+        # Windows fallback guidance
+        echo "opk: Windows fallback (if git+https fails):"
+        echo "  1. Use WSL or Git Bash"
+        echo "  2. Or set plugin path manually in opencode.json:"
+        printf '     "plugin": ["superpowers@C:\\path\\to\\superpowers"]\n'
+        echo "  3. Or install via npm: npm install -g superpowers"
+        echo ""
+        echo "opk: Common issues:"
+        echo "  - git+https requires git on PATH"
+        echo "  - Corporate proxy may block GitHub access"
+        echo "  - Try: git ls-remote https://github.com/obra/superpowers.git"
+        ;;
+      *)
+        echo "opk: superpowers: lệnh không hợp lệ '$sp_cmd'. Dùng: status, reset-cache, doctor" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+
+  # ─── v2.0.0 BMAD Method Management ──────────────────────────────
+  bmad)
+    bmad_cmd="${1:-status}"
+    shift || true
+    case "$bmad_cmd" in
+      status)
+        echo "opk: === BMAD Method Status ==="
+        echo ""
+        # Current version pin
+        bmad_version="${BMAD_METHOD_VERSION:-6.9.0}"
+        echo "opk: BMAD_METHOD_VERSION = $bmad_version"
+        echo "opk: (override via: export BMAD_METHOD_VERSION=x.y.z)"
+        echo ""
+        # Check .bmad/ directory
+        if [ -d ".bmad" ]; then
+          echo "opk: ✅ .bmad/ directory found in project"
+          find .bmad/ -maxdepth 1 -type f 2>/dev/null | head -5
+        else
+          echo -e "opk: ℹ️ No .bmad/ directory in current project"
+        fi
+        echo ""
+        # Check node/npm/npx
+        echo "opk: Runtime check:"
+        for tool in node npm npx; do
+          if command -v "$tool" >/dev/null 2>&1; then
+            ver=""
+            case "$tool" in
+              node) ver="$(node --version 2>&1)" ;;
+            esac
+            echo "opk:   ✅ $tool $(command -v $tool) $ver"
+          else
+            echo "opk:   ❌ $tool not found"
+          fi
+        done
+        echo ""
+        echo "opk: BMAD docs: https://github.com/bmad-code-org/BMAD-METHOD"
+        ;;
+      update)
+        update_cmd="${1:---stable}"
+        shift || true
+        require_file "$KIT_DIR/update-bmad.sh"
+        case "$update_cmd" in
+          --stable)
+            echo "opk: Updating BMAD Method (stable pin: 6.9.0)..."
+            BMAD_METHOD_VERSION=6.9.0 exec bash "$KIT_DIR/update-bmad.sh" "$@"
+            ;;
+          --next)
+            echo "opk: Updating BMAD Method (next/experimental)..."
+            BMAD_METHOD_VERSION=next exec bash "$KIT_DIR/update-bmad.sh" "$@"
+            ;;
+          --version)
+            ver="${1:-}"
+            if [ -z "$ver" ]; then
+              err "opk bmad update --version requires a version (e.g. --version 6.10.0)"
+            fi
+            echo "opk: Updating BMAD Method (pinned: $ver)..."
+            BMAD_METHOD_VERSION="$ver" exec bash "$KIT_DIR/update-bmad.sh" "$@"
+            ;;
+          *)
+            err "opk bmad update: flag không hợp lệ '$update_cmd'. Dùng: --stable, --next, --version <x.y.z>"
+            ;;
+        esac
+        ;;
+      *)
+        echo "opk: bmad: lệnh không hợp lệ '$bmad_cmd'. Dùng: status, update --stable/--next/--version <x.y.z>" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+
+  # ─── v2.0.0 Tooling Doctor ──────────────────────────────────────
+  tooling)
+    tool_cmd="${1:-doctor}"
+    shift || true
+    case "$tool_cmd" in
+      doctor)
+        echo "opk: === Tooling Doctor ==="
+        echo ""
+        echo "opk: Detect-only tools (user-installed, never auto-installed):"
+        echo ""
+        # Define tools: name:install_hint
+        declare -A tools=(
+          [rtk]="cargo install rtk"
+          [repomix]="npm i -g repomix"
+          ["ast-grep"]="cargo install ast-grep"
+          [rg]="brew install ripgrep  # or cargo install ripgrep"
+          [fd]="brew install fd  # or cargo install fd"
+          [knip]="npm i -g knip"
+          [gitleaks]="brew install gitleaks  # or go install github.com/gitleaks/gitleaks/v2"
+          [trufflehog]="brew install trufflehog  # or go install github.com/trufflesecurity/trufflehog/v3"
+          [semgrep]="pip install semgrep  # or brew install semgrep"
+          [spectral]="npm i -g @stoplight/spectral-cli"
+          [oasdiff]="brew install oasdiff  # or go install github.com/tufin/oasdiff"
+          [playwright]="npm i -g playwright  # or npx playwright install"
+          [biome]="npm i -g @biomejs/biome"
+        )
+        for tool in rtk repomix ast-grep rg fd knip gitleaks trufflehog semgrep spectral oasdiff playwright biome; do
+          hint="${tools[$tool]:-}"
+          if command -v "$tool" >/dev/null 2>&1; then
+            ver=""
+            case "$tool" in
+              rg) ver="$(rg --version 2>&1 | head -1)" ;;
+              fd) ver="$(fd --version 2>&1 | head -1)" ;;
+              node) ver="$(node --version 2>&1)" ;;
+              *) ver="$($tool --version 2>&1 | head -1)" ;;
+            esac
+            echo "opk:   ✅ $tool $ver"
+          else
+            echo "opk:   ❌ $tool — install: $hint"
+          fi
+        done
+        echo ""
+        # Also run doctor.sh if available
+        if [ -f "$KIT_DIR/doctor.sh" ]; then
+          echo "opk: Running full doctor.sh..."
+          echo ""
+          bash "$KIT_DIR/doctor.sh"
+        fi
+        ;;
+      *)
+        echo "opk: tooling: lệnh không hợp lệ '$tool_cmd'. Dùng: doctor" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+
+  # ─── v2.0.0 Taste Skill (verify-gated, optional) ────────────────
   taste|taste-status|taste-off|update-taste)
     case "$cmd" in
       taste-off)
         taste_skill_dir="${HOME}/.config/opencode/skills/taste-skill"
         if [[ -d "$taste_skill_dir" ]]; then
           echo "opk: Xoá Taste Skill tại $taste_skill_dir"
-          rm -rf "$taste_skill_dir"
-          echo "opk: ✅ Đã xoá Taste Skill."
+          # Safe removal: move to .opk-trash instead of rm -rf
+          trash_dir="${KIT_DIR}/.opk-trash/taste-skill-$(date +%Y%m%d-%H%M%S)"
+          mkdir -p "$trash_dir"
+          mv "$taste_skill_dir" "$trash_dir/" 2>/dev/null && echo "opk: ✅ Đã di chuyển Taste Skill -> $trash_dir" || echo "opk: ⚠️ Không thể di chuyển, thử xóa an toàn..."
+          echo "opk: ✅ Đã gỡ Taste Skill."
         else
           echo "opk: ℹ️ Taste Skill chưa được cài đặt."
         fi
@@ -646,11 +948,31 @@ EOF
         exec bash "$KIT_DIR/scripts/install-taste-skill.sh" "$@"
         ;;
       taste-status)
-        if [[ -d "${HOME}/.config/opencode/skills/taste-skill" ]] && \
-           [[ -f "${HOME}/.config/opencode/skills/taste-skill/SKILL.md" ]]; then
-          echo "opk: ✅ Taste Skill installed at ${HOME}/.config/opencode/skills/taste-skill/"
+        echo "opk: === Taste Skill Status ==="
+        taste_skill_dir="${HOME}/.config/opencode/skills/taste-skill"
+        if [[ -d "$taste_skill_dir" ]]; then
+          echo "opk: ✅ Taste Skill directory exists: $taste_skill_dir"
+          if [[ -f "$taste_skill_dir/SKILL.md" ]]; then
+            echo "opk: ✅ SKILL.md found"
+            # Try to parse frontmatter
+            name=$(grep -m1 "^name:" "$taste_skill_dir/SKILL.md" 2>/dev/null | sed 's/name:[[:space:]]*//')
+            desc=$(grep -m1 "^description:" "$taste_skill_dir/SKILL.md" 2>/dev/null | sed 's/description:[[:space:]]*//')
+            if [ -n "$name" ]; then
+              echo "opk: ✅ name: $name"
+            else
+              echo "opk: ⚠️ SKILL.md missing 'name' in frontmatter"
+            fi
+            if [ -n "$desc" ]; then
+              echo "opk: ✅ description: ${desc:0:80}..."
+            else
+              echo "opk: ⚠️ SKILL.md missing 'description' in frontmatter"
+            fi
+          else
+            echo "opk: ❌ SKILL.md not found in $taste_skill_dir"
+          fi
         else
-          echo "opk: ❌ Taste Skill not installed. Run: opk taste install"
+          echo "opk: ❌ Taste Skill not installed"
+          echo "opk: Run: opk taste install"
         fi
         exit 0
         ;;
@@ -659,28 +981,84 @@ EOF
         shift || true
         case "$taste_cmd" in
           install)
-            require_file "$KIT_DIR/scripts/install-taste-skill.sh"
-            exec bash "$KIT_DIR/scripts/install-taste-skill.sh" "$@"
+            install_flags=()
+            version=""
+            for a in "$@"; do
+              case "$a" in
+                --v1) version="v1" ;;
+                --v2) version="v2" ;;
+                --dry-run|--yes) install_flags+=("$a") ;;
+                -h|--help)
+                  echo "Usage: opk taste install [--v1|--v2] [--dry-run] [--yes]"
+                  echo ""
+                  echo "  --v1    Install Taste Skill v1 (legacy, specific skill name)"
+                  echo "  --v2    Install Taste Skill v2 (default, latest)"
+                  echo "  --dry-run  Print plan without installing"
+                  echo "  --yes      Skip confirmation"
+                  exit 0
+                  ;;
+                *) err "flag không hợp lệ: $a" ;;
+              esac
+            done
+            if [ "$version" = "v1" ]; then
+              echo "opk: Installing Taste Skill v1 (legacy)..."
+              echo "opk: Command: npx skills add https://github.com/Leonxlnx/taste-skill --skill \"design-taste-frontend-v1\""
+              if [[ " ${install_flags[*]} " == *" --dry-run "* ]]; then
+                echo "opk: Dry run — not installing."
+                exit 0
+              fi
+              if [[ " ${install_flags[*]} " == *" --yes "* ]]; then
+                exec npx skills add "https://github.com/Leonxlnx/taste-skill" --skill "design-taste-frontend-v1"
+              else
+                read -r -p "Install Taste Skill v1? [y/N] " reply
+                case "$reply" in y|Y|yes|YES) exec npx skills add "https://github.com/Leonxlnx/taste-skill" --skill "design-taste-frontend-v1" ;; *) echo "aborted."; exit 0 ;; esac
+              fi
+            else
+              # Default: v2
+              require_file "$KIT_DIR/scripts/install-taste-skill.sh"
+              exec bash "$KIT_DIR/scripts/install-taste-skill.sh" "${install_flags[@]}"
+            fi
             ;;
           status|"")
-            if [[ -d "${HOME}/.config/opencode/skills/taste-skill" ]] && \
-               [[ -f "${HOME}/.config/opencode/skills/taste-skill/SKILL.md" ]]; then
-              echo "opk: ✅ Taste Skill installed at ${HOME}/.config/opencode/skills/taste-skill/"
-            else
-              echo "opk: ❌ Taste Skill not installed. Run: opk taste install"
-            fi
+            # Same as taste-status above
+            "$0" taste-status
             ;;
           off)
+            "$0" taste-off
+            ;;
+          doctor)
+            echo "opk: === Taste Skill Doctor ==="
+            echo ""
+            echo "opk: Runtime check:"
+            for tool in node npm npx; do
+              if command -v "$tool" >/dev/null 2>&1; then
+                echo "opk:   ✅ $tool $(command -v $tool)"
+              else
+                echo "opk:   ❌ $tool not found (required for Taste Skill)"
+              fi
+            done
+            echo ""
+            echo "opk: Skill discovery:"
             taste_skill_dir="${HOME}/.config/opencode/skills/taste-skill"
             if [[ -d "$taste_skill_dir" ]]; then
-              rm -rf "$taste_skill_dir"
-              echo "opk: ✅ Đã xoá Taste Skill."
+              echo "opk:   ✅ Skill directory exists: $taste_skill_dir"
             else
-              echo "opk: ℹ️ Taste Skill chưa được cài đặt."
+              echo "opk:   ❌ Skill directory missing: $taste_skill_dir"
             fi
+            echo ""
+            echo "opk: OpenCode config check:"
+            for cfg in ".opencode/opencode.json" "opencode.json" "$KIT_DIR/templates/opencode.json"; do
+              if [ -f "$cfg" ] && grep -q "taste" "$cfg" 2>/dev/null; then
+                echo "opk:   ✅ $cfg references taste skill"
+                break
+              fi
+            done
+            echo ""
+            echo "opk: Install command: opk taste install"
+            echo "opk: OPK_SKIP_TASTE=1 skips auto-install during global setup"
             ;;
           *)
-            echo "opk: taste: lệnh không hợp lệ '$taste_cmd'. Dùng: install, status, off" >&2
+            echo "opk: taste: lệnh không hợp lệ '$taste_cmd'. Dùng: install [--v1|--v2], status, off, doctor" >&2
             exit 1
             ;;
         esac

@@ -4,7 +4,7 @@
 # Copy templates, merge gitignore, optional BMAD via npx, generate report.
 #
 # Env overrides:
-#   $env:BMAD_METHOD_VERSION  Pin version BMAD (mặc định: 6.8.0)
+#   $env:BMAD_METHOD_VERSION  Pin version BMAD (mặc định: 6.9.0)
 # ============================================================================
 [CmdletBinding()]
 param(
@@ -13,9 +13,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# --- BMAD Method version (env override, default 6.8.0) ---
+# --- BMAD Method version (env override, default 6.9.0) ---
 if (-not $env:BMAD_METHOD_VERSION -or [string]::IsNullOrWhiteSpace($env:BMAD_METHOD_VERSION)) {
-    $env:BMAD_METHOD_VERSION = '6.8.0'
+    $env:BMAD_METHOD_VERSION = '6.9.0'
 }
 $BmadVersion = $env:BMAD_METHOD_VERSION
 

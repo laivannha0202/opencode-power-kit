@@ -7,5 +7,41 @@
     "AGENTS.md",
     "OPENCODE.md"
   ],
-  "permission": "allow"
+  "permission": {
+    "*": "allow",
+    "read": "allow",
+    "grep": "allow",
+    "glob": "allow",
+    "skill": "allow",
+    "search": "allow",
+    "write": "allow",
+    "edit": "allow",
+    "bash": {
+      "pwd": "allow",
+      "ls *": "allow",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "rg *": "allow",
+      "fd *": "allow",
+      "cat *": "allow",
+      "npm test*": "allow",
+      "npm run test*": "allow",
+      "npm run lint*": "allow",
+      "npm run typecheck*": "allow",
+      "python3 scripts/validate-opencode-pack.py*": "allow",
+      "bash verify.sh*": "allow",
+      "bash doctor.sh*": "allow",
+      "rm -rf*": "deny",
+      "git reset --hard*": "deny",
+      "git clean -fd*": "deny",
+      "git push --force*": "deny",
+      "DROP TABLE*": "deny",
+      "TRUNCATE TABLE*": "deny",
+      "curl *| sh": "deny",
+      "wget *| sh": "deny",
+      "*": "allow"
+    },
+    "task": "allow"
+  }
 }

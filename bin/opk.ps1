@@ -174,10 +174,13 @@ switch ($Command.ToLower()) {
         Write-Host "  opk supermemory init      Init Supermemory (yeu cau da cai)"
         Write-Host "  opk supermemory init-help Xem upstream init --help (khong can cai)"
         Write-Host ""
-        Write-Host "v1.7.0 — Taste Skill (tu dong bat khi cai global / one / go):"
+        Write-Host "v1.7.0 — Taste Skill (optional, verify-gated):"
         Write-Host "  opk taste install          Cai Taste Skill (npx — dry-run + confirm)"
+        Write-Host "  opk taste install --v1     Cai Taste Skill v1 (legacy)"
+        Write-Host "  opk taste install --v2     Cai Taste Skill v2 (default)"
         Write-Host "  opk taste status           Kiem tra Taste Skill da cai chua"
-        Write-Host "  opk taste off              Tat Taste Skill (xoa skill file)"
+        Write-Host "  opk taste doctor           Kiem tra runtime dependencies"
+        Write-Host "  opk taste off              Go Taste Skill (an toan: move to .opk-trash/)"
         Write-Host "  opk update-taste           Refresh Taste Skill"
         Write-Host "  opk taste-status           Kiem tra nhanh (shortcut)"
         Write-Host ""
@@ -195,6 +198,21 @@ switch ($Command.ToLower()) {
         Write-Host "  opk hermes status    Check Hermes-lite installation status"
         Write-Host "  opk hermes capsule   Package learnings into capsule file"
         Write-Host "  opk hermes off       Remove Hermes-lite components"
+        Write-Host ""
+        Write-Host "v2.0.0 — Upstream Audit & Tooling:"
+        Write-Host "  opk upstream audit         Scan repo for upstream refs (audit-upstreams.py)"
+        Write-Host "  opk upstream audit --check CI mode (exit 1 if issues found)"
+        Write-Host "  opk upstream audit --write Write docs/UPSTREAM_AUDIT.md"
+        Write-Host "  opk upstream doctor        Run audit + validator + check docs"
+        Write-Host "  opk superpowers status     Check superpowers plugin status"
+        Write-Host "  opk superpowers reset-cache Clear superpowers cache (manual instructions)"
+        Write-Host "  opk superpowers reset-cache -Yes  Auto-clear (safe: move to .opk-trash/)"
+        Write-Host "  opk superpowers doctor     Full superpowers diagnosis + Windows fallback"
+        Write-Host "  opk bmad status            Show BMAD version pin + runtime check"
+        Write-Host "  opk bmad update -Stable    Update BMAD (pinned: 6.9.0)"
+        Write-Host "  opk bmad update -Next      Update BMAD (experimental)"
+        Write-Host "  opk bmad update -Version X.Y.Z  Pin BMAD to specific version"
+        Write-Host "  opk tooling doctor         Detect + suggest install for dev tools"
         Write-Host ""
         Write-Host "v1.6.4 — Mode & Safety:"
         Write-Host "  opk mode show   Xem che do Power/Safe hien tai"
@@ -559,17 +577,262 @@ switch ($Command.ToLower()) {
         }
     }
 
-    # ─── v1.7.0 Taste Skill (auto-enabled on install) ────────────
+    # ─── v2.0.0 Upstream Audit & Management ──────────────────────
+    'upstream' {
+        $upCmd = if ($Args.Count -gt 0) { $Args[0].ToLower() } else { 'audit' }
+        $upArgs = if ($Args.Count -gt 1) { $Args[1..($Args.Count-1)] } else { @() }
+
+        switch ($upCmd) {
+            'audit' {
+                $auditPy = Join-Path $KitDir 'scripts\audit-upstreams.py'
+                Require-File $auditPy
+                if ($upArgs.Count -gt 0 -and $upArgs[0] -eq '--check') {
+                    & python3 $auditPy --check
+                    exit $LASTEXITCODE
+                } elseif ($upArgs.Count -gt 0 -and $upArgs[0] -eq '--write') {
+                    $outfile = if ($upArgs.Count -gt 1) { $upArgs[1] } else { 'docs\UPSTREAM_AUDIT.md' }
+                    & python3 $auditPy --write $outfile
+                } else {
+                    & python3 $auditPy
+                }
+            }
+            'doctor' {
+                Write-Host "opk: === Upstream Doctor ==="
+                Write-Host ""
+                $auditPy = Join-Path $KitDir 'scripts\audit-upstreams.py'
+                if (Test-Path $auditPy) {
+                    Write-Host "opk: [1/2] Running upstream audit..."
+                    & python3 $auditPy --check
+                    if ($LASTEXITCODE -eq 0) { Write-Host "opk: Audit check passed" -ForegroundColor Green }
+                    else { Write-Host "opk: Audit check found issues" -ForegroundColor Yellow }
+                    Write-Host ""
+                }
+                $validator = Join-Path $KitDir 'scripts\validate-opencode-pack.py'
+                if (Test-Path $validator) {
+                    Write-Host "opk: [2/2] Running pack validator..."
+                    & python3 $validator
+                    if ($LASTEXITCODE -eq 0) { Write-Host "opk: Validator passed" -ForegroundColor Green }
+                    else { Write-Host "opk: Validator found issues" -ForegroundColor Yellow }
+                    Write-Host ""
+                }
+                Write-Host "opk: Upstream docs:"
+                foreach ($doc in @('UPSTREAM_AUDIT.md','UPSTREAM_UPDATE_POLICY.md','UPSTREAM_RISKS.md')) {
+                    $docPath = Join-Path $KitDir "docs\$doc"
+                    if (Test-Path $docPath) { Write-Host "opk:   docs/$doc" -ForegroundColor Green }
+                    else { Write-Host "opk:   docs/$doc missing" -ForegroundColor Yellow }
+                }
+            }
+            default {
+                Write-Host "opk: upstream: lenh khong hop le '$upCmd'. Dung: audit, audit --check, doctor" -ForegroundColor Red
+                exit 1
+            }
+        }
+    }
+
+    # ─── v2.0.0 Superpowers Status & Cache ──────────────────────────
+    'superpowers' {
+        $spCmd = if ($Args.Count -gt 0) { $Args[0].ToLower() } else { 'status' }
+        $spArgs = if ($Args.Count -gt 1) { $Args[1..($Args.Count-1)] } else { @() }
+
+        switch ($spCmd) {
+            'status' {
+                Write-Host "opk: === Superpowers Status ==="
+                Write-Host ""
+                $templateFile = Join-Path $KitDir 'templates\opencode.json'
+                if ((Test-Path $templateFile) -and (Select-String -Path $templateFile -Pattern 'superpowers@git\+https://github.com/obra/superpowers.git' -Quiet)) {
+                    Write-Host "opk: Template plugin reference found" -ForegroundColor Green
+                } else {
+                    Write-Host "opk: Template missing superpowers plugin reference" -ForegroundColor Yellow
+                }
+                $projConfig = $null
+                if (Test-Path '.opencode\opencode.json') { $projConfig = '.opencode\opencode.json' }
+                elseif (Test-Path 'opencode.json') { $projConfig = 'opencode.json' }
+                if ($projConfig -and (Select-String -Path $projConfig -Pattern 'superpowers@git\+https://github.com/obra/superpowers.git' -Quiet)) {
+                    Write-Host "opk: Project config ($projConfig) has superpowers plugin" -ForegroundColor Green
+                } elseif ($projConfig) {
+                    Write-Host "opk: Project config ($projConfig) missing superpowers plugin" -ForegroundColor Yellow
+                } else {
+                    Write-Host "opk: No project opencode.json found (using template defaults)" -ForegroundColor Gray
+                }
+                $oc = Get-Command opencode -ErrorAction SilentlyContinue
+                if ($oc) { Write-Host "opk: opencode found: $($oc.Source)" -ForegroundColor Green }
+                else { Write-Host "opk: opencode not found on PATH" -ForegroundColor Yellow }
+                Write-Host ""
+                Write-Host "opk: Superpowers is loaded at runtime by OpenCode plugin system."
+            }
+            'reset-cache' {
+                Write-Host "opk: === Superpowers Cache Reset ==="
+                Write-Host ""
+                Write-Host "Superpowers cache is managed by OpenCode's plugin system."
+                Write-Host "To reset the cache manually:"
+                Write-Host ""
+                Write-Host "  1. Find the OpenCode cache directory:"
+                Write-Host "     ls ~/.cache/opencode/packages/"
+                Write-Host ""
+                Write-Host "  2. Remove the superpowers package cache:"
+                Write-Host "     Remove-Item -Recurse ~/.cache/opencode/packages/superpowers*"
+                Write-Host ""
+                if ($spArgs.Count -gt 0 -and $spArgs[0] -eq '--yes') {
+                    Write-Host "opk: --yes specified, attempting safe cache clear..."
+                    $cacheDir = Join-Path $HOME '.cache\opencode\packages'
+                    if (Test-Path $cacheDir) {
+                        $trashDir = Join-Path $KitDir ".opk-trash\cache-reset-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+                        New-Item -ItemType Directory -Path $trashDir -Force | Out-Null
+                        Get-ChildItem -Path $cacheDir -Filter 'superpowers*' -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+                            Move-Item -Path $_.FullName -Destination $trashDir -Force
+                            Write-Host "opk: Moved $($_.Name) -> $trashDir/"
+                        }
+                        Write-Host "opk: Cache cleared (moved to $trashDir)" -ForegroundColor Green
+                    } else {
+                        Write-Host "opk: No OpenCode cache directory found" -ForegroundColor Yellow
+                    }
+                }
+            }
+            'doctor' {
+                Write-Host "opk: === Superpowers Doctor ==="
+                Write-Host ""
+                & $PSCommandPath superpowers status
+                Write-Host ""
+                Write-Host "opk: Windows fallback (if git+https fails):"
+                Write-Host "  1. Use WSL or Git Bash"
+                Write-Host "  2. Or set plugin path manually in opencode.json"
+                Write-Host "  3. Or install via npm: npm install -g superpowers"
+            }
+            default {
+                Write-Host "opk: superpowers: lenh khong hop le '$spCmd'. Dung: status, reset-cache, doctor" -ForegroundColor Red
+                exit 1
+            }
+        }
+    }
+
+    # ─── v2.0.0 BMAD Method Management ──────────────────────────────
+    'bmad' {
+        $bmadCmd = if ($Args.Count -gt 0) { $Args[0].ToLower() } else { 'status' }
+        $bmadArgs = if ($Args.Count -gt 1) { $Args[1..($Args.Count-1)] } else { @() }
+
+        switch ($bmadCmd) {
+            'status' {
+                Write-Host "opk: === BMAD Method Status ==="
+                Write-Host ""
+                $bmadVersion = if ($env:BMAD_METHOD_VERSION) { $env:BMAD_METHOD_VERSION } else { '6.9.0' }
+                Write-Host "opk: BMAD_METHOD_VERSION = $bmadVersion"
+                Write-Host "opk: (override via: `$env:BMAD_METHOD_VERSION='x.y.z')"
+                Write-Host ""
+                if (Test-Path '.bmad') {
+                    Write-Host "opk: .bmad/ directory found in project" -ForegroundColor Green
+                    Get-ChildItem '.bmad' | Select-Object -First 5 | ForEach-Object { Write-Host "  $($_.Name)" }
+                } else {
+                    Write-Host "opk: No .bmad/ directory in current project" -ForegroundColor Gray
+                }
+                Write-Host ""
+                Write-Host "opk: Runtime check:"
+                foreach ($tool in @('node','npm','npx')) {
+                    $tc = Get-Command $tool -ErrorAction SilentlyContinue
+                    if ($tc) { Write-Host "opk:   $tool $($tc.Source)" -ForegroundColor Green }
+                    else { Write-Host "opk:   $tool not found" -ForegroundColor Yellow }
+                }
+                Write-Host ""
+                Write-Host "opk: BMAD docs: https://github.com/bmad-code-org/BMAD-METHOD"
+            }
+            'update' {
+                $updateFlag = if ($bmadArgs.Count -gt 0) { $bmadArgs[0] } else { '--stable' }
+                $script = Join-Path $KitDir 'update-bmad.ps1'
+                Require-File $script
+                switch ($updateFlag) {
+                    '--stable' {
+                        Write-Host "opk: Updating BMAD Method (stable pin: 6.9.0)..."
+                        $env:BMAD_METHOD_VERSION = '6.9.0'
+                        & powershell -ExecutionPolicy Bypass -File $script
+                    }
+                    '--next' {
+                        Write-Host "opk: Updating BMAD Method (next/experimental)..."
+                        $env:BMAD_METHOD_VERSION = 'next'
+                        & powershell -ExecutionPolicy Bypass -File $script
+                    }
+                    '--version' {
+                        $ver = if ($bmadArgs.Count -gt 1) { $bmadArgs[1] } else { '' }
+                        if (-not $ver) {
+                            Write-Host "opk: bmad update --version requires a version" -ForegroundColor Red
+                            exit 1
+                        }
+                        Write-Host "opk: Updating BMAD Method (pinned: $ver)..."
+                        $env:BMAD_METHOD_VERSION = $ver
+                        & powershell -ExecutionPolicy Bypass -File $script
+                    }
+                    default {
+                        Write-Host "opk: bmad update: flag khong hop le '$updateFlag'. Dung: --stable, --next, --version <x.y.z>" -ForegroundColor Red
+                        exit 1
+                    }
+                }
+            }
+            default {
+                Write-Host "opk: bmad: lenh khong hop le '$bmadCmd'. Dung: status, update --stable/--next/--version <x.y.z>" -ForegroundColor Red
+                exit 1
+            }
+        }
+    }
+
+    # ─── v2.0.0 Tooling Doctor ──────────────────────────────────────
+    'tooling' {
+        $toolCmd = if ($Args.Count -gt 0) { $Args[0].ToLower() } else { 'doctor' }
+
+        switch ($toolCmd) {
+            'doctor' {
+                Write-Host "opk: === Tooling Doctor ==="
+                Write-Host ""
+                Write-Host "opk: Detect-only tools (user-installed, never auto-installed):"
+                Write-Host ""
+                $tools = @(
+                    @{Name='rtk'; Hint='cargo install rtk'},
+                    @{Name='repomix'; Hint='npm i -g repomix'},
+                    @{Name='ast-grep'; Hint='cargo install ast-grep'},
+                    @{Name='rg'; Hint='Install ripgrep'},
+                    @{Name='fd'; Hint='Install fd'},
+                    @{Name='knip'; Hint='npm i -g knip'},
+                    @{Name='gitleaks'; Hint='brew install gitleaks'},
+                    @{Name='trufflehog'; Hint='brew install trufflehog'},
+                    @{Name='semgrep'; Hint='pip install semgrep'},
+                    @{Name='spectral'; Hint='npm i -g @stoplight/spectral-cli'},
+                    @{Name='oasdiff'; Hint='brew install oasdiff'},
+                    @{Name='playwright'; Hint='npm i -g playwright'},
+                    @{Name='biome'; Hint='npm i -g @biomejs/biome'}
+                )
+                foreach ($tool in $tools) {
+                    $tc = Get-Command $tool.Name -ErrorAction SilentlyContinue
+                    if ($tc) {
+                        Write-Host "opk:   $($tool.Name) $($tc.Source)" -ForegroundColor Green
+                    } else {
+                        Write-Host "opk:   $($tool.Name) — install: $($tool.Hint)" -ForegroundColor Yellow
+                    }
+                }
+                Write-Host ""
+                $doctorScript = Join-Path $KitDir 'doctor.sh'
+                if (Test-Path $doctorScript) {
+                    Write-Host "opk: Running full doctor.sh..."
+                    Write-Host ""
+                    & bash $doctorScript
+                }
+            }
+            default {
+                Write-Host "opk: tooling: lenh khong hop le '$toolCmd'. Dung: doctor" -ForegroundColor Red
+                exit 1
+            }
+        }
+    }
+
+    # ─── v2.0.0 Taste Skill (optional, verify-gated) ────────────────
     { @('taste','taste-status','taste-off','update-taste') -contains $_ } {
         switch ($Command) {
             'taste-off' {
                 $tasteDir = Join-Path $HOME '.config\opencode\skills\taste-skill'
                 if (Test-Path $tasteDir) {
-                    Write-Host "opk: Xoá Taste Skill tai $tasteDir" -ForegroundColor Yellow
-                    Remove-Item -Recurse -Force $tasteDir
-                    Write-Host 'opk: ✅ Đã xoá Taste Skill.' -ForegroundColor Green
+                    Write-Host "opk: Go Taste Skill tai $tasteDir" -ForegroundColor Yellow
+                    $trashDir = Join-Path $KitDir ".opk-trash\taste-skill-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+                    New-Item -ItemType Directory -Path $trashDir -Force | Out-Null
+                    Move-Item -Path $tasteDir -Destination $trashDir -Force
+                    Write-Host "opk: Da di chuyen Taste Skill -> $trashDir" -ForegroundColor Green
                 } else {
-                    Write-Host 'opk: ℹ️ Taste Skill chua duoc cai dat.'
+                    Write-Host 'opk: Taste Skill chua duoc cai dat.' -ForegroundColor Gray
                 }
                 exit 0
             }
@@ -580,11 +843,19 @@ switch ($Command.ToLower()) {
                 exit $LASTEXITCODE
             }
             'taste-status' {
+                Write-Host "opk: === Taste Skill Status ==="
                 $tasteDir = Join-Path $HOME '.config\opencode\skills\taste-skill'
-                if (Test-Path (Join-Path $tasteDir 'SKILL.md')) {
-                    Write-Host "opk: ✅ Taste Skill installed at $tasteDir" -ForegroundColor Green
+                if (Test-Path $tasteDir) {
+                    Write-Host "opk: Taste Skill directory exists: $tasteDir" -ForegroundColor Green
+                    $skillMd = Join-Path $tasteDir 'SKILL.md'
+                    if (Test-Path $skillMd) {
+                        Write-Host "opk: SKILL.md found" -ForegroundColor Green
+                    } else {
+                        Write-Host "opk: SKILL.md not found in $tasteDir" -ForegroundColor Yellow
+                    }
                 } else {
-                    Write-Host 'opk: ❌ Taste Skill not installed. Run: opk taste install' -ForegroundColor Yellow
+                    Write-Host "opk: Taste Skill not installed" -ForegroundColor Yellow
+                    Write-Host "opk: Run: opk taste install"
                 }
                 exit 0
             }
@@ -598,25 +869,31 @@ switch ($Command.ToLower()) {
                         Require-File $installer
                         & powershell -ExecutionPolicy Bypass -File $installer @tasteArgs
                     }
-                    'status' {
-                        $tasteDir = Join-Path $HOME '.config\opencode\skills\taste-skill'
-                        if (Test-Path (Join-Path $tasteDir 'SKILL.md')) {
-                            Write-Host "opk: ✅ Taste Skill installed at $tasteDir" -ForegroundColor Green
-                        } else {
-                            Write-Host 'opk: ❌ Taste Skill not installed. Run: opk taste install' -ForegroundColor Yellow
+                    'status' { & $PSCommandPath taste-status }
+                    'off' { & $PSCommandPath taste-off }
+                    'doctor' {
+                        Write-Host "opk: === Taste Skill Doctor ==="
+                        Write-Host ""
+                        Write-Host "opk: Runtime check:"
+                        foreach ($tool in @('node','npm','npx')) {
+                            $tc = Get-Command $tool -ErrorAction SilentlyContinue
+                            if ($tc) { Write-Host "opk:   $tool $($tc.Source)" -ForegroundColor Green }
+                            else { Write-Host "opk:   $tool not found (required for Taste Skill)" -ForegroundColor Yellow }
                         }
-                    }
-                    'off' {
+                        Write-Host ""
+                        Write-Host "opk: Skill discovery:"
                         $tasteDir = Join-Path $HOME '.config\opencode\skills\taste-skill'
                         if (Test-Path $tasteDir) {
-                            Remove-Item -Recurse -Force $tasteDir
-                            Write-Host 'opk: ✅ Đã xoá Taste Skill.' -ForegroundColor Green
+                            Write-Host "opk:   Skill directory exists: $tasteDir" -ForegroundColor Green
                         } else {
-                            Write-Host 'opk: ℹ️ Taste Skill chua duoc cai dat.'
+                            Write-Host "opk:   Skill directory missing: $tasteDir" -ForegroundColor Yellow
                         }
+                        Write-Host ""
+                        Write-Host "opk: Install command: opk taste install"
+                        Write-Host "opk: OPK_SKIP_TASTE=1 skips auto-install during global setup"
                     }
                     default {
-                        Write-Host "opk: taste: lenh khong hop le '$tasteCmd'. Dung: install, status, off" -ForegroundColor Red
+                        Write-Host "opk: taste: lenh khong hop le '$tasteCmd'. Dung: install [--v1|--v2], status, off, doctor" -ForegroundColor Red
                         exit 1
                     }
                 }

@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](./VERSION)
-[![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.8.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
+[![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.9.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
 [![Cross-platform](https://img.shields.io/badge/cross--platform-Linux%20%7C%20macOS%20%7C%20Windows-blue.svg)](#cài-nhanh)
@@ -142,7 +142,7 @@ người dùng hiểu rõ ranh giới.
 | **Target platform** | Nền tảng mà kit cấu hình workflow | No | No | OpenCode |
 | **Plugin reference** | Plugin được load runtime từ GitHub/npm | Via OpenCode | No | Superpowers |
 | **Install-time dependency** | Cài vào project user qua official installer | Via npx | No | BMAD Method |
-| **Auto-enabled dependency** | Cài tự động khi kit install, vẫn dùng official installer | Via opk update-* | No | Taste Skill |
+| **Verify-gated dependency** | Cài khi user yêu cầu explicit, dùng official installer | Via opk update-* | No | Taste Skill |
 | **Config-only reference** | Kit chỉ ship template config trỏ đến upstream | No | No | Biome config |
 | **Opt-in wrapper** | Chỉ gọi installer chính thức khi user yêu cầu | No | No | GSD Core |
 | **Detect-only** | Chỉ phát hiện tool đã cài sẵn trên PATH | No | No | rg, fd, semgrep, gitleaks |
@@ -158,7 +158,7 @@ người dùng hiểu rõ ranh giới.
 | GSD Core | open-gsd | Optional companion workflow engine | Opt-in wrapper | `scripts/install-gsd-core.sh` |
 | Supermemory | supermemory.ai | Memory/knowledge layer — store, retrieve, and search agent conversations, notes, and context | Opt-in wrapper | `scripts/install-supermemory.sh`, `scripts/install-supermemory.ps1` |
 | MarkItDown | Microsoft | Document-to-Markdown conversion (PDF/DOCX/PPTX/XLSX/HTML) | Opt-in wrapper | `scripts/install-markitdown.sh`, `scripts/install-markitdown.ps1` |
-| Taste Skill | Leonxlnx | AI-augmented UI/UX design — image-to-code, redesign, polish, brand kit | Auto-enabled dependency | `scripts/install-taste-skill.sh`, `scripts/install-taste-skill.ps1` |
+| Taste Skill | Leonxlnx | AI-augmented UI/UX design — image-to-code, redesign, polish, brand kit | Verify-gated dependency | `scripts/install-taste-skill.sh`, `scripts/install-taste-skill.ps1` |
 | Hermes Agent | NousResearch | Meta-cognitive self-improvement framework — learning loop, skill improvement, memory policy review, context/budget pressure, lightweight kanban, tool surface audit, remote backend review | Inspiration (OPK-native) | `opencode-global/agents/hermes-lite-strong.md`, 8 commands, 3 scripts |
 | NirDiamant/RAG_Techniques | NirDiamant | Comprehensive RAG tutorial collection — conceptual reference for RAG patterns, techniques, and best practices | Reference / Learning resource (OPK-native) | `docs/RAG_LITE_INTEGRATION.md`, `opencode-global/skills/rag-lite/SKILL.md`, 3 commands |
 | chopratejas/headroom | chopratejas | Context/token compression Linux daemon — conceptual reference for context window economics, compression strategies, token budget optimization | Inspiration / Reference (OPK-native) | `docs/HEADROOM_LITE_INTEGRATION.md`, `opencode-global/skills/headroom-lite/SKILL.md`, 3 commands |
@@ -575,6 +575,31 @@ Phù hợp nhất cho project dùng: NestJS backend, React/Vite frontend, MySQL 
 
 ---
 
+## External Upstreams
+
+Kit tích hợp nhiều upstream bên ngoài. Bảng tổng quan:
+
+| Name | Type | Enabled by default? | Install command | Update command | Risk |
+|------|------|--------------------|-----------------|----------------|----|
+| OpenCode | Target platform | Yes (user-managed) | User installs | User updates | Low |
+| Superpowers | Plugin reference | Yes (auto-loaded) | Auto via plugin | Auto via plugin | Medium |
+| BMAD Method | Install-time dependency | Yes (during install) | `npx bmad-method@VERSION install` | `opk update-bmad` | Medium |
+| GSD Core | Opt-in wrapper | No | `opk gsd` | `opk update-gsd` | Low |
+| MarkItDown | Opt-in wrapper | No | `opk markitdown install` | `opk markitdown install --upgrade` | Low |
+| Supermemory | Opt-in wrapper | No | `opk supermemory install` | `opk supermemory install` | High (migrated) |
+| Taste Skill | Verify-gated (user-installed) | Yes (with verification) | `opk taste install` | `opk update-taste` | Medium |
+| ECC | Opt-in wrapper | No | `opk ecc lite` | `opk update-ecc` | Low |
+| Hermes Agent | Inspiration-only | No (reference only) | N/A | N/A | Low |
+| rtk, repomix, ast-grep, etc. | Detect-only | No (user-installs) | User-installs | User-updates | Low |
+
+**Key policies:**
+- Core install does NOT vendor upstream source
+- Optional tools are detect-only (no auto-install)
+- MCP is OFF by default
+- All upstreams documented in `THIRD_PARTY.md` and `docs/UPSTREAM_AUDIT.md`
+
+---
+
 ## How to Update Upstreams
 
 ### Install-time dependencies (BMAD Method)
@@ -737,19 +762,20 @@ opencode-power-kit ships **integrated** support for [Taste Skill](https://github
 — an AI-augmented UI/UX design tool for image-to-code conversion, UI redesign,
 visual polish, brand kit generation, landing page design, and mobile UI optimization.
 
-### Integration model: Auto-enabled (graceful degradation)
+### Integration model: Verify-gated (optional, user-installed)
 
-Unlike opt-in tools, Taste Skill is **automatically enabled** during kit setup:
+Taste Skill is **optional** — installed on-demand by the user, never auto-installed:
 
 | Trigger | Installs? | Skip behavior |
 |---------|:---------:|:-------------:|
-| `opk global` / `opk one` / `opk go` | ✅ Yes | Warn if node/npx missing, no failure |
-| `install-global.sh` / `install-global.ps1` | ✅ Yes | Warn if node/npx missing, no failure |
-| `bootstrap.sh --all` / `setup.sh --global` | ✅ Yes | Warn if node/npx missing, no failure |
+| `opk global` / `opk one` / `opk go` | ❌ No | Use `opk taste install` to add |
+| `opk taste install` | ✅ Yes | Verify node/npx before install |
+| `opk taste install --v1` | ✅ Yes | Install v1 (legacy, specific skill name) |
+| `opk taste install --v2` | ✅ Yes | Install v2 (default, latest) |
 | `opk up` (update) | ❌ No | N/A |
 | Shell startup | ❌ No | N/A |
 
-Set `OPK_SKIP_TASTE=1` to completely bypass auto-install.
+`OPK_SKIP_TASTE=1` is a legacy escape hatch — no longer needed since global scripts no longer auto-install Taste Skill (v2.0.0).
 
 ### Safety guarantees
 
@@ -757,7 +783,7 @@ Set `OPK_SKIP_TASTE=1` to completely bypass auto-install.
 - **No curl|sh** — installer is in-kit bash/PowerShell.
 - **No .env/secrets** — Taste Skill reads no sensitive files.
 - **No core failure** — missing deps produce a warning only.
-- **Fail soft** — if `npx` fails, install continues without error.
+- **Safe removal** — `opk taste off` moves to `.opk-trash/`, never `rm -rf`.
 
 ### Usage
 
@@ -767,10 +793,16 @@ opk taste status
 # or
 opk taste-status
 
-# Install manually
+# Install (default: v2)
 opk taste install
 
-# Remove
+# Install v1 (legacy)
+opk taste install --v1
+
+# Check runtime dependencies
+opk taste doctor
+
+# Remove (safe: moves to .opk-trash/)
 opk taste off
 # or
 opk taste-off

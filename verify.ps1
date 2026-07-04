@@ -285,9 +285,9 @@ Write-Host ''
 Write-Host '[v1.6.7 Supermemory Memory API]'
 Require-Contains 'CHANGELOG.md' '1.6.7'
 Require-Contains 'CHANGELOG.md' 'Supermemory'
-Require-Contains 'scripts/install-supermemory.sh' '@supermemory/ai'
+Require-Contains 'scripts/install-supermemory.sh' 'supermemory'
 Require-Contains 'scripts/install-supermemory.sh' 'npm install'
-Require-Contains 'scripts/install-supermemory.ps1' '@supermemory/ai'
+Require-Contains 'scripts/install-supermemory.ps1' 'supermemory'
 Require-Contains 'scripts/install-supermemory.ps1' 'supermemory'
 Require-Contains 'opencode-global/commands/supermemory-init.md' 'supermemory'
 Require-Contains 'opencode-global/commands/supermemory-init.md' 'opk supermemory'
@@ -468,6 +468,77 @@ Require-Contains 'THIRD_PARTY.md' 'Inspiration-only'
 Require-Contains '.gitignore' '.opk/work/'
 Require-Contains '.gitignore' '.opk/tmp/'
 Require-Contains '.gitignore' '.opk/cache/'
+
+# ─── v2.0.0: CLI Expansion & Taste verify-gated ──────────────────
+Write-Host '[v2.0.0 CLI Expansion]'
+Require-Contains 'bin/opk' 'upstream)'
+Require-Contains 'bin/opk' 'upstream audit'
+Require-Contains 'bin/opk' 'upstream doctor'
+Require-Contains 'bin/opk' 'superpowers)'
+Require-Contains 'bin/opk' 'superpowers status'
+Require-Contains 'bin/opk' 'superpowers reset-cache'
+Require-Contains 'bin/opk' 'superpowers doctor'
+Require-Contains 'bin/opk' 'bmad)'
+Require-Contains 'bin/opk' 'bmad status'
+Require-Contains 'bin/opk' 'bmad update'
+Require-Contains 'bin/opk' 'tooling)'
+Require-Contains 'bin/opk' 'tooling doctor'
+Require-Contains 'bin/opk' 'taste doctor'
+Require-Contains 'bin/opk' 'taste install --v1'
+Require-Contains 'bin/opk' 'taste install --v2'
+Require-Contains 'bin/opk.ps1' "'upstream'"
+Require-Contains 'bin/opk.ps1' 'upstream audit'
+Require-Contains 'bin/opk.ps1' 'upstream doctor'
+Require-Contains 'bin/opk.ps1' "'superpowers'"
+Require-Contains 'bin/opk.ps1' 'superpowers status'
+Require-Contains 'bin/opk.ps1' 'superpowers reset-cache'
+Require-Contains 'bin/opk.ps1' 'superpowers doctor'
+Require-Contains 'bin/opk.ps1' "'bmad'"
+Require-Contains 'bin/opk.ps1' 'bmad status'
+Require-Contains 'bin/opk.ps1' 'bmad update'
+Require-Contains 'bin/opk.ps1' "'tooling'"
+Require-Contains 'bin/opk.ps1' 'tooling doctor'
+Require-Contains 'bin/opk.ps1' 'taste doctor'
+
+Write-Host '[v2.0.0 Taste verify-gated]'
+Require-Contains 'README.md' 'verify-gated'
+Require-Contains 'README.md' 'opk taste install --v1'
+Require-Contains 'README.md' 'opk taste doctor'
+Require-Contains 'THIRD_PARTY.md' 'verify-gated'
+Require-Contains 'THIRD_PARTY.md' 'user-installed'
+Require-Contains 'CHANGELOG.md' 'Verify-gated'
+Require-Contains 'CHANGELOG.md' 'CLI Expansion'
+
+Write-Host '[v2.0.0 Taste auto-install removed from global scripts]'
+# install-global.ps1 must NOT call install-taste-skill.ps1 -Yes
+$ps1Content = Get-Content 'install-global.ps1' -Raw -ErrorAction SilentlyContinue
+if ($ps1Content -and $ps1Content -match 'install-taste-skill\.ps1.*-Yes') {
+    Write-Host '  FAIL: install-global.ps1 still calls install-taste-skill.ps1 -Yes' -ForegroundColor Red
+    $script:Failed++
+} else {
+    Write-Host '  ok: install-global.ps1: no Taste auto-install call' -ForegroundColor Green
+}
+# install-global must have suggestion hint
+Require-Contains 'install-global.sh' 'opk taste install'
+Require-Contains 'install-global.ps1' 'opk taste install'
+# UPSTREAM_AUDIT must not contain auto-enabled-dependency
+$auditContent = Get-Content 'docs/UPSTREAM_AUDIT.md' -Raw -ErrorAction SilentlyContinue
+if ($auditContent -and $auditContent -match 'auto-enabled-dependency') {
+    Write-Host '  FAIL: docs/UPSTREAM_AUDIT.md still contains auto-enabled-dependency' -ForegroundColor Red
+    $script:Failed++
+} else {
+    Write-Host '  ok: docs/UPSTREAM_AUDIT.md: no auto-enabled-dependency' -ForegroundColor Green
+}
+# No current-state auto-enabled wording in README/THIRD_PARTY
+foreach ($f in @('README.md', 'THIRD_PARTY.md')) {
+    $c = Get-Content $f -Raw -ErrorAction SilentlyContinue
+    if ($c -and $c -match 'Taste Skill is automatically enabled') {
+        Write-Host "  FAIL: $f contains 'Taste Skill is automatically enabled'" -ForegroundColor Red
+        $script:Failed++
+    } else {
+        Write-Host "  ok: $f: no current-state auto-enabled wording" -ForegroundColor Green
+    }
+}
 Write-Host ''
 
 # ─── v1.6.6: MarkItDown Document Tools ──────────────────────────
@@ -499,7 +570,7 @@ Require-Contains 'CHANGELOG.md' 'Power Mode vs Safe Mode'
 Require-Contains 'CHANGELOG.md' 'Safety plugin guard'
 Require-Contains 'CHANGELOG.md' 'opk mode'
 Require-Contains 'templates/opencode.safe.json' '"permission":'
-Require-Contains 'templates/opencode.power.json' '"permission": "allow"'
+Require-Contains 'templates/opencode.power.json' '"permission"'
 Require-Contains 'templates/plugins/opk-safety-guard.js' 'guardCheck'
 Require-Contains 'bin/opk' 'mode)'
 Require-Contains 'bin/opk' 'safety-plugin)'

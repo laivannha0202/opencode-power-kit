@@ -215,7 +215,7 @@ require_contains "THIRD_PARTY.md" "GSD Core"
 
 # ─── v1.6.0: Full Auto Permission Mode ──────────────────────────
 echo "[v1.6.0 Full Auto Permission Mode]"
-require_contains "templates/opencode.json" '"permission": "allow"'
+require_contains "templates/opencode.json" '"permission"'
 require_contains "templates/AGENTS.md" "Full Auto Permission Mode"
 require_contains "templates/OPENCODE.md" "Full Auto Permission Mode"
 echo
@@ -328,10 +328,10 @@ require_file "scripts/install-supermemory.ps1"
 require_file "opencode-global/commands/supermemory-init.md"
 require_executable "scripts/install-supermemory.sh"
 # Script content checks
-require_contains "scripts/install-supermemory.sh" "@supermemory/ai"
+require_contains "scripts/install-supermemory.sh" "supermemory"
 require_contains "scripts/install-supermemory.sh" "--dry-run"
 require_contains "scripts/install-supermemory.sh" "npm install"
-require_contains "scripts/install-supermemory.ps1" "@supermemory/ai"
+require_contains "scripts/install-supermemory.ps1" "supermemory"
 require_contains "scripts/install-supermemory.ps1" "supermemory"
 require_contains "opencode-global/commands/supermemory-init.md" "supermemory"
 require_contains "opencode-global/commands/supermemory-init.md" "opk supermemory"
@@ -713,7 +713,7 @@ require_contains "CHANGELOG.md" "Power Mode vs Safe Mode"
 require_contains "CHANGELOG.md" "Safety plugin guard"
 require_contains "CHANGELOG.md" "opk mode"
 require_contains "templates/opencode.safe.json" '"permission":'
-require_contains "templates/opencode.power.json" '"permission": "allow"'
+require_contains "templates/opencode.power.json" '"permission"'
 require_contains "templates/plugins/opk-safety-guard.js" "guardCheck"
 require_contains "bin/opk" "mode)"
 require_contains "bin/opk" "safety-plugin)"
@@ -804,6 +804,85 @@ if [ -d "node_modules/oh-my-openagent" ] || [ -d "vendor/oh-my-openagent" ]; the
 else
 	ok "oh-my-openagent not vendored"
 fi
+
+# ─── v2.0.0: CLI Expansion & Taste verify-gated ──────────────────
+echo "[v2.0.0 CLI Expansion]"
+# bin/opk subcommands
+require_contains "bin/opk" "upstream)"
+require_contains "bin/opk" "upstream audit"
+require_contains "bin/opk" "upstream doctor"
+require_contains "bin/opk" "superpowers)"
+require_contains "bin/opk" "superpowers status"
+require_contains "bin/opk" "superpowers reset-cache"
+require_contains "bin/opk" "superpowers doctor"
+require_contains "bin/opk" "bmad)"
+require_contains "bin/opk" "bmad status"
+require_contains "bin/opk" "bmad update"
+require_contains "bin/opk" "tooling)"
+require_contains "bin/opk" "tooling doctor"
+require_contains "bin/opk" "taste doctor"
+require_contains "bin/opk" "taste install --v1"
+require_contains "bin/opk" "taste install --v2"
+# bin/opk.ps1 parity
+require_contains "bin/opk.ps1" "'upstream'"
+require_contains "bin/opk.ps1" "upstream audit"
+require_contains "bin/opk.ps1" "upstream doctor"
+require_contains "bin/opk.ps1" "'superpowers'"
+require_contains "bin/opk.ps1" "superpowers status"
+require_contains "bin/opk.ps1" "superpowers reset-cache"
+require_contains "bin/opk.ps1" "superpowers doctor"
+require_contains "bin/opk.ps1" "'bmad'"
+require_contains "bin/opk.ps1" "bmad status"
+require_contains "bin/opk.ps1" "bmad update"
+require_contains "bin/opk.ps1" "'tooling'"
+require_contains "bin/opk.ps1" "tooling doctor"
+require_contains "bin/opk.ps1" "taste doctor"
+
+echo "[v2.0.0 Taste verify-gated]"
+require_contains "README.md" "verify-gated"
+require_contains "README.md" "opk taste install --v1"
+require_contains "README.md" "opk taste doctor"
+require_contains "THIRD_PARTY.md" "verify-gated"
+require_contains "THIRD_PARTY.md" "user-installed"
+require_contains "CHANGELOG.md" "Verify-gated"
+require_contains "CHANGELOG.md" "CLI Expansion"
+
+# Taste safe removal (no rm -rf)
+if grep -A5 "taste-off)" "bin/opk" | grep -v "^[[:space:]]*#" | grep -q "rm -rf"; then
+	fail "bin/opk taste-off uses rm -rf (should use mv to .opk-trash/)"
+else
+	ok "bin/opk taste-off uses safe removal"
+fi
+
+echo "[v2.0.0 Taste auto-install removed from global scripts]"
+# install-global.sh must NOT call install-taste-skill.sh --yes
+if grep -q "install-taste-skill.sh.*--yes" "install-global.sh"; then
+	fail "install-global.sh still calls install-taste-skill.sh --yes (auto-install must be removed)"
+else
+	ok "install-global.sh: no Taste auto-install call"
+fi
+# install-global.ps1 must NOT call install-taste-skill.ps1 -Yes
+if grep -q "install-taste-skill.ps1.*-Yes" "install-global.ps1"; then
+	fail "install-global.ps1 still calls install-taste-skill.ps1 -Yes (auto-install must be removed)"
+else
+	ok "install-global.ps1: no Taste auto-install call"
+fi
+# install-global must have suggestion hint
+require_contains "install-global.sh" "opk taste install"
+require_contains "install-global.ps1" "opk taste install"
+# UPSTREAM_AUDIT must not contain auto-enabled-dependency
+if grep -q "auto-enabled-dependency" "docs/UPSTREAM_AUDIT.md"; then
+	fail "docs/UPSTREAM_AUDIT.md still contains 'auto-enabled-dependency'"
+else
+	ok "docs/UPSTREAM_AUDIT.md: no 'auto-enabled-dependency'"
+fi
+# No current-state auto-enabled wording in README/THIRD_PARTY
+if grep -q "Taste Skill is automatically enabled" "README.md" "THIRD_PARTY.md" 2>/dev/null; then
+	fail "README.md or THIRD_PARTY.md contains 'Taste Skill is automatically enabled'"
+else
+	ok "No current-state 'Taste Skill is automatically enabled' wording"
+fi
+
 echo
 
 # ─── Script sanity (shellcheck optional, syntax required) ─────────

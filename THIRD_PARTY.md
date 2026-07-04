@@ -5,6 +5,10 @@
 > This project packages, configures, and documents workflows around
 > [OpenCode](https://github.com/opencode-ai). It credits upstream authors
 > clearly and does **not** claim ownership of upstream projects.
+>
+> **Upstream audit:** See `docs/UPSTREAM_AUDIT.md` for the full dependency
+> matrix, risk levels, and update policy. See `docs/UPSTREAM_RISKS.md` for
+> risk analysis. See `docs/UPSTREAM_UPDATE_POLICY.md` for update procedures.
 
 ---
 
@@ -30,7 +34,7 @@
 | **Target platform** | Nền tảng mà kit cấu hình / đóng gói workflow | No | No | OpenCode |
 | **Plugin reference** | Plugin được load runtime từ GitHub/npm | Via OpenCode | No | Superpowers |
 | **Install-time dependency** | Cài vào project user qua official installer | Via npx | No | BMAD Method |
-| **Auto-enabled dependency** | Cài tự động khi kit install, vẫn dùng official installer | Via npx | Via opk update-* | Taste Skill |
+| **Verify-gated dependency** | Cài khi user yêu cầu explicit, dùng official installer | Via npx | Via opk update-* | Taste Skill |
 | **Config-only reference** | Kit chỉ ship template config trỏ đến upstream | No | No | Biome config |
 | **Opt-in wrapper** | Chỉ gọi installer chính thức khi user yêu cầu | No | No | GSD Core, MarkItDown, ECC-lite |
 | **Detect-only** | Chỉ phát hiện tool đã cài sẵn trên PATH | No | No | rg, fd, semgrep |
@@ -48,7 +52,7 @@
 | GSD Core | open-gsd | https://github.com/open-gsd/gsd-core | Optional companion workflow engine | Opt-in wrapper | `opk gsd` / `opk update-gsd` | See npm |
 | MarkItDown | Microsoft | https://github.com/microsoft/markitdown | Document-to-Markdown conversion (PDF/DOCX/PPTX/XLSX/HTML) | Opt-in wrapper | `opk markitdown install` (pipx/pip) | MIT |
 | Supermemory | sudomateo / community | https://github.com/supermemory/supermemory | Memory persistence across AI coding sessions | Opt-in wrapper | `opk supermemory install` (npm) | Apache-2.0 |
-| Taste Skill | Leonxlnx | https://github.com/Leonxlnx/taste-skill | AI-augmented UI/UX design (image-to-code, redesign, polish, brand kit) | Auto-enabled dependency | `opk taste install` / auto on `opk global/go/one` (npx) | MIT |
+| Taste Skill | Leonxlnx | https://github.com/Leonxlnx/taste-skill | AI-augmented UI/UX design (image-to-code, redesign, polish, brand kit) | Verify-gated dependency | `opk taste install` (user-initiated, npx) | MIT |
 | ECC | affaan-m | https://github.com/affaan-m/ECC | Engineering Code Commandments — coding standards, security, engineering rigor | Opt-in wrapper | `opk ecc lite` (kit-native); `opk ecc audit` (read-only clone) | MIT |
 | Hermes Agent | NousResearch | https://github.com/NousResearch/hermes-agent | Meta-cognitive self-improvement — learning loop, skill improvement, memory review, kanban, tool audit | Inspiration-only | `opk hermes status` (local); `git pull` refreshes OPK source | Apache-2.0 |
 | NirDiamant/RAG_Techniques | NirDiamant | https://github.com/NirDiamant/RAG_Techniques | Comprehensive RAG tutorial collection — reference for conceptual guidance only | Reference / Learning resource | N/A — no code, no auto-update | Custom (non-commercial) |
@@ -113,7 +117,7 @@ curated skills, separate from Superpowers.
 | Integration | **Install-time dependency** — `install.sh` runs `npx bmad-method@VERSION install` into the target project |
 | Source | https://github.com/bmad-code-org/BMAD-METHOD |
 | npm | `bmad-method` (published to npm registry) |
-| Version pin | `BMAD_METHOD_VERSION` env (default: 6.8.0) in `install.sh`, `install.ps1`, `update-bmad.sh`, `update-bmad.ps1` |
+| Version pin | `BMAD_METHOD_VERSION` env (default: 6.9.0) in `install.sh`, `install.ps1`, `update-bmad.sh`, `update-bmad.ps1` |
 | Kit ships | Wrapper scripts that call the official npm installer |
 | Update path | `bash update-bmad.sh` / `opk update-bmad` — re-runs `npx bmad-method@... install` |
 | License | MIT (per upstream) |
@@ -208,16 +212,17 @@ Agents never install packages directly.
 | Integration | **Opt-in wrapper** — never vendored, never auto-installed |
 | Source | https://github.com/supermemory/supermemory |
 | Kit label | `opencode-supermemory` (internal integration name) |
-| npm | `@supermemory/ai` |
-| Installer | `npm install -g @supermemory/ai` |
+| npm | `supermemory` (migrated from `@supermemory/ai` which is deprecated) |
+| Installer | `npm install -g supermemory` |
 | Kit ships | `scripts/install-supermemory.sh` + `scripts/install-supermemory.ps1` — thin wrappers |
 | Update path | `opk supermemory install` (re-runs npm global install) |
 | License | Apache-2.0 (per upstream) |
+| Migration | `@supermemory/ai` → `supermemory` (2026-07-03). Deprecated package reference only in migration comments. |
 
 The kit does **not** bundle Supermemory. The wrapper scripts:
 
 1. Verify `node` and `npm` are on PATH.
-2. Print the planned `npm install -g @supermemory/ai` command.
+2. Print the planned `npm install -g supermemory` command.
 3. Ask for confirmation (or accept `--yes` / `-Y`).
 4. Forward to the official npm installer.
 5. Run `supermemory --help` to verify installation.
@@ -245,12 +250,12 @@ Agents never install packages directly.
 
 ---
 
-## 7. Taste Skill — Auto-enabled Dependency
+## 7. Taste Skill — Verify-gated Dependency
 
 | Field | Value |
 |-------|-------|
 | Role | AI-augmented UI/UX design — image-to-code, redesign, polish, brand kit, landing page, mobile UI optimization |
-| Integration | **Auto-enabled dependency** — installed automatically during `opk global`, `opk one`, `opk go`, `bootstrap.sh --all`, `setup.sh --global`, `install-global.sh`. Graceful degradation if node/npx/network missing. |
+| Integration | **Verify-gated dependency** — user-installed via `opk taste install`. No auto-install. Optional. |
 | Source | https://github.com/Leonxlnx/taste-skill |
 | Installer | `npx taste-skill` (official npx package) |
 | Kit ships | `scripts/install-taste-skill.sh` + `scripts/install-taste-skill.ps1` — installers |
@@ -258,19 +263,19 @@ Agents never install packages directly.
 | Update path | `opk update-taste` (re-runs npx) |
 | License | MIT (per upstream) |
 
-The kit integrates Taste Skill as an auto-enabled dependency. Unlike opt-in
-wrappers, Taste Skill is installed by default when the user runs global setup
-— but with **graceful degradation**: if `node`, `npx`, or network are
-unavailable, installation is skipped with a warning and does not fail the
-core install.
+The kit integrates Taste Skill as a **verify-gated** optional dependency. Unlike
+auto-enabled tools (legacy v1.7.0), Taste Skill is only installed when the user
+explicitly runs `opk taste install`. This ensures no unexpected network calls or
+package installations during global setup.
 
-### Auto-install behavior
+### Install behavior
 
 | Trigger | Install? | Skip if missing? |
 |---------|:--------:|:----------------:|
-| `opk global` / `opk one` / `opk go` | ✅ Yes (unless `OPK_SKIP_TASTE=1`) | Warn only, no failure |
-| `install-global.sh` / `install-global.ps1` | ✅ Yes (unless `OPK_SKIP_TASTE=1`) | Warn only, no failure |
-| `bootstrap.sh --all` / `setup.sh --global` | ✅ Yes (unless `OPK_SKIP_TASTE=1`) | Warn only, no failure |
+| `opk global` / `opk one` / `opk go` | ❌ No (user runs `opk taste install` separately) | N/A |
+| `opk taste install` | ✅ Yes | Verify node/npx before install |
+| `opk taste install --v1` | ✅ Yes (legacy) | Verify node/npx before install |
+| `opk taste install --v2` | ✅ Yes (default) | Verify node/npx before install |
 | `opk up` (update) | ❌ No | N/A |
 | Shell startup | ❌ No | N/A |
 
@@ -281,7 +286,7 @@ core install.
 - **No curl|sh** — installer is a bash/PowerShell script in the kit.
 - **No .env/secrets modification** — Taste Skill reads no sensitive files.
 - **No core install failure** — missing deps produce a warning only.
-- **`OPK_SKIP_TASTE=1`** completely bypasses auto-install.
+- **`OPK_SKIP_TASTE=1`** — legacy escape hatch (no longer needed since global scripts no longer auto-install Taste).
 - **Fail soft** — if `npx` fails, install continues without error.
 
 ### Taste Skill commands
@@ -292,7 +297,7 @@ core install.
 | `opk taste status` / `opk taste-status` | Check installation status |
 | `opk taste off` / `opk taste-off` | Remove Taste Skill |
 | `opk update-taste` | Refresh Taste Skill installation |
-| `OPK_SKIP_TASTE=1` | Environment variable to skip auto-install |
+| `OPK_SKIP_TASTE=1` | Legacy env var (no longer needed for global setup) |
 
 ### Slash commands
 
@@ -723,7 +728,7 @@ scaffolding, agents, and commands are designed for.
 - `opk gsd` / `opk update-gsd` — calls `npx @opengsd/gsd-core@latest`.
 - `opk update-all --with-gsd` — pulls kit + updates GSD.
 - `opk markitdown install` — re-runs `pipx install "markitdown[all]"`.
-- `opk supermemory install` — re-runs `npm install -g @supermemory/ai`.
+- `opk supermemory install` — re-runs `npm install -g supermemory`.
 - `opk ecc lite` — installs ECC-lite agent + commands (OPK-native, not full ECC).
 - `opk update-ecc` — refreshes ECC-lite from OPK repo.
 - `opk ecc audit` — read-only audit against ECC principles (clone to .tmp/).
@@ -732,11 +737,14 @@ scaffolding, agents, and commands are designed for.
 - `opk hermes capsule` — package learnings into capsule file.
 - No auto-update, no background refresh.
 
-### Auto-enabled dependencies (Taste Skill)
+### Verify-gated dependencies (Taste Skill)
 
-- `opk update-taste` — re-runs `npx taste-skill`.
-- Automatically installed during `opk global/go/one` and `install-global.sh`.
-- `OPK_SKIP_TASTE=1` bypasses auto-install.
+- `opk taste install` — user-installed, not auto-installed.
+- `opk taste install --v1` — install v1 (legacy).
+- `opk taste install --v2` — install v2 (default).
+- `opk taste doctor` — check runtime dependencies.
+- `opk taste off` — safe removal (moves to `.opk-trash/`).
+- `OPK_SKIP_TASTE=1` — legacy env var (no longer needed since global scripts no longer auto-install Taste).
 - Graceful degradation if node/npx/network missing.
 
 ### Plugin references (Superpowers)

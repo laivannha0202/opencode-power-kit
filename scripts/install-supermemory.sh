@@ -26,7 +26,10 @@ set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
 MODE="interactive"
-SUPERMEMORY_PACKAGE="@supermemory/ai"
+# DEPRECATED: @supermemory/ai is no longer maintained.
+# Use 'supermemory' or '@supermemory/tools' instead.
+# See: https://github.com/supermemory/supermemory
+SUPERMEMORY_PACKAGE="supermemory"
 
 # ─── Usage ────────────────────────────────────────────────────────
 usage() {

@@ -5,12 +5,12 @@
 # Cài đặt Superpowers + BMAD Method vào project hiện tại
 #
 # Env overrides:
-#   BMAD_METHOD_VERSION  Pin version BMAD (mặc định: 6.8.0)
+#   BMAD_METHOD_VERSION  Pin version BMAD (mặc định: 6.9.0)
 # ============================================================================
 set -euo pipefail
 
-# --- BMAD Method version (env override, default 6.8.0) ---
-: "${BMAD_METHOD_VERSION:=6.8.0}"
+# --- BMAD Method version (env override, default 6.9.0) ---
+: "${BMAD_METHOD_VERSION:=6.9.0}"
 export BMAD_METHOD_VERSION
 
 # --- Colors ---

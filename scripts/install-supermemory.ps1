@@ -20,7 +20,10 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $ScriptName = 'install-supermemory.ps1'
-$SupermemoryPackage = '@supermemory/ai'
+# DEPRECATED: @supermemory/ai is no longer maintained.
+# Use 'supermemory' or '@supermemory/tools' instead.
+# See: https://github.com/supermemory/supermemory
+$SupermemoryPackage = 'supermemory'
 
 # ─── Helpers ──────────────────────────────────────────────────────
 function Write-Plan($cmdLine) {

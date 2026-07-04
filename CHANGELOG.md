@@ -7,6 +7,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0] - 2026-06-14
 
+### Upstream Audit & Security Hardening (2026-07-03)
+
+### Added
+
+- **`docs/UPSTREAM_AUDIT.md`** — comprehensive audit of all 28 upstream dependencies
+  with integration types, risk levels, and required actions.
+- **`docs/UPSTREAM_UPDATE_POLICY.md`** — policy for when/how to update upstream
+  references, including pin updates, package migrations, and breaking changes.
+- **`docs/UPSTREAM_RISKS.md`** — risk analysis for permission, auto-install,
+  stale packages, license, Windows paths, version conflicts, and network deps.
+- **Permission deny-list** — `templates/opencode.json`, `templates/opencode.power.json`,
+  and `templates/opencode.safe.json` now include explicit deny-list for destructive
+  commands: `rm -rf`, `git reset --hard`, `git clean -fd`, `git push --force`,
+  `DROP TABLE`, `TRUNCATE TABLE`, `curl|sh`, `wget|sh`.
+- **`scripts/audit-upstreams.py`** — new script to scan repo for upstream references
+  and generate audit reports.
+- **Validator updates** — `scripts/validate-opencode-pack.py` now checks for:
+  - UPSTREAM_AUDIT.md, UPSTREAM_UPDATE_POLICY.md, UPSTREAM_RISKS.md existence
+  - Permission deny-list in all config templates
+  - Deprecated `@supermemory/ai` references outside migration section
+
+### Changed
+
+- **BMAD Method version pin** — default updated from `6.8.0` to `6.9.0` in
+  `install.sh`, `install.ps1`, `update-bmad.sh`, `update-bmad.ps1`.
+- **Supermemory package migration** — `scripts/install-supermemory.sh` and
+  `scripts/install-supermemory.ps1` now use `supermemory` instead of deprecated
+  `@supermemory/ai`. Old package name only appears in DEPRECATED comments.
+- **OpenCode config templates** — all three templates (default, power, safe) now
+  use permission object with explicit deny-list instead of bare `"permission": "allow"`.
+
+### Security
+
+- All config templates now deny destructive bash commands even in power mode.
+- Deprecated package references removed from active code.
+- Upstream dependency matrix documented with risk levels.
+
+### CLI Expansion (v2.0.0)
+
+- **`bin/opk`** — new subcommands:
+  - `opk upstream audit` / `opk upstream audit --check` / `opk upstream doctor`
+  - `opk superpowers status` / `opk superpowers reset-cache` / `opk superpowers doctor`
+  - `opk bmad status` / `opk bmad update --stable/--next/--version`
+  - `opk tooling doctor`
+  - `opk taste install --v1/--v2` / `opk taste doctor`
+- **`bin/opk.ps1`** — full parity for all new subcommands.
+- **Help text** — updated with v2.0.0 sections for all new commands.
+
+### Taste Skill — Verify-gated (v2.0.0)
+
+- **Changed from auto-enabled to verify-gated** — Taste Skill is no longer
+  auto-installed during `opk global/one/go`. User must explicitly run
+  `opk taste install` to add it.
+- **`install-global.sh` / `install-global.ps1`** — Taste auto-install removed.
+  Scripts now print suggestion hint only.
+- **New `opk taste doctor`** — checks node/npx runtime dependencies.
+- **New `opk taste install --v1/--v2`** — explicit version selection.
+- **Safe removal** — `opk taste off` now moves to `.opk-trash/` instead of
+  deleting files directly. No `rm -rf` used.
+- **README.md** — updated integration model from "Auto-enabled" to "Verify-gated".
+- **THIRD_PARTY.md** — updated integration type and install behavior table.
+
+### Migration Notes
+
+- **BMAD 6.8.0 → 6.9.0:** If you have existing projects, run
+  `BMAD_METHOD_VERSION=6.9.0 opk update-bmad` to update.
+- **Supermemory:** If you installed `@supermemory/ai`, uninstall it and
+  install `supermemory` instead: `npm uninstall -g @supermemory/ai && npm install -g supermemory`.
+
+## [2.0.0] - 2026-06-14
+
 ### OPK Orchestration Lite — Inspired by oh-my-openagent
 
 ### Added
@@ -361,7 +432,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.7.0] - 2026-06-10
 
-### Taste Skill — AI-Augmented UI/UX Design (Auto-Enabled)
+> **⚠️ Legacy behavior:** Auto-install in v1.7.0 was replaced by verify-gated
+> install in v2.0.0. Global scripts no longer auto-install Taste Skill.
+> Use `opk taste install` instead.
+
+### Taste Skill — AI-Augmented UI/UX Design (Auto-Enabled — Legacy)
 
 ### Added
 

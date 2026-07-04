@@ -392,23 +392,11 @@ ok "Tạo report: $REPORT_FILE"
 
 ok "Tạo report: $PACK_REPORT_FILE"
 
-# --- Optional: Taste Skill auto-install (không fail nếu lỗi) ---
-if [ "${OPK_SKIP_TASTE:-}" != "1" ]; then
-	if [ -f "$KIT_DIR/scripts/install-taste-skill.sh" ]; then
-		echo ""
-		info "Đang cài Taste Skill (UI/UX design) — set OPK_SKIP_TASTE=1 để bỏ qua..."
-		if bash "$KIT_DIR/scripts/install-taste-skill.sh" --yes 2>/dev/null; then
-			ok "Taste Skill installed."
-		else
-			warn "Taste Skill không cài được (node/npx/network?). Chạy sau: opk taste install"
-		fi
-	else
-		warn "scripts/install-taste-skill.sh không tìm thấy — bỏ qua Taste Skill."
-	fi
-else
-	echo ""
-	info "OPK_SKIP_TASTE=1 — bỏ qua Taste Skill."
-fi
+# --- Taste Skill: suggest (verify-gated, not auto-installed since v2.0.0) ---
+echo ""
+info "Taste Skill (UI/UX design) is optional and NOT auto-installed."
+info "To install:  opk taste install"
+info "To check:    opk taste doctor"
 
 # --- Final summary ---
 echo ""
