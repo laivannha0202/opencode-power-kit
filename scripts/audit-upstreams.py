@@ -44,6 +44,7 @@ PATTERNS = {
 }
 
 SKIP_DIRS = {".git", "node_modules", ".tmp", ".opk-trash", "vendor", "dist", "build", "coverage"}
+SKIP_FILES = {"docs/UPSTREAM_AUDIT.md"}
 
 # ─── Key upstreams that MUST appear in the audit report ────────────
 REQUIRED_UPSTREAMS = [
@@ -63,6 +64,9 @@ def rg_search(pattern: str, root: str) -> list[UpstreamRef]:
     skip_args = []
     for d in SKIP_DIRS:
         skip_args.extend(["--glob", f"!{d}"])
+    # Also skip the audit report itself to avoid self-referential entries
+    for f in SKIP_FILES:
+        skip_args.extend(["--glob", f"!{f}"])
     try:
         proc = subprocess.run(
             ["rg", "-n", "--no-heading", "-e", pattern, root] + skip_args,
