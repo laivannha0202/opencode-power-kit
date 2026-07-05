@@ -1,11 +1,7 @@
 name: verify
 
 on:
-  push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
-  workflow_dispatch:
+  workflow_dispatch:  # manual only — local validation (verify.sh/verify.ps1) is primary
 
 jobs:
   verify:
