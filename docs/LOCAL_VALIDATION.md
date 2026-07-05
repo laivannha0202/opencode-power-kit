@@ -9,10 +9,18 @@
   chạy thủ công qua `workflow_dispatch`. Không auto-trigger trên push/PR.
 - **Local validation là primary** — Mọi thay đổi phải pass local validation
   trước khi commit/push. Actions trên GitHub chỉ là lớp kiểm tra bổ sung.
-- **Không yêu cầu billing** — Local validation chạy hoàn toàn trên máy
-  của bạn, không cần GitHub billing hay Actions unlock.
+- **Không yêu cầu GitHub Actions** — Local validation chạy hoàn toàn trên máy
+  của bạn. GitHub Actions là optional/manual-only.
 
 ## Các lệnh validation
+
+### 0. Formatting guard
+
+Kiểm tra format file, line count, workflow YAML structure:
+
+```bash
+python3 scripts/validate-formatting.py
+```
 
 ### 1. Upstream audit
 
@@ -68,6 +76,7 @@ Chạy tất cả validation trong một lần:
 
 ```bash
 set -e
+echo "=== 0) formatting guard ===" && python3 scripts/validate-formatting.py
 echo "=== 1) upstream audit ===" && python3 scripts/audit-upstreams.py --check
 echo "=== 2) pack validation ===" && python3 scripts/validate-opencode-pack.py
 echo "=== 3) verify.sh ===" && bash verify.sh
@@ -78,6 +87,7 @@ echo "=== ALL PASS ==="
 
 ## Checklist trước commit/push
 
+- [ ] `python3 scripts/validate-formatting.py` — formatting guard PASS
 - [ ] `python3 scripts/audit-upstreams.py --check` — upstream audit PASS
 - [ ] `python3 scripts/validate-opencode-pack.py` — pack validation PASS
 - [ ] `bash verify.sh` — verify PASS (505 tests, 0 failed)
@@ -97,9 +107,16 @@ echo "=== ALL PASS ==="
    - Sửa lỗi trước, chạy lại local validation cho đến khi PASS.
    - Sau đó mới commit/push.
 
+## Model yếu / flash
+
+Nếu dùng model yếu (flash, low-cost), xem:
+
+- `docs/WEAK_MODEL_GUIDE.md` — Hướng dẫn cho model yếu, slice nhỏ, anti-patterns
+
 ## Tài liệu liên quan
 
 - `README.md` — Tổng quan kit, troubleshooting
 - `docs/UPSTREAM_AUDIT.md` — Audit chi tiết upstream dependencies
 - `docs/safety.md` — Mô hình an toàn
 - `docs/workflow.md` — Workflow chi tiết
+- `docs/WEAK_MODEL_GUIDE.md` — Hướng dẫn model yếu

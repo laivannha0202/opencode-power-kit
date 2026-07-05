@@ -1,7 +1,8 @@
 name: verify
 
 on:
-  workflow_dispatch:  # manual only — local validation (verify.sh/verify.ps1) is primary
+  workflow_dispatch:
+    # manual only — local validation (verify.sh/verify.ps1) is primary
 
 jobs:
   verify:
@@ -34,6 +35,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      - name: formatting validation
+        run: python3 scripts/validate-formatting.py
 
       - name: bash -n scripts
         run: |

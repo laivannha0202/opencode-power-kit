@@ -1016,6 +1016,23 @@ else
 fi
 echo
 
+# ─── Formatting guard (run if present) ────────────────────────────
+echo "[formatting guard]"
+if [[ -f "scripts/validate-formatting.py" ]]; then
+	if command -v python3 >/dev/null 2>&1; then
+		if python3 "scripts/validate-formatting.py"; then
+			ok "python3 validate-formatting.py"
+		else
+			fail "python3 validate-formatting.py failed"
+		fi
+	else
+		echo "  skip formatting guard (python3 not installed)"
+	fi
+else
+	warn "scripts/validate-formatting.py missing"
+fi
+echo
+
 # ─── Python validator (run if present) ────────────────────────────
 echo "[python validator]"
 if [[ -f "scripts/validate-opencode-pack.py" ]]; then
