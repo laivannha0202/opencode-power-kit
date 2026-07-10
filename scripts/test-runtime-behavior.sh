@@ -119,7 +119,9 @@ fi
 
 # --- 7. Release Gate ---
 section "7. Release Gate"
-if [ -f "$SCRIPT_DIR/release-gate.sh" ]; then
+if [ "${RELEASE_GATE_RUNNING:-0}" -eq 1 ]; then
+  skip_test "Release gate" "already running inside release-gate.sh (skip to avoid loop)"
+elif [ -f "$SCRIPT_DIR/release-gate.sh" ]; then
   run_test "Release gate: passes" \
     "bash $SCRIPT_DIR/release-gate.sh 2>/dev/null"
 else

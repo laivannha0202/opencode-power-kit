@@ -259,8 +259,7 @@ AGENTS_WITH_SCOPE_GATE=(
 	"opencode-global/agents/release-strong.md"
 	"opencode-global/agents/security-strong.md"
 	"opencode-global/agents/ui-ux-strong.md"
-	"opencode-global/agents/gsd-executor.md"
-	"opencode-global/agents/gsd-code-fixer.md"
+	# v2.1.0: GSD agents moved to extras/gsd-agent-reference/
 )
 for agent_file in "${AGENTS_WITH_SCOPE_GATE[@]}"; do
 	if [[ -f "${agent_file}" ]]; then
@@ -714,7 +713,7 @@ require_contains "CHANGELOG.md" "Safety plugin guard"
 require_contains "CHANGELOG.md" "opk mode"
 require_contains "templates/opencode.safe.json" '"permission":'
 require_contains "templates/opencode.power.json" '"permission"'
-require_contains "templates/plugins/opk-safety-guard.js" "guardCheck"
+require_contains "templates/plugins/opk-safety-guard.js" "tool.execute.before"
 require_contains "bin/opk" "mode)"
 require_contains "bin/opk" "safety-plugin)"
 require_contains "bin/opk.ps1" "'mode'"
@@ -749,7 +748,7 @@ require_contains "CHANGELOG.md" "init-deep-lite"
 require_contains "CHANGELOG.md" "no MCP"
 require_contains "CHANGELOG.md" "no telemetry"
 # VERSION
-require_contains "VERSION" "2.0.0"
+require_contains "VERSION" "2.1.0"
 # New commands (5)
 require_file "opencode-global/commands/intent-router.md"
 require_file "opencode-global/commands/init-deep-lite.md"

@@ -43,31 +43,31 @@ section "Kit Integrity"
 if [ -f "$KIT_DIR/VERSION" ]; then
   pass "VERSION exists: $(cat "$KIT_DIR/VERSION")"
 else
-  fail "VERSION file missing"; ((errors++))
+  fail "VERSION file missing"; errors=$((errors + 1))
 fi
 
 if [ -f "$KIT_DIR/install.sh" ]; then
   pass "install.sh exists"
 else
-  fail "install.sh missing"; ((errors++))
+  fail "install.sh missing"; errors=$((errors + 1))
 fi
 
 if [ -f "$KIT_DIR/install-global.sh" ]; then
   pass "install-global.sh exists"
 else
-  fail "install-global.sh missing"; ((errors++))
+  fail "install-global.sh missing"; errors=$((errors + 1))
 fi
 
 if [ -f "$KIT_DIR/verify.sh" ]; then
   pass "verify.sh exists"
 else
-  fail "verify.sh missing"; ((errors++))
+  fail "verify.sh missing"; errors=$((errors + 1))
 fi
 
 if [ -f "$KIT_DIR/bin/opk" ]; then
   pass "bin/opk exists"
 else
-  fail "bin/opk missing"; ((errors++))
+  fail "bin/opk missing"; errors=$((errors + 1))
 fi
 
 if [ -f "$KIT_DIR/doctor.sh" ]; then
@@ -88,7 +88,7 @@ for tpl in opencode.json opencode.power.json opencode.safe.json; do
       warn "templates/$tpl may be missing deny-list"
     fi
   else
-    fail "templates/$tpl missing"; ((errors++))
+    fail "templates/$tpl missing"; errors=$((errors + 1))
   fi
 done
 
@@ -195,15 +195,17 @@ if [ "$DEEP" -eq 1 ]; then
   section "Deep Checks"
 
   # Check for personal paths
-  INFO_COUNT=$(grep -rl '/home/nha' "$KIT_DIR/opencode-global/" 2>/dev/null | wc -l)
+  INFO_COUNT=$(grep -rl '/home/nha' "$KIT_DIR/opencode-global/" 2>/dev/null || true)
+  INFO_COUNT=$(printf "%s" "$INFO_COUNT" | wc -l)
   if [ "$INFO_COUNT" -gt 0 ]; then
-    fail "$INFO_COUNT files contain personal path /home/nha"; ((errors++))
+    fail "$INFO_COUNT files contain personal path /home/nha"; errors=$((errors + 1))
   else
     pass "No personal paths in opencode-global/"
   fi
 
   # Check extras paths
-  EXTRAS_INFO=$(grep -rl '/home/nha' "$KIT_DIR/extras/" 2>/dev/null | wc -l)
+  EXTRAS_INFO=$(grep -rl '/home/nha' "$KIT_DIR/extras/" 2>/dev/null || true)
+  EXTRAS_INFO=$(printf "%s" "$EXTRAS_INFO" | wc -l)
   if [ "$EXTRAS_INFO" -gt 0 ]; then
     warn "$EXTRAS_INFO files in extras/ may contain personal paths"
   else
@@ -215,7 +217,7 @@ if [ "$DEEP" -eq 1 ]; then
   for s in "$KIT_DIR"/scripts/*.sh "$KIT_DIR"/doctor.sh "$KIT_DIR"/verify.sh; do
     if [ -f "$s" ] && ! bash -n "$s" 2>/dev/null; then
       warn "bash -n failed: $(basename "$s")"
-      ((SCRIPT_ERRS++))
+      SCRIPT_ERRS=$((SCRIPT_ERRS + 1))
     fi
   done
   if [ "$SCRIPT_ERRS" -eq 0 ]; then
@@ -239,7 +241,8 @@ if [ "$DEEP" -eq 1 ]; then
   fi
 
   # Vendoring check — no GSD source in active agents
-  GSD_SOURCE=$(grep -rl '@opengsd/gsd-core' "$KIT_DIR/opencode-global/" 2>/dev/null | wc -l)
+  GSD_SOURCE=$(grep -rl '@opengsd/gsd-core' "$KIT_DIR/opencode-global/" 2>/dev/null || true)
+  GSD_SOURCE=$(printf "%s" "$GSD_SOURCE" | wc -l)
   if [ "$GSD_SOURCE" -gt 0 ]; then
     warn "$GSD_SOURCE files reference @opengsd/gsd-core in opencode-global/ (may be OK in docs)"
   else

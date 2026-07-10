@@ -4,8 +4,10 @@
   // Model routing example — copy và tùy chỉnh cho project của bạn.
   //
   // Place tại project root hoặc .opencode/opencode.json.
-  // Chỉ cần cấu hình "model" mặc định. Routing là optional.
+  // Chỉ cần cấu hình "model" mặc định. Per-agent model là optional.
   // ============================================================================
+
+  "$schema": "https://opencode.ai/config.json",
 
   // Model mặc định cho mọi task.
   // Format: "provider/model-name"
@@ -24,20 +26,40 @@
     // "deepseek": { "apiKey": "env:DEEPSEEK_API_KEY" }
   },
 
-  // Optional: Model routing per task type.
-  // Nếu bỏ trống hoặc không có key, dùng model mặc định.
-  "modelRouting": {
-    // Code generation, refactoring, complex changes — model mạnh nhất.
-    "code": "anthropic/claude-sonnet-4-20250514",
+  // Optional: Per-agent model routing.
+  // Override model mặc định cho từng agent.
+  // Nếu bỏ trống hoặc không có key, dùng model mặc định ở trên.
+  //
+  // Mode values:
+  //   - "primary": model chính cho agent này
+  //   - "subagent": model cho subagent tasks
+  //   - "all": model cho tất cả modes
+  //
+  // Model format: "provider/model-name" (vd: "anthropic/claude-sonnet-4-20250514")
+  "agent": {
+    // Build agent — model mạnh nhất cho code generation, refactoring.
+    "build": {
+      "mode": "primary",
+      "model": "anthropic/claude-sonnet-4-20250514"
+    },
 
-    // Quick edits, renames, formatting — model nhanh/rẻ hơn.
-    "quick": "openai/gpt-4o-mini",
+    // Exploration agent — model nhanh, rẻ cho read-only tasks.
+    "explore": {
+      "mode": "subagent",
+      "model": "anthropic/claude-haiku-3-20240307"
+    },
 
-    // Code review, PR review — model analytical.
-    "review": "anthropic/claude-sonnet-4-20250514",
+    // Build-strong agent — model mạnh cho implementation phức tạp.
+    "build-strong": {
+      "mode": "primary",
+      "model": "anthropic/claude-sonnet-4-20250514"
+    },
 
-    // Research, documentation, planning — model có context lớn.
-    "research": "anthropic/claude-sonnet-4-20250514"
+    // Debug agent — model analytical mạnh nhất cho root cause analysis.
+    "debug-strong": {
+      "mode": "all",
+      "model": "anthropic/claude-opus-4-20250514"
+    }
   }
 
   // Permission, instructions, plugins, MCP, formatter — giữ nguyên

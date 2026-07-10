@@ -1,6 +1,6 @@
 # ─────────────────────────────────────────────────────────────────
 # verify.ps1
-# opencode-power-kit v1.6.6
+# opencode-power-kit v2.1.0
 #
 # PowerShell mirror of verify.sh. Read-only sanity check.
 #
@@ -708,6 +708,99 @@ if (Test-Path -LiteralPath $pyScript) {
     }
 } else {
     Fail 'scripts/validate-opencode-pack.py missing'
+}
+Write-Host ''
+
+# ─── v2.1.0: Model Routing Schema ────────────────────────────────
+Write-Host '[v2.1.0 Model Routing Schema]'
+$modelsExample = Join-Path $KitDir 'templates/opencode.models.example.jsonc'
+if (Test-Path -LiteralPath $modelsExample -PathType Leaf) {
+    $modelsContent = Get-Content -LiteralPath $modelsExample -Raw -ErrorAction SilentlyContinue
+    if ($null -ne $modelsContent) {
+        # Must use "agent" (singular), not "agents" (plural)
+        if ($modelsContent.Contains('"agents"')) {
+            Fail 'templates/opencode.models.example.jsonc uses agents (plural) — must use agent (singular)'
+        } elseif ($modelsContent.Contains('"agent"')) {
+            Ok 'templates/opencode.models.example.jsonc uses agent (singular)'
+        } else {
+            Fail 'templates/opencode.models.example.jsonc missing agent key'
+        }
+        # Must use "mode", not "kind"
+        if ($modelsContent.Contains('"kind"')) {
+            Fail 'templates/opencode.models.example.jsonc uses kind — must use mode'
+        } else {
+            Ok 'templates/opencode.models.example.jsonc: no kind found (uses mode)'
+        }
+        # Must have $schema
+        if ($modelsContent.Contains('"$schema"')) {
+            Ok 'templates/opencode.models.example.jsonc has $schema'
+        } else {
+            Fail 'templates/opencode.models.example.jsonc missing $schema'
+        }
+    } else {
+        Fail 'templates/opencode.models.example.jsonc is empty'
+    }
+} else {
+    Fail 'templates/opencode.models.example.jsonc missing'
+}
+Write-Host ''
+
+# ─── v2.1.0: Safety Plugin Contract ──────────────────────────────
+Write-Host '[v2.1.0 Safety Plugin Contract]'
+$spFile = Join-Path $KitDir 'templates/plugins/opk-safety-guard.js'
+if (Test-Path -LiteralPath $spFile -PathType Leaf) {
+    $spContent = Get-Content -LiteralPath $spFile -Raw -ErrorAction SilentlyContinue
+    if ($null -ne $spContent) {
+        if ($spContent.Contains('tool.execute.before')) {
+            Ok 'safety plugin: uses tool.execute.before hook'
+        } else {
+            Fail 'safety plugin: missing tool.execute.before hook'
+        }
+        if ($spContent.Contains('throw new Error')) {
+            Ok 'safety plugin: uses throw new Error for blocking'
+        } else {
+            Fail 'safety plugin: missing throw new Error pattern'
+        }
+        if ($spContent.Contains('module.exports')) {
+            Ok 'safety plugin: has factory export (module.exports)'
+        } else {
+            Fail 'safety plugin: missing factory export'
+        }
+    }
+} else {
+    Fail 'templates/plugins/opk-safety-guard.js missing'
+}
+Write-Host ''
+
+# ─── v2.1.0: GSD agents only in extras/ reference ────────────────
+Write-Host '[v2.1.0 GSD agents reference-only]'
+$gsdActive = Get-ChildItem -Path (Join-Path $KitDir 'opencode-global/agents') -Filter 'gsd-*.md' -ErrorAction SilentlyContinue
+if ($gsdActive -and $gsdActive.Count -gt 0) {
+    Fail "GSD agents still in active agents/ ($($gsdActive.Count) files)"
+} else {
+    Ok 'No GSD agents in active agents/ directory'
+}
+$gsdRefDir = Join-Path $KitDir 'extras/gsd-agent-reference'
+if (Test-Path -LiteralPath $gsdRefDir -PathType Container) {
+    $gsdRefFiles = Get-ChildItem -Path $gsdRefDir -Filter '*.md' -ErrorAction SilentlyContinue
+    if ($gsdRefFiles -and $gsdRefFiles.Count -gt 0) {
+        Ok "GSD reference agents in extras/gsd-agent-reference/ ($($gsdRefFiles.Count) files)"
+    } else {
+        Fail 'extras/gsd-agent-reference/ exists but no .md files'
+    }
+} else {
+    Fail 'extras/gsd-agent-reference/ directory missing'
+}
+Write-Host ''
+
+# ─── v2.1.0: Active-agent scope — no GSD in active dir ───────────
+Write-Host '[v2.1.0 Active-agent scope]'
+$activeAgents = Get-ChildItem -Path (Join-Path $KitDir 'opencode-global/agents') -Filter '*.md' -ErrorAction SilentlyContinue
+$gsdInActive = $activeAgents | Where-Object { $_.Name -like 'gsd-*' }
+if ($gsdInActive -and $gsdInActive.Count -gt 0) {
+    Fail "GSD agents found in active agents/: $($gsdInActive.Name -join ', ')"
+} else {
+    Ok 'No GSD agents in active agents/ directory'
 }
 Write-Host ''
 

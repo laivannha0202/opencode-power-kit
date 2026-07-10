@@ -15,15 +15,14 @@
 //   bash (execute, shell)    -> destructive shell commands
 //
 // Helper functions (isSensitivePath / findDangerousCommand / extractPatchPaths)
-// are exported separately and are unit-tested by scripts/test-safety-plugin.mjs.
+// are private (not exported) and tested via the plugin hook in test-safety-plugin.mjs.
 //
 // @version 2.1.0
 // ============================================================================
 
 // --- Sensitive path detection ------------------------------------------------
 // Ordered: exact .env, .env.<suffix> (except .example), private keys, etc.
-// Allowlist: *.example and anything under a templates/ directory is treated
-// as a non-secret sample and is NEVER blocked.
+// Allowlist: *.example only. No broad directory allowlists.
 const SENSITIVE_PATH_PATTERNS = [
   /\.env$/, // exact .env
   /\.env\.(?!example)[A-Za-z0-9_-]+$/, // .env.local / .env.production ... but not .env.example
@@ -41,7 +40,6 @@ const SENSITIVE_PATH_PATTERNS = [
 
 const SENSITIVE_PATH_ALLOWLIST = [
   /\.example$/, // *.example sample files (.env.example, opencode.example.jsonc)
-  /(^|[\\/])templates([\\/]|$)/, // bundled template samples
 ];
 
 /**
@@ -56,7 +54,7 @@ function normalizePath(p) {
  * Trả về true nếu filePath là file nhạy cảm (secret / private key / .env thật).
  * .env.example và file template mẫu KHÔNG bị block.
  */
-export function isSensitivePath(filePath) {
+function isSensitivePath(filePath) {
   const p = normalizePath(filePath);
   if (!p) return false;
 
@@ -81,13 +79,17 @@ function stripQuotes(cmd) {
     .replace(/"[^"]*"/g, " ");
 }
 
-const RM_RF_RE = /\brm\b[^|;&]*(-[a-z]*[rR][a-z]*\s+-[a-z]*[fF][a-z]*|-[rR][fF]|-[fF][rR])/;
+// Matches: rm -rf, rm -fr, rm -r -f, rm --recursive --force, rm -Rf, rm -fR
+const RM_RF_RE = /\brm\b[^|;&]*(-[a-z]*[rR][a-z]*\s+-[a-z]*[fF][a-z]*|-[rR][fF]|-[fF][rR]|--recursive\s+--force|--force\s+--recursive)/;
 const GIT_RESET_RE = /\bgit\s+reset\s+--hard\b/;
 const GIT_CLEAN_RE = /\bgit\s+clean\s+-f/;
-const GIT_PUSH_FORCE_RE = /\bgit\s+push\s+(--force|-[a-zA-Z]*f[a-zA-Z]*)\b/;
+// Matches: git push --force, git push -f, git push ... --force, git push ... --force-with-lease
+const GIT_PUSH_FORCE_RE = /\bgit\s+push\b[^|;&]*(--force|-[a-zA-Z]*f[a-zA-Z]*|--force-with-lease)\b/;
 const SQL_RE = /\b(DROP\s+TABLE|TRUNCATE\s+TABLE|TRUNCATE\s+)\b/i;
 const SQL_DELETE_RE = /\bDELETE\s+FROM\b(?![\s\S]*\bWHERE\b)/i;
-const PIPE_SHELL_RE = /\|\s*(ba)?sh\b|\|\s*zsh\b/;
+const PIPE_SHELL_RE = /\|\s*(?:sudo\s+|env\s+)?(?:ba)?sh\b|\|\s*zsh\b/;
+// Matches: bash -c "dangerous", sh -c 'dangerous'
+const SHELL_C_RE = /\b(ba)?sh\s+-c\b/;
 
 function splitSegments(cmd) {
   return String(cmd)
@@ -101,10 +103,24 @@ function splitSegments(cmd) {
  * Trả về string mô tả rule vi phạm, hoặc null nếu an toàn.
  * Phát hiện command nguy hiểm kể cả khi nằm sau &&, ;, ||, pipe.
  */
-export function findDangerousCommand(command) {
+function findDangerousCommand(command) {
   if (!command) return null;
   const raw = String(command);
   const stripped = stripQuotes(raw);
+
+  // Check for bash -c "..." / sh -c '...' with dangerous inner command
+  // Must check BEFORE pipe detection because -c content is quoted and would
+  // be stripped. Check on raw command to preserve quoted content.
+  if (SHELL_C_RE.test(raw)) {
+    const innerMatch = raw.match(/\b(?:ba)?sh\s+-c\s+["']([^"']*)["']/);
+    if (innerMatch) {
+      const inner = innerMatch[1];
+      if (RM_RF_RE.test(inner)) return "bash -c rm -rf: xóa dữ liệu không thể phục hồi";
+      if (GIT_RESET_RE.test(inner)) return "bash -c git reset --hard: mất thay đổi chưa commit";
+      if (GIT_CLEAN_RE.test(inner)) return "bash -c git clean -f: xóa untracked files";
+      if (GIT_PUSH_FORCE_RE.test(inner)) return "bash -c git push --force: ghi đè lịch sử remote";
+    }
+  }
 
   // Pipe-to-shell must be checked on the whole (quote-stripped) command
   // because the pipe itself is the danger and splitting on | would hide it.
@@ -138,29 +154,31 @@ export function findDangerousCommand(command) {
 }
 
 // --- apply_patch path extraction --------------------------------------------
-// Matches OpenCode apply_patch markers:
-//   *** Add File: path
-//   *** Update File: path
-//   *** Delete File: path
-//   *** Move File: from -> to
-export function extractPatchPaths(patchText) {
+// Matches OpenCode apply_patch markers (both old and new formats):
+//   *** Add File: path       /  *** Add File: path
+//   *** Update File: path    /  *** Update File: path
+//   *** Delete File: path    /  *** Delete File: path
+//   *** Move File: from -> to  /  *** Move to: path
+function extractPatchPaths(patchText) {
   const text = String(patchText || "");
   const paths = [];
-  const re = /\*\*\*\s+(Add|Update|Delete|Move)\s+File:\s*(.+?)\s*$/gm;
+  // Match Add/Update/Delete File: ... AND Move File: ... AND Move to: ...
+  const re = /\*\*\*\s+(?:Add|Update|Delete)\s+File:\s*(.+?)\s*$|\*\*\*\s+Move\s+File:\s*(.+?)\s*$|\*\*\*\s+Move\s+to:\s*(.+?)\s*$/gm;
   let m;
   while ((m = re.exec(text)) !== null) {
-    const op = m[1];
-    const rest = m[2].trim();
-    if (op === "Move") {
-      const arrow = rest.match(/^(.*?)\s*->\s*(.*)$/);
+    if (m[2]) {
+      // Move File: from -> to
+      const arrow = m[2].trim().match(/^(.*?)\s*->\s*(.*)$/);
       if (arrow) {
         paths.push(arrow[1].trim());
         paths.push(arrow[2].trim());
       } else {
-        paths.push(rest);
+        paths.push(m[2].trim());
       }
     } else {
-      paths.push(rest);
+      // Add/Update/Delete File: path OR Move to: path
+      const path = (m[1] || m[3] || "").trim();
+      if (path) paths.push(path);
     }
   }
   return paths;
@@ -168,7 +186,7 @@ export function extractPatchPaths(patchText) {
 
 // --- Core guard --------------------------------------------------------------
 // Throws Error nếu (tool, args) vi phạm. Ngược lại không làm gì.
-export function guardToolCall(tool, args) {
+function guardToolCall(tool, args) {
   const name = String(tool || "").toLowerCase();
   const a = args || {};
 
@@ -216,7 +234,7 @@ export function guardToolCall(tool, args) {
  * The hook reads the tool name from `input.tool` and arguments from
  * `output.args`, then delegates to guardToolCall.
  */
-export const OPKSafetyGuard = async (ctx) => {
+const OPKSafetyGuard = async (ctx) => {
   return {
     "tool.execute.before": async (input, output) => {
       const tool = (input && input.tool) || (output && output.tool);
@@ -230,4 +248,4 @@ export const OPKSafetyGuard = async (ctx) => {
   };
 };
 
-export default OPKSafetyGuard;
+module.exports = OPKSafetyGuard;
