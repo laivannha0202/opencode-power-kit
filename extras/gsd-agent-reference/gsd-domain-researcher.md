@@ -54,7 +54,7 @@ works via Bash and produces equivalent output.
 </documentation_lookup>
 
 <required_reading>
-Read `/home/nha/opencode-power-kit/opencode-global/gsd-core/references/ai-evals.md` — specifically the rubric design and domain expert sections.
+Read `${OPK_GSD_CORE_DIR}/gsd-core/references/ai-evals.md` — specifically the rubric design and domain expert sections.
 </required_reading>
 
 <input>

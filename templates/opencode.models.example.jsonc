@@ -1,0 +1,45 @@
+{
+  // ============================================================================
+  // opencode.models.example.jsonc
+  // Model routing example — copy và tùy chỉnh cho project của bạn.
+  //
+  // Place tại project root hoặc .opencode/opencode.json.
+  // Chỉ cần cấu hình "model" mặc định. Routing là optional.
+  // ============================================================================
+
+  // Model mặc định cho mọi task.
+  // Format: "provider/model-name"
+  "model": "anthropic/claude-sonnet-4-20250514",
+
+  // Provider definitions — API keys từ env vars.
+  "provider": {
+    "anthropic": {
+      "apiKey": "env:ANTHROPIC_API_KEY"
+    },
+    "openai": {
+      "apiKey": "env:OPENAI_API_KEY"
+    }
+    // Thêm provider khác tùy needs:
+    // "google": { "apiKey": "env:GOOGLE_API_KEY" },
+    // "deepseek": { "apiKey": "env:DEEPSEEK_API_KEY" }
+  },
+
+  // Optional: Model routing per task type.
+  // Nếu bỏ trống hoặc không có key, dùng model mặc định.
+  "modelRouting": {
+    // Code generation, refactoring, complex changes — model mạnh nhất.
+    "code": "anthropic/claude-sonnet-4-20250514",
+
+    // Quick edits, renames, formatting — model nhanh/rẻ hơn.
+    "quick": "openai/gpt-4o-mini",
+
+    // Code review, PR review — model analytical.
+    "review": "anthropic/claude-sonnet-4-20250514",
+
+    // Research, documentation, planning — model có context lớn.
+    "research": "anthropic/claude-sonnet-4-20250514"
+  }
+
+  // Permission, instructions, plugins, MCP, formatter — giữ nguyên
+  // từ template chính. Không cần khai báo lại ở đây trừ khi override.
+}

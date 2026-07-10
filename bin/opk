@@ -156,7 +156,8 @@ opk — OpenCode Power Kit CLI (v$VERSION)
   opk safety-plugin status   Kiểm tra trạng thái safety plugin
 
   v1.3.4 — GSD Core opt-in:
-  opk gsd         Forward sang official GSD installer (opt-in, --dry-run / --yes)
+  opk gsd         Forward sang official GSD installer (opt-in, version-pinned, --dry-run / --yes)
+  opk gsd status  Kiểm tra GSD Core đã cài chưa (KHÔNG báo ready chỉ vì snapshot)
   opk update-gsd  Tương tự opk gsd, explicit refresh intent
   opk update-all  Pull kit (ff-only) + refresh bmad (+ optional GSD với --with-gsd)
 
@@ -350,13 +351,31 @@ EOF
         echo "Template: $KIT_DIR/templates/opencode.json"
         echo "Project:  $(test -f .opencode/opencode.json && echo '.opencode/opencode.json' || echo '(none)')"
         echo ""
-        if grep -q '"permission": "allow"' "$proj_config" 2>/dev/null; then
-          echo "Current mode: POWER (permission: allow)"
-          echo "  Agent tự động chạy tool, sửa file, bash — không hỏi lại."
+        detect_py="$KIT_DIR/scripts/detect-mode.py"
+        if [ -f "$detect_py" ] && command -v python3 >/dev/null 2>&1; then
+          resolved="$(python3 "$detect_py" "$proj_config" 2>/dev/null || echo CUSTOM)"
         else
-          echo "Current mode: SAFE (permission object)"
-          echo "  Agent hỏi trước khi write/edit/bash/task."
+          # Fallback cổ điển: parse chuỗi đơn giản.
+          if grep -q '"permission": "allow"' "$proj_config" 2>/dev/null; then
+            resolved="POWER"
+          else
+            resolved="SAFE"
+          fi
         fi
+        case "$resolved" in
+          POWER)
+            echo "Current mode: POWER"
+            echo "  permission == allow: Agent tự động chạy tool, sửa file, bash — không hỏi lại."
+            ;;
+          SAFE)
+            echo "Current mode: SAFE"
+            echo "  permission object: Agent hỏi trước khi write/edit/bash/task."
+            ;;
+          *)
+            echo "Current mode: CUSTOM"
+            echo "  Cấu hình không khớp POWER hay SAFE — dùng thiết lập tùy chỉnh của bạn."
+            ;;
+        esac
         ;;
       power)
         require_file "$KIT_DIR/templates/opencode.power.json"
@@ -379,7 +398,7 @@ EOF
         target=".opencode/opencode.json"
         if [ ! -f "$target" ]; then
           target="$KIT_DIR/templates/opencode.json"
-          echo "opk: Không tìm thấy .opencode/opencode.json — cập nhật template mặc định."
+          echo "opk: Không tìm thấy .opencode/opencode.json — cập nhật template mạĐịnh."
         fi
         backup="${target}.bak.$(date +%Y%m%d-%H%M%S)"
         cp "$target" "$backup"
@@ -392,6 +411,120 @@ EOF
         ;;
       *)
         echo "opk: mode: lệnh không hợp lệ '$mode_cmd'. Dùng: show, power, safe" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+
+  # ─── v2.1.0 Model Routing ──────────────────────────────────────
+  model)
+    model_cmd="${1:-status}"
+    shift || true
+    case "$model_cmd" in
+      status)
+        echo "opk: === Model Routing Status ==="
+        echo ""
+        # Check project config
+        proj_config=""
+        if [ -f ".opencode/opencode.json" ]; then
+          proj_config=".opencode/opencode.json"
+        elif [ -f "opencode.json" ]; then
+          proj_config="opencode.json"
+        fi
+        if [ -n "$proj_config" ]; then
+          echo "opk: Project config: $proj_config"
+          # Parse model using python3 JSON parser
+          if command -v python3 >/dev/null 2>&1; then
+            model="$(python3 -c "
+import json, sys
+try:
+    d = json.load(open('$proj_config'))
+    print(d.get('model', '(not set)'))
+except Exception as e:
+    print('(parse error: ' + str(e) + ')')
+" 2>/dev/null)"
+            echo "opk:   Default model: $model"
+          else
+            echo "opk:   (python3 not found, cannot parse model)"
+          fi
+        else
+          echo "opk: No project config found (using template defaults)"
+          echo "opk: Template model: $(python3 -c "
+import json
+try:
+    d = json.load(open('$KIT_DIR/templates/opencode.json'))
+    print(d.get('model', '(not set)'))
+except:
+    print('(not set)')
+" 2>/dev/null || echo '(not set)')"
+        fi
+        echo ""
+        echo "opk: Model routing docs: docs/MODEL_ROUTING.md"
+        echo "opk: Model config example: templates/opencode.models.example.jsonc"
+        ;;
+      example)
+        example_file="$KIT_DIR/templates/opencode.models.example.jsonc"
+        if [ -f "$example_file" ]; then
+          echo "opk: === Model Routing Example ==="
+          echo ""
+          echo "Copy this to your project root or .opencode/opencode.json:"
+          echo ""
+          cat "$example_file"
+        else
+          echo "opk: Model routing example not found: $example_file"
+        fi
+        ;;
+      doctor)
+        echo "opk: === Model Routing Doctor ==="
+        echo ""
+        # Check python3
+        if command -v python3 >/dev/null 2>&1; then
+          echo "opk: ✅ python3 found: $(command -v python3)"
+        else
+          echo "opk: ❌ python3 not found (required for JSON config parsing)"
+        fi
+        echo ""
+        # Check project config
+        proj_config=""
+        if [ -f ".opencode/opencode.json" ]; then
+          proj_config=".opencode/opencode.json"
+        elif [ -f "opencode.json" ]; then
+          proj_config="opencode.json"
+        fi
+        if [ -n "$proj_config" ]; then
+          echo "opk: ✅ Project config found: $proj_config"
+          # Validate JSON
+          if command -v python3 >/dev/null 2>&1; then
+            if python3 -c "import json; json.load(open('$proj_config'))" 2>/dev/null; then
+              echo "opk: ✅ Config is valid JSON"
+            else
+              echo "opk: ❌ Config has invalid JSON"
+            fi
+          fi
+        else
+          echo "opk: ℹ️  No project config found"
+        fi
+        echo ""
+        # Check template
+        echo "opk: Template check:"
+        for tpl in opencode.json opencode.power.json opencode.safe.json; do
+          if [ -f "$KIT_DIR/templates/$tpl" ]; then
+            if command -v python3 >/dev/null 2>&1; then
+              if python3 -c "import json; json.load(open('$KIT_DIR/templates/$tpl'))" 2>/dev/null; then
+                echo "opk:   ✅ $tpl (valid JSON)"
+              else
+                echo "opk:   ⚠️  $tpl (invalid JSON)"
+              fi
+            else
+              echo "opk:   ℹ️  $tpl (cannot validate without python3)"
+            fi
+          fi
+        done
+        echo ""
+        echo "opk: Model routing docs: docs/MODEL_ROUTING.md"
+        ;;
+      *)
+        echo "opk: model: lệnh không hợp lệ '$model_cmd'. Dùng: status, example, doctor" >&2
         exit 1
         ;;
     esac
@@ -542,10 +675,23 @@ EOF
 
   # ─── v1.3.4 GSD Core opt-in integration ────────────────────────
   # Forwards to scripts/install-gsd-core.sh (calls official
-  # `npx @opengsd/gsd-core@latest`). Never vendors GSD source.
+  # `npx @opengsd/gsd-core@<pinned>`). Never vendors GSD source.
   gsd)
-    require_file "$KIT_DIR/scripts/install-gsd-core.sh"
-    exec bash "$KIT_DIR/scripts/install-gsd-core.sh" "$@"
+    gsd_cmd="${1:-install}"
+    case "$gsd_cmd" in
+      status)
+        require_file "$KIT_DIR/scripts/install-gsd-core.sh"
+        exec bash "$KIT_DIR/scripts/install-gsd-core.sh" status
+        ;;
+      install|"")
+        require_file "$KIT_DIR/scripts/install-gsd-core.sh"
+        exec bash "$KIT_DIR/scripts/install-gsd-core.sh" "$@"
+        ;;
+      *)
+        echo "opk: gsd: lệnh không hợp lệ '$gsd_cmd'. Dùng: status, install (default)" >&2
+        exit 1
+        ;;
+    esac
     ;;
 
   update-gsd)

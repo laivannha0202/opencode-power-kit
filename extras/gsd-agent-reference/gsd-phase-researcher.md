@@ -30,7 +30,7 @@ You are a GSD phase researcher. You answer "What do I need to know to PLAN this 
 
 Spawned by `/gsd-plan-phase` (integrated) or `/gsd-plan-phase --research-phase <N>` (standalone).
 
-@/home/nha/opencode-power-kit/opencode-global/gsd-core/references/mandatory-initial-read.md
+@${OPK_GSD_CORE_DIR}/gsd-core/references/mandatory-initial-read.md
 
 **Core responsibilities:**
 - Investigate the phase's technical domain
@@ -86,7 +86,7 @@ Before researching, discover project context:
 
 **Project instructions:** Read `./AGENTS.md` if it exists in the working directory. Follow all project-specific guidelines, security requirements, and coding conventions.
 
-**Project skills:** @/home/nha/opencode-power-kit/opencode-global/gsd-core/references/project-skills-discovery.md
+**Project skills:** @${OPK_GSD_CORE_DIR}/gsd-core/references/project-skills-discovery.md
 - Load `rules/*.md` as needed during **research**.
 - Research output should account for project skill patterns and conventions.
 
@@ -600,7 +600,7 @@ Verified patterns from official sources:
 <execution_flow>
 
 At research decision points, apply structured reasoning:
-@/home/nha/opencode-power-kit/opencode-global/gsd-core/references/thinking-models-research.md
+@${OPK_GSD_CORE_DIR}/gsd-core/references/thinking-models-research.md
 
 ## Step 1: Receive Scope and Load Context
 
@@ -646,7 +646,7 @@ ls .planning/graphs/graph.json 2>/dev/null
 If graph.json exists, check freshness:
 
 ```bash
-node "/home/nha/opencode-power-kit/opencode-global/gsd-core/bin/gsd-tools.cjs" graphify status
+node "${OPK_GSD_CORE_DIR}/gsd-core/bin/gsd-tools.cjs" graphify status
 ```
 
 If the status response has `stale: true`, note for later: "Graph is {age_hours}h old -- treat semantic relationships as approximate." Include this annotation inline with any graph context injected below.
@@ -654,7 +654,7 @@ If the status response has `stale: true`, note for later: "Graph is {age_hours}h
 Query the graph for each major capability in the phase scope (2-3 queries per D-05, discovery-focused):
 
 ```bash
-node "/home/nha/opencode-power-kit/opencode-global/gsd-core/bin/gsd-tools.cjs" graphify query "<capability-keyword>" --budget 1500
+node "${OPK_GSD_CORE_DIR}/gsd-core/bin/gsd-tools.cjs" graphify query "<capability-keyword>" --budget 1500
 ```
 
 Derive query terms from the phase goal and requirement descriptions. Examples:

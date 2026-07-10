@@ -1,0 +1,22 @@
+[
+  {
+    "id": "code-gen-001",
+    "name": "Simple function implementation",
+    "description": "Agent should implement a basic function with proper error handling",
+    "input": "Write a TypeScript function called `parseJSONSafe` that takes a string and returns either the parsed object or null on error. Include proper types.",
+    "expected_contains": ["function", "parseJSONSafe", "try", "catch"],
+    "expected_not_contains": ["any", "eval("],
+    "max_tokens": 2000,
+    "timeout_seconds": 60
+  },
+  {
+    "id": "code-gen-002",
+    "name": "React component with props",
+    "description": "Agent should create a React component with TypeScript props",
+    "input": "Create a React component called UserCard that displays a user's name, email, and avatar. Use TypeScript interfaces for props.",
+    "expected_contains": ["interface", "UserCard", "props"],
+    "expected_not_contains": ["React.FC", "PropTypes"],
+    "max_tokens": 3000,
+    "timeout_seconds": 90
+  }
+]

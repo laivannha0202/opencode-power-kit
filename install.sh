@@ -100,39 +100,23 @@ info "Target project: $TARGET_DIR"
 info "Power Kit source: $KIT_DIR"
 info "BMAD Method version: $BMAD_METHOD_VERSION"
 
-# --- Backup existing files ---
-BACKUP_NEEDED=false
-for f in AGENTS.md OPENCODE.md .opencode/opencode.json; do
-	if [ -e "$TARGET_DIR/$f" ]; then
-		BACKUP_NEEDED=true
-		break
-	fi
-done
-
-if [ "$BACKUP_NEEDED" = true ]; then
-	info "Backup files cũ vào $BACKUP_DIR ..."
-	mkdir -p "$BACKUP_DIR"
-	for f in AGENTS.md OPENCODE.md .opencode/opencode.json; do
-		if [ -e "$TARGET_DIR/$f" ]; then
-			mkdir -p "$BACKUP_DIR/$(dirname "$f")"
-			cp "$TARGET_DIR/$f" "$BACKUP_DIR/$f"
-			ok "Đã backup: $f"
-		fi
-	done
+# --- Merge OPK vào project (KHÔNG ghi đè cấu hình user) ---
+# Dùng scripts/merge-opk-project.py: giữ nguyên model/provider/MCP/plugin
+# tùy chỉnh, dùng managed marker cho AGENTS.md/OPENCODE.md, backup trước
+# mọi thay đổi, và cài safety plugin mặc định (không ghi đè plugin user).
+info "Merge OPK vào project (giữ cấu hình tùy chỉnh)..."
+if command -v python3 >/dev/null 2>&1; then
+	python3 "$KIT_DIR/scripts/merge-opk-project.py" --project-dir "$TARGET_DIR" || \
+		warn "merge-opk-project.py thất bại, fallback copy template."
+else
+	warn "python3 không có — fallback copy template thô (có thể ghi đè)."
+	mkdir -p "$TARGET_DIR/.opencode"
+	cp "$KIT_DIR/templates/AGENTS.md" "$TARGET_DIR/AGENTS.md"
+	cp "$KIT_DIR/templates/OPENCODE.md" "$TARGET_DIR/OPENCODE.md"
+	cp "$KIT_DIR/templates/opencode.json" "$TARGET_DIR/.opencode/opencode.json"
 fi
-
-# --- Copy templates ---
-info "Copy templates..."
-
-cp "$KIT_DIR/templates/AGENTS.md" "$TARGET_DIR/AGENTS.md"
-ok "AGENTS.md"
-
-cp "$KIT_DIR/templates/OPENCODE.md" "$TARGET_DIR/OPENCODE.md"
-ok "OPENCODE.md"
-
-mkdir -p "$TARGET_DIR/.opencode"
-cp "$KIT_DIR/templates/opencode.json" "$TARGET_DIR/.opencode/opencode.json"
-ok ".opencode/opencode.json"
+ok "AGENTS.md / OPENCODE.md / .opencode/opencode.json (merged)"
+ok "Safety plugin: .opencode/plugins/opk-safety-guard.js"
 
 # --- Merge gitignore-extra ---
 if [ -f "$TARGET_DIR/.gitignore" ]; then
@@ -218,9 +202,10 @@ cat >"$REPORT_FILE" <<EOF
 
 | File | Trạng thái |
 |------|-----------|
-| AGENTS.md | ✅ |
-| OPENCODE.md | ✅ |
-| .opencode/opencode.json | ✅ |
+| AGENTS.md | ✅ (merged, giữ nội dung user) |
+| OPENCODE.md | ✅ (merged, giữ nội dung user) |
+| .opencode/opencode.json | ✅ (merged, giữ model/provider/MCP/plugin) |
+| .opencode/plugins/opk-safety-guard.js | ✅ (runtime safety plugin) |
 | .gitignore (merged) | ✅ |
 | knip.json | $([ -f "$TARGET_DIR/knip.json" ] && echo "✅" || echo "⏭️ Đã có") |
 | lefthook.yml | $([ -f "$TARGET_DIR/lefthook.yml" ] && echo "✅" || echo "⏭️ Đã có") |
