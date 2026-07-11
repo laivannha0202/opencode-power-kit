@@ -1,0 +1,103 @@
+[
+  {
+    "id": "contract-001",
+    "name": "No model routing in bin/opk",
+    "description": "bin/opk must not contain model discovery, routing, or benchmark commands",
+    "check_type": "grep_absent",
+    "target": "bin/opk",
+    "patterns": [
+      "discover-free",
+      "list-free",
+      "benchmark-free",
+      "route-free",
+      "opk-model-discover",
+      "opk-model-route",
+      "opk-model-benchmark",
+      "FREE_ONLY",
+      "opencode run --model"
+    ],
+    "expected": "all_absent"
+  },
+  {
+    "id": "contract-002",
+    "name": "No API keys in templates",
+    "description": "Template files must not contain API key references",
+    "check_type": "grep_absent",
+    "target": "templates/",
+    "patterns": [
+      "ANTHROPIC_API_KEY",
+      "OPENAI_API_KEY",
+      "api_key",
+      "API_KEY"
+    ],
+    "expected": "all_absent"
+  },
+  {
+    "id": "contract-003",
+    "name": ".gitignore allows .opencode/",
+    "description": ".gitignore must not block .opencode/ directory",
+    "check_type": "grep_absent",
+    "target": ".gitignore",
+    "patterns": [
+      "^\\.opencode/$",
+      "opk-free-models"
+    ],
+    "expected": "all_absent"
+  },
+  {
+    "id": "contract-004",
+    "name": "No model routing scripts exist",
+    "description": "Deleted model scripts must not exist",
+    "check_type": "file_absent",
+    "targets": [
+      "scripts/opk-model-discover.sh",
+      "scripts/opk-model-route.sh",
+      "scripts/opk-model-benchmark.sh",
+      "scripts/validate-free-model.sh"
+    ],
+    "expected": "all_absent"
+  },
+  {
+    "id": "contract-005",
+    "name": "Safety plugin exists and uses correct pattern",
+    "description": "Safety plugin must exist and use tool.execute.before + throw new Error",
+    "check_type": "file_present",
+    "targets": [
+      "templates/plugins/opk-safety-guard.js"
+    ],
+    "expected": "all_present"
+  },
+  {
+    "id": "contract-006",
+    "name": "Permission ordering correct",
+    "description": "Permission wildcard must come before deny rules",
+    "check_type": "file_present",
+    "targets": [
+      "templates/opencode.json"
+    ],
+    "expected": "all_present"
+  },
+  {
+    "id": "contract-007",
+    "name": "No model override template",
+    "description": "opencode.models.example.jsonc must not exist",
+    "check_type": "file_absent",
+    "targets": [
+      "templates/opencode.models.example.jsonc"
+    ],
+    "expected": "all_absent"
+  },
+  {
+    "id": "contract-008",
+    "name": "Model-agnostic policy documented",
+    "description": "docs/MODEL_ROUTING.md must exist and contain model-agnostic language",
+    "check_type": "grep_present",
+    "target": "docs/MODEL_ROUTING.md",
+    "patterns": [
+      "model-agnostic",
+      "không chọn",
+      "không route"
+    ],
+    "expected": "all_present"
+  }
+]

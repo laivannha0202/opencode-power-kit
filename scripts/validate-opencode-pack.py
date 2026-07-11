@@ -848,43 +848,13 @@ def validate_version() -> list[str]:
     else:
         errors.append(f"GSD reference agents count: {len(gsd_ref_files)}, expected {expected_gsd} (excl README.md)")
 
-    # v2.1.0: Model routing schema validation
-    print("[v2.1.0 Model routing schema]")
+    # v2.1.0: Model-agnostic contract — no model override template
+    print("[v2.1.0 Model-agnostic contract]")
     models_example = KIT_ROOT / "templates" / "opencode.models.example.jsonc"
     if models_example.is_file():
-        models_text = models_example.read_text(encoding="utf-8")
-        # Must use "agent" (singular), not "agents" (plural)
-        if '"agents"' in models_text:
-            errors.append("templates/opencode.models.example.jsonc uses 'agents' (plural) — must use 'agent' (singular)")
-        elif '"agent"' in models_text:
-            ok("templates/opencode.models.example.jsonc uses 'agent' (singular)")
-        else:
-            errors.append("templates/opencode.models.example.jsonc missing 'agent' key")
-        # Must use "mode", not "kind"
-        if '"kind"' in models_text:
-            errors.append("templates/opencode.models.example.jsonc uses 'kind' — must use 'mode'")
-        else:
-            ok("templates/opencode.models.example.jsonc: no 'kind' found (uses 'mode')")
-        # Must have $schema
-        if '"$schema"' in models_text:
-            ok("templates/opencode.models.example.jsonc has $schema")
-        else:
-            errors.append("templates/opencode.models.example.jsonc missing $schema")
-        # mode values must be primary/subagent/all
-        import re as _re
-        # Check mode values via regex (JSONC can't be parsed as plain JSON)
-        for mode_val in ("primary", "subagent", "all"):
-            if f'"mode": "{mode_val}"' in models_text or f'"mode":"{mode_val}"' in models_text:
-                ok(f"agent mode '{mode_val}' found in models example")
-        # Check model format: must contain provider/model pattern
-        model_matches = _re.findall(r'"model":\s*"([^"]+)"', models_text)
-        for m in model_matches:
-            if "/" in m:
-                ok(f"model format OK: '{m}'")
-            else:
-                errors.append(f"model format invalid: '{m}' — must be provider/model")
+        errors.append("templates/opencode.models.example.jsonc must not exist (model-agnostic policy)")
     else:
-        errors.append("templates/opencode.models.example.jsonc missing")
+        ok("templates/opencode.models.example.jsonc correctly absent")
 
     # v2.0.0: audit-upstreams.py must have proper argparse flags
     print("[v2.0.0 audit-upstreams.py argparse]")

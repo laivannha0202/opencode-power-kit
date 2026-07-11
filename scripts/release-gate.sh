@@ -187,20 +187,8 @@ if [ -d "$KIT_DIR/evals" ]; then
 else
   warn "evals/ directory not found"
 fi
-# Run eval harness in dry-run mode (structural check only, no model call)
-if [ -f "$KIT_DIR/evals/run.sh" ]; then
-  run_cmd "evals/run.sh --dry-run" \
-    "bash $KIT_DIR/evals/run.sh --dry-run"
-fi
-
-# ============================================================================
-# PHAN 2: Chay thuc te cac lenh test/validation
-# ============================================================================
-section "11. Command Execution (actual runs)"
-
-# Mang luu ket qua: "status|name|exitcode|output"
+# --- run_cmd helper (defined early for use in Phase 10+) ---
 declare -a RESULTS=()
-
 CMD_TIMEOUT=120  # 2 phut moi command
 
 run_cmd() {
@@ -264,6 +252,17 @@ run_cmd() {
     errors=$((errors + 1))
   fi
 }
+
+# Run eval harness in dry-run mode (structural check only, no model call)
+if [ -f "$KIT_DIR/evals/run.sh" ]; then
+  run_cmd "evals/run.sh --dry-run" \
+    "bash $KIT_DIR/evals/run.sh --dry-run"
+fi
+
+# ============================================================================
+# PHAN 2: Chay thuc te cac lenh test/validation
+# ============================================================================
+section "11. Command Execution (actual runs)"
 
 # --- Python validators ---
 echo ""

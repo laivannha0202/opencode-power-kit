@@ -6,7 +6,6 @@
 .opk/work/
 .opk/tmp/
 .opk/cache/
-.opencode/
 .opencode-power-*.log
 *.bak
 *.orig
@@ -21,6 +20,3 @@ GLOBAL_INSTALL_REPORT.md
 # Taste skill installer artifacts (runtime, not kit source)
 .agents/
 skills-lock.json
-
-# Free-model cache (runtime, not kit source)
-.opencode/opk-free-models.json

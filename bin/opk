@@ -219,13 +219,8 @@ opk — OpenCode Power Kit CLI (v$VERSION)
   opk bmad update --version X.Y.Z  Pin BMAD to specific version
   opk tooling doctor         Detect + suggest install for dev tools
 
-  v2.1.0 — Free-Model Orchestration:
-  opk model discover-free    Tự phát hiện model free từ opencode CLI
-  opk model list-free        Hiển thị danh sách free model đã cache
-  opk model benchmark-free   Benchmark các free model
-  opk model route-free       Tạo config routing từ free models
-  opk model status           Hiển thị trạng thái free-model orchestration
-  opk model refresh          Refresh cache model free
+  v2.1.0 — Model-Agnostic Runtime:
+  opk model status           Hiển thị model-agnostic policy
 
 Flags chung (forward cho sub-script):
   --yes   skip confirm
@@ -1390,53 +1385,31 @@ except:
     echo "opk: ✅ Done ($(wc -c < "$output") bytes)"
     ;;
 
-  # ─── v2.1.0 Free-Model Orchestration ──────────────────────────
+  # ─── Model-Agnostic: OPK không quản lý model ─────────────────
   model)
-    model_cmd="${1:-help}"
+    model_cmd="${1:-status}"
     shift || true
 
     case "$model_cmd" in
-      discover-free)
-        # opk model discover-free — tự phát hiện model free từ opencode CLI
-        require_file "$KIT_DIR/scripts/opk-model-discover.sh"
-        exec bash "$KIT_DIR/scripts/opk-model-discover.sh" "$@"
-        ;;
-      list-free)
-        # opk model list-free — hiển thị danh sách free model đã cache
-        require_file "$KIT_DIR/scripts/opk-model-discover.sh"
-        exec bash "$KIT_DIR/scripts/opk-model-discover.sh" --list-only "$@"
-        ;;
-      benchmark-free)
-        # opk model benchmark-free — benchmark các free model
-        require_file "$KIT_DIR/scripts/opk-model-benchmark.sh"
-        exec bash "$KIT_DIR/scripts/opk-model-benchmark.sh" "$@"
-        ;;
-      route-free)
-        # opk model route-free — tạo config routing từ free models
-        require_file "$KIT_DIR/scripts/opk-model-route.sh"
-        exec bash "$KIT_DIR/scripts/opk-model-route.sh" "$@"
-        ;;
       status)
-        # opk model status — hiển thị trạng thái free-model orchestration
-        require_file "$KIT_DIR/scripts/opk-model-discover.sh"
-        exec bash "$KIT_DIR/scripts/opk-model-discover.sh" --status "$@"
-        ;;
-      refresh)
-        # opk model refresh — refresh cache model free
-        require_file "$KIT_DIR/scripts/opk-model-discover.sh"
-        exec bash "$KIT_DIR/scripts/opk-model-discover.sh" --refresh "$@"
+        echo "opk: Model-agnostic mode — OPK không quản lý model."
+        echo "    Chọn model trong OpenCode UI (Settings → Model)."
+        echo "    Tất cả agent OPK inherit model đó."
+        echo ""
+        if command -v opencode &>/dev/null; then
+          echo "    OpenCode version: $(opencode --version 2>/dev/null || echo 'unknown')"
+        fi
+        exit 0
         ;;
       help|--help|-h)
-        echo "opk model discover-free   Tự phát hiện model free từ opencode CLI"
-        echo "opk model list-free       Hiển thị danh sách free model đã cache"
-        echo "opk model benchmark-free  Benchmark các free model"
-        echo "opk model route-free      Tạo config routing từ free models"
-        echo "opk model status          Hiển thị trạng thái free-model orchestration"
-        echo "opk model refresh         Refresh cache model free"
+        echo "opk model status    Hiển thị model-agnostic policy"
+        echo ""
+        echo "OPK không chọn, route, benchmark, hay override model."
+        echo "User tự chọn model trong OpenCode UI."
         exit 0
         ;;
       *)
-        echo "opk: model: lệnh không hợp lệ '$model_cmd'. Dùng: discover-free, list-free, benchmark-free, route-free, status, refresh, help" >&2
+        echo "opk: model: '$model_cmd' không hỗ trợ. OPK model-agnostic — chỉ dùng 'opk model status'." >&2
         exit 1
         ;;
     esac
