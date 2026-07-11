@@ -1,12 +1,20 @@
-# Model Routing
+# Model Routing — Free-Only Mode
 
 Hướng dẫn cấu hình model routing trong OpenCode Power Kit.
+**OPK free-model orchestration: không yêu cầu API key của OpenAI/Anthropic.**
 
 ## Tổng quan
 
-OpenCode hỗ trợ cấu hình nhiều model/provider khác nhau cho các use case
-riêng biệt. Model routing cho phép bạn định tuyến task phù hợp nhất tới
-model phù hợp nhất, tối ưu cả chất lượng lẫn chi phí.
+OpenCode hỗ trợ cấu hình nhiều model/provider khác nhau. OPK tự phát hiện
+model miễn phí và định tuyến task phù hợp. **Không cần API key riêng** —
+người dùng đăng nhập provider bằng giao diện OpenCode hoặc `/connect`.
+
+## Quan trọng
+
+- **OPK không quản lý, đọc hoặc ghi credential.**
+- **OPK chỉ dùng các model mà `opencode models` trả về.**
+- **Free models là thời hạn và có thể thay đổi.**
+- **FREE_ONLY không tự động fallback sang model có phí.**
 
 ## Cấu trúc
 
@@ -15,62 +23,56 @@ Model routing được cấu hình trong `opencode.json` (project root hoặc
 
 ```jsonc
 {
-  // Model mặc định cho mọi task
-  "model": "anthropic/claude-sonnet-4-20250514",
+  // Model mặc định — lấy exact ID từ: opencode models --refresh --verbose
+  "model": "REPLACE_WITH_OUTPUT_FROM_OPENCODE_MODELS",
 
-  // Provider definitions
-  "provider": {
-    "anthropic": {
-      "apiKey": "env:ANTHROPIC_API_KEY"
+  // Optional: Per-agent model routing
+  "agent": {
+    "build": {
+      "mode": "primary",
+      "model": "REPLACE_WITH_BEST_FREE_MODEL"
     },
-    "openai": {
-      "apiKey": "env:OPENAI_API_KEY"
+    "explore": {
+      "mode": "subagent",
+      "model": "REPLACE_WITH_SECOND_FREE_MODEL"
     }
-  },
-
-  // Model overrides per task type (optional)
-  "modelRouting": {
-    // Code generation — dùng model mạnh nhất
-    "code": "anthropic/claude-sonnet-4-20250514",
-
-    // Quick edits — dùng model nhanh/rẻ hơn
-    "quick": "openai/gpt-4o-mini",
-
-    // Review — dùng model analytical
-    "review": "anthropic/claude-sonnet-4-20250514",
-
-    // Research — dùng model có context lớn
-    "research": "anthropic/claude-sonnet-4-20250514"
   }
 }
 ```
 
+## Free-Only Mode
+
+Khi `OPK_FREE_ONLY=1`:
+
+- Chỉ dùng model được xác định miễn phí
+- Không fallback sang model có phí
+- Nếu không có model free → dừng với thông báo rõ ràng
+- Model không rõ giá bị loại khỏi pool mặc định
+
 ## Task Types
 
-| Type | Description | Default Model |
-|------|-------------|---------------|
-| `code` | Code generation, refactoring, bug fix | Claude Sonnet |
-| `quick` | Simple edits, renames, formatting | GPT-4o Mini |
-| `review` | Code review, PR review | Claude Sonnet |
-| `research` | Research, documentation, planning | Claude Sonnet |
-| `all` | Fallback for everything else | Default model |
+| Type | Description | Routing Strategy |
+|------|-------------|------------------|
+| `code` | Code generation, refactoring | Model free mạnh nhất |
+| `quick` | Simple edits, renames | Model free nhanh |
+| `review` | Code review, PR review | Model free khác (reviewer) |
+| `research` | Research, documentation | Model free nhanh |
+| `all` | Fallback | Default free model |
 
 ## Tips
 
-1. **Bắt đầu đơn giản** — Chỉ cấu hình `"model"` mặc định. Thêm routing
-   sau khi xác định bottleneck.
+1. **Bắt đầu đơn giản** — Chạy `opencode models --refresh --verbose`
+   để xem danh sách model free hiện có.
 
-2. **Dùng model nhỏ cho quick tasks** — `gpt-4o-mini` hoặc `claude-haiku`
-   tiết kiệm chi phí cho edit đơn giản.
+2. **Dùng `opk model discover-free`** — Tự phát hiện model miễn phí.
 
-3. **Provider key qua env** — Luôn dùng `"env:ANTHROPIC_API_KEY"` thay vì
-   hardcode key trong config.
+3. **Không hardcode model slug** — Danh sách free có thể thay đổi.
 
-4. **Model routing là optional** — Nếu không cấu hình `modelRouting`,
+4. **Model routing là optional** — Nếu không cấu hình `agent`,
    mọi task dùng model mặc định.
 
 ## Xem thêm
 
 - [templates/opencode.models.example.jsonc](../templates/opencode.models.example.jsonc)
-  — Template ví dụ với model routing đầy đủ.
+  — Template ví dụ với free-model routing.
 - [docs/LOCAL_VALIDATION.md](LOCAL_VALIDATION.md) — Cách validate config.

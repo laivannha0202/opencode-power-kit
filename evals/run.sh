@@ -24,87 +24,69 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-# --- Detect model client ---
+# --- Detect opencode CLI ---
 MODEL_CLIENT="none"
 MODEL_REASON=""
+FREE_MODEL_ID=""
 
 detect_model_client() {
-  if python3 -c "import openai" 2>/dev/null; then
-    MODEL_CLIENT="openai"
-    MODEL_REASON="openai library found"
-    return 0
-  fi
+  # OPK free-model orchestration: dùng opencode CLI, không import openai/anthropic
+  if command -v opencode >/dev/null 2>&1; then
+    MODEL_CLIENT="opencode"
+    MODEL_REASON="opencode CLI found"
 
-  if python3 -c "import anthropic" 2>/dev/null; then
-    MODEL_CLIENT="anthropic"
-    MODEL_REASON="anthropic library found"
-    return 0
+    # Phát hiện free model từ opencode models
+    FREE_MODEL_ID=$(opencode models --refresh --verbose 2>/dev/null | \
+      grep -i "free\|0\.00\|zero" | head -1 | awk '{print $1}' || echo "")
+
+    if [ -n "$FREE_MODEL_ID" ]; then
+      MODEL_REASON="opencode CLI found, free model: $FREE_MODEL_ID"
+      return 0
+    else
+      MODEL_REASON="opencode CLI found but no free model detected"
+      return 1
+    fi
   fi
 
   MODEL_CLIENT="none"
-  MODEL_REASON="no model client library found (install openai or anthropic)"
+  MODEL_REASON="opencode CLI not found (install opencode)"
   return 1
 }
 
-# --- Real model call ---
+# --- Real model call via opencode CLI ---
 call_model_real() {
   local prompt="$1"
   local max_tokens="${2:-500}"
+  local model_id="${3:-$FREE_MODEL_ID}"
 
-  python3 -c "
-import json, time, sys
+  if [ -z "$model_id" ]; then
+    echo '{"success": false, "error": "no free model ID available"}'
+    return 1
+  fi
 
-model = '$MODEL_CLIENT'
-prompt = sys.stdin.read()
-max_tokens = $max_tokens
+  # Dùng opencode run với model free — không import openai/anthropic
+  local start_time
+  start_time=$(date +%s%N)
 
-start = time.time()
+  local output
+  output=$(opencode run \
+    --model "$model_id" \
+    --format json \
+    --max-tokens "$max_tokens" \
+    "$prompt" 2>/dev/null) || {
+    local end_time
+    end_time=$(date +%s%N)
+    local latency_ms=$(( (end_time - start_time) / 1000000 ))
+    echo "{\"success\": false, \"error\": \"opencode run failed\", \"latency_ms\": $latency_ms}"
+    return 1
+  }
 
-try:
-    if model == 'openai':
-        import openai
-        client = openai.OpenAI()
-        resp = client.chat.completions.create(
-            model='gpt-4o-mini',
-            messages=[{'role': 'user', 'content': prompt}],
-            max_tokens=max_tokens,
-            temperature=0.0
-        )
-        content = resp.choices[0].message.content or ''
-        latency = time.time() - start
-        result = {
-            'success': True,
-            'model': 'gpt-4o-mini',
-            'content': content,
-            'latency_ms': round(latency * 1000),
-            'tokens_used': getattr(resp.usage, 'total_tokens', 0) if resp.usage else 0
-        }
-    elif model == 'anthropic':
-        import anthropic
-        client = anthropic.Anthropic()
-        resp = client.messages.create(
-            model='claude-3-haiku-20240307',
-            max_tokens=max_tokens,
-            messages=[{'role': 'user', 'content': prompt}]
-        )
-        content = resp.content[0].text if resp.content else ''
-        latency = time.time() - start
-        result = {
-            'success': True,
-            'model': 'claude-3-haiku-20240307',
-            'content': content,
-            'latency_ms': round(latency * 1000),
-            'tokens_used': (resp.usage.input_tokens + resp.usage.output_tokens) if resp.usage else 0
-        }
-    else:
-        result = {'success': False, 'error': f'unknown client: {model}'}
+  local end_time
+  end_time=$(date +%s%N)
+  local latency_ms=$(( (end_time - start_time) / 1000000 ))
 
-except Exception as e:
-    latency = time.time() - start
-    result = {'success': False, 'error': str(e), 'latency_ms': round(latency * 1000)}
-
-print(json.dumps(result))
-" <<< "$prompt" 2>/dev/null
+  # Parse output từ opencode
+  echo "{\"success\": true, \"model\": \"$model_id\", \"content\": $(echo "$output" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' 2>/dev/null || echo '""'), \"latency_ms\": $latency_ms}"
 }
 
 # --- Generate dry-run JSON ---
@@ -289,7 +271,7 @@ t = next((x for x in tasks if x['id'] == '$tid'), None)
 print(t.get('max_tokens', 500) if t else 500)
 " 2>/dev/null)
 
-      echo -e "    ${YELLOW}⏳ Calling $MODEL_CLIENT (max_tokens=$max_tokens)...${NC}"
+      echo -e "    ${YELLOW}⏳ Calling opencode CLI with model $FREE_MODEL_ID (max_tokens=$max_tokens)...${NC}"
       local model_result
       model_result=$(call_model_real "$input_prompt" "$max_tokens")
 
@@ -348,8 +330,8 @@ for arg in "$@"; do
   esac
 done
 
-# Detect model client
-echo "Detecting model client..."
+# Detect opencode CLI (free-model orchestration)
+echo "Detecting opencode CLI..."
 if detect_model_client; then
   echo -e "  ${GREEN}✅ $MODEL_REASON${NC}"
   DRY_RUN=false

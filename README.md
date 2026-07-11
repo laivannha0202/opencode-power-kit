@@ -1182,6 +1182,60 @@ full memory strategies, safe handoff protocol, and upstream references.
 
 ---
 
+## Free-Model Orchestration v2.1.0
+
+OPK hỗ trợ free-model orchestration — tự phát hiện và định tuyến model miễn phí.
+
+### Chính sách
+
+- **Không yêu cầu OpenAI/Anthropic API key** — OPK dùng `opencode models` để discover.
+- **FREE_ONLY mode** — Chỉ dùng model free, không fallback trả phí.
+- **Không hardcode model slug** — Danh sách free có thể thay đổi.
+- **Không tuyên bố model free ngang GPT/Opus** — Cần benchmark thật.
+
+### Commands mới
+
+| Command | Công dụng |
+|---------|-----------|
+| `opk model discover-free` | Tự phát hiện model free từ opencode CLI |
+| `opk model list-free` | Hiển thị danh sách free model đã cache |
+| `opk model benchmark-free` | Benchmark các free model |
+| `opk model route-free` | Tạo config routing từ free models |
+| `opk model status` | Hiển thị trạng thái free-model orchestration |
+| `opk model refresh` | Refresh cache model free |
+
+### FREE_ONLY Mode
+
+```bash
+export OPK_FREE_ONLY=1
+opk model discover-free
+```
+
+Khi `OPK_FREE_ONLY=1`:
+- Chỉ dùng model được xác định miễn phí
+- Không fallback sang model có phí
+- Nếu không có model free → dừng với thông báo rõ ràng
+
+### Router Strategy
+
+| Task | Strategy |
+|------|----------|
+| Nhỏ | Một model free nhanh, một lượt |
+| Trung bình | Model A plan + implement, Model B review |
+| Khó/rủi ro | Model A plan, Model B phản biện, Model C implement |
+
+### Safety
+
+- Không đọc `~/.local/share/opencode/auth.json`
+- Không in credential
+- Không ghi API key vào report/log
+- Không tự bật model trả phí
+- Cache file được gitignore
+
+Xem chi tiết: [`docs/MODEL_ROUTING.md`](./docs/MODEL_ROUTING.md)
+
+---
+
 ## Vietnamese Language Lock
 
 Tất cả tương tác của agent tuân theo chính sách ưu tiên tiếng Việt:

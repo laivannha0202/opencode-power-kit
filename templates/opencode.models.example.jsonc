@@ -1,30 +1,22 @@
 {
   // ============================================================================
   // opencode.models.example.jsonc
-  // Model routing example — copy và tùy chỉnh cho project của bạn.
+  // Model routing example — free-model orchestration.
   //
   // Place tại project root hoặc .opencode/opencode.json.
   // Chỉ cần cấu hình "model" mặc định. Per-agent model là optional.
+  //
+  // IMPORTANT: OPK KHÔNG quản lý API key. Người dùng đăng nhập
+  // provider bằng giao diện OpenCode hoặc /connect.
+  // OPK chỉ dùng các model mà `opencode models` trả về.
   // ============================================================================
 
   "$schema": "https://opencode.ai/config.json",
 
   // Model mặc định cho mọi task.
-  // Format: "provider/model-name"
-  "model": "anthropic/claude-sonnet-4-20250514",
-
-  // Provider definitions — API keys từ env vars.
-  "provider": {
-    "anthropic": {
-      "apiKey": "env:ANTHROPIC_API_KEY"
-    },
-    "openai": {
-      "apiKey": "env:OPENAI_API_KEY"
-    }
-    // Thêm provider khác tùy needs:
-    // "google": { "apiKey": "env:GOOGLE_API_KEY" },
-    // "deepseek": { "apiKey": "env:DEEPSEEK_API_KEY" }
-  },
+  // Lấy exact ID từ: opencode models --refresh --verbose
+  // Không hardcode model slug — danh sách free có thể thay đổi.
+  "model": "REPLACE_WITH_OUTPUT_FROM_OPENCODE_MODELS",
 
   // Optional: Per-agent model routing.
   // Override model mặc định cho từng agent.
@@ -35,30 +27,31 @@
   //   - "subagent": model cho subagent tasks
   //   - "all": model cho tất cả modes
   //
-  // Model format: "provider/model-name" (vd: "anthropic/claude-sonnet-4-20250514")
+  // Model format: "provider/exact-model-id"
+  // Lấy ID từ: opencode models --refresh --verbose
   "agent": {
     // Build agent — model mạnh nhất cho code generation, refactoring.
     "build": {
       "mode": "primary",
-      "model": "anthropic/claude-sonnet-4-20250514"
+      "model": "REPLACE_WITH_BEST_FREE_MODEL"
     },
 
     // Exploration agent — model nhanh, rẻ cho read-only tasks.
     "explore": {
       "mode": "subagent",
-      "model": "anthropic/claude-haiku-3-20240307"
+      "model": "REPLACE_WITH_SECOND_FREE_MODEL"
     },
 
     // Build-strong agent — model mạnh cho implementation phức tạp.
     "build-strong": {
       "mode": "primary",
-      "model": "anthropic/claude-sonnet-4-20250514"
+      "model": "REPLACE_WITH_BEST_FREE_MODEL"
     },
 
-    // Debug agent — model analytical mạnh nhất cho root cause analysis.
+    // Debug agent — model analytical cho root cause analysis.
     "debug-strong": {
       "mode": "all",
-      "model": "anthropic/claude-opus-4-20250514"
+      "model": "REPLACE_WITH_THIRD_FREE_MODEL"
     }
   }
 
