@@ -143,5 +143,97 @@
       "Report"
     ],
     "expected": "all_present"
+  },
+  {
+    "id": "contract-013",
+    "name": "Timeout helper exists and runs",
+    "description": "scripts/timeout.sh must exist and run without error",
+    "check_type": "script_exec",
+    "command": "bash scripts/timeout.sh 1 true; echo $?",
+    "expected_exit": 0
+  },
+  {
+    "id": "contract-014",
+    "name": "Timeout helper exits 124 on timeout",
+    "description": "scripts/timeout.sh must return exit code 124 when command exceeds timeout",
+    "check_type": "script_exec",
+    "command": "bash scripts/timeout.sh 1 sleep 10; echo $?",
+    "expected_exit": 124
+  },
+  {
+    "id": "contract-015",
+    "name": "Timeout helper passes through exit code",
+    "description": "scripts/timeout.sh must pass through command exit code when not timed out",
+    "check_type": "script_exec",
+    "command": "bash scripts/timeout.sh 5 sh -c 'exit 42'; echo $?",
+    "expected_exit": 42
+  },
+  {
+    "id": "contract-016",
+    "name": "backend-route-review exists, model-route-review deleted",
+    "description": "backend-route-review.md must exist, model-route-review.md must not exist",
+    "check_type": "file_absent",
+    "targets": [
+      "opencode-global/commands/model-route-review.md"
+    ],
+    "expected": "all_absent"
+  },
+  {
+    "id": "contract-017",
+    "name": "No model routing commands in backend-route-review",
+    "description": "backend-route-review.md must not contain model routing commands",
+    "check_type": "grep_absent",
+    "target": "opencode-global/commands/backend-route-review.md",
+    "patterns": [
+      "discover-free",
+      "list-free",
+      "opk-model-route"
+    ],
+    "expected": "all_absent"
+  },
+  {
+    "id": "contract-018",
+    "name": "README agent count accurate",
+    "description": "README.md must show 16 active agents, not 49",
+    "check_type": "grep_present",
+    "target": "README.md",
+    "patterns": [
+      "16 active agents"
+    ],
+    "expected": "all_present"
+  },
+  {
+    "id": "contract-019",
+    "name": "README command count accurate",
+    "description": "README.md must show 71 commands, not 66",
+    "check_type": "grep_present",
+    "target": "README.md",
+    "patterns": [
+      "71 commands"
+    ],
+    "expected": "all_present"
+  },
+  {
+    "id": "contract-020",
+    "name": "No Quality Scorecard in README",
+    "description": "README.md must not contain Quality Scorecard with 10/10 scores",
+    "check_type": "grep_absent",
+    "target": "README.md",
+    "patterns": [
+      "Quality Scorecard",
+      "10/10"
+    ],
+    "expected": "all_absent"
+  },
+  {
+    "id": "contract-021",
+    "name": "UPSTREAM_CAPABILITY_MAP has verified pins",
+    "description": "UPSTREAM_CAPABILITY_MAP.md must show Superpowers v6.1.1",
+    "check_type": "grep_present",
+    "target": "docs/UPSTREAM_CAPABILITY_MAP.md",
+    "patterns": [
+      "v6.1.1"
+    ],
+    "expected": "all_present"
   }
 ]

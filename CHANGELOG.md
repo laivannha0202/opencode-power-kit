@@ -484,7 +484,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `/quality-gate` — quality gate before merge/release
   - `/research-first` — research-first approach
   - `/verify-loop` — verification loop (test-before-done)
-  - `/model-route-review` — AI model routing review
+  - `/backend-route-review` — backend HTTP/API route review (renamed from `/model-route-review` to clarify scope)
   - `/harness-audit` — constraints/edge-cases/invariants audit
 - **`docs/ECC_INTEGRATION.md`** — architecture, component table, safety
   guarantees, usage guide, comparison with full ECC.

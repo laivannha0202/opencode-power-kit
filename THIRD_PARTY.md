@@ -331,7 +331,7 @@ Agents never install packages directly. All installs go through `opk` wrappers.
 | License | MIT (per upstream) |
 | Kit ships | `scripts/audit-ecc.sh`, `scripts/install-ecc-lite.sh`, `scripts/check-ecc-lite.sh` — OPK-native scripts |
 | | `opencode-global/agents/ecc-lite-strong.md` — ECC-lite agent (6 core principles) |
-| | `opencode-global/commands/ecc-audit.md`, `quality-gate.md`, `research-first.md`, `verify-loop.md`, `model-route-review.md`, `harness-audit.md` — 6 commands |
+| | `opencode-global/commands/ecc-audit.md`, `quality-gate.md`, `research-first.md`, `verify-loop.md`, `backend-route-review.md`, `harness-audit.md` — 6 commands |
 | | `bin/opk` / `bin/opk.ps1` — CLI subcommands: `ec`, `e`, `ecc`, `update-ecc` |
 | Update path | `opk update-ecc` (re-sources from OPK repo, not from ECC upstream) |
 

@@ -253,10 +253,10 @@ run_cmd() {
   fi
 }
 
-# Run eval harness in dry-run mode (structural check only, no model call)
+# Run eval harness (workflow regression tests, no model calls)
 if [ -f "$KIT_DIR/evals/run.sh" ]; then
-  run_cmd "evals/run.sh --dry-run" \
-    "bash $KIT_DIR/evals/run.sh --dry-run"
+  run_cmd "evals/run.sh" \
+    "bash $KIT_DIR/evals/run.sh"
 fi
 
 # ============================================================================
@@ -326,8 +326,10 @@ CMD_TIMEOUT=120
 # --- Git Checks ---
 echo ""
 echo "--- Git Checks ---"
-run_cmd "git-diff-check HEAD^ HEAD" \
-  "git -C '$KIT_DIR' diff --check HEAD^ HEAD"
+# Check for whitespace errors in all changes from base branch
+MERGE_BASE=$(git -C "$KIT_DIR" merge-base origin/main HEAD 2>/dev/null || echo "HEAD")
+run_cmd "git-diff-check (from main)" \
+  "git -C '$KIT_DIR' diff --check '$MERGE_BASE' HEAD"
 
 # ============================================================================
 # PHAN 3: Summary

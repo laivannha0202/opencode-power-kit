@@ -115,15 +115,15 @@ opk clean --apply  # apply: move vào .opk-trash/<timestamp>/
 
 | Thành phần | Số lượng | Vị trí |
 |-----------|-------|----------|
-| Core power agents | 14 | `opencode-global/agents/` |
-| Total agent files | 49 | `opencode-global/agents/` (14 core + 33 GSD-style + 1 ECC-lite + 1 Hermes-lite) |
-| Slash commands | 66 | `opencode-global/commands/` (+3 RAG-lite, +3 Headroom-lite, +3 AgentMemory-lite) |
-| Skills | 23 | `opencode-global/skills/` (+1 rag-lite, +1 headroom-lite, +1 agentmemory-lite) |
-| Helper scripts | 18 | `scripts/` |
+| Active agents | 16 | `opencode-global/agents/` (10 strong, 3 lite, 1 taste, 1 ECC-lite, 1 Hermes-lite) |
+| GSD reference agents | 34 | `extras/gsd-agent-reference/` (reference-only, not active) |
+| Slash commands | 71 | `opencode-global/commands/` |
+| Skills | 23 | `opencode-global/skills/` |
+| Helper scripts | 37 | `scripts/` |
 | Root-level scripts | 15 | `*.sh` + `*.ps1` (install, bootstrap, verify, doctor, ...) |
 | Full-stack profile | 1 | `profiles/node-nest-react-mysql/` |
 | Safety scripts | 4 | `verify.sh`, `doctor.sh`, `cleanup-agent-artifacts.sh`, `opk-command-guard.sh` |
-| Install/Bootstrap | 8+ | `bootstrap.*`, `setup.*`, `install*.*` |
+| Install/Bootstrap | 8 | `bootstrap.*`, `setup.*`, `install*.*` |
 | CLI wrappers | 3 | `bin/opk`, `bin/opk.cmd`, `bin/opk.ps1` |
 
 ---
@@ -185,8 +185,8 @@ người dùng hiểu rõ ranh giới.
 
 ## Power Mode v1.5.0
 
-- **14 core power agents** + **33 GSD-style agents** + **1 ECC-lite** + **1 Hermes-lite** = **49 total agent files** — mỗi agent chuyên sâu một lĩnh vực
-- **66 commands** — phân loại theo power workflow, safety, build lifecycle, review, DB/API, QA/E2E, DevOps, quality/security, token/tooling, RAG, compression, memory
+- **16 active agents** — 10 core strong agents, 3 lite agents, 1 taste agent, 1 ECC-lite, 1 Hermes-lite; GSD 34 reference-only in `extras/gsd-agent-reference/`
+- **71 commands** — phân loại theo power workflow, safety, build lifecycle, review, DB/API, QA/E2E, DevOps, quality/security, token/tooling, RAG, compression, memory
 - **`scripts/opk-command-guard.sh`** — lớp bảo vệ: cảnh báo/chặn lệnh shell nguy hiểm (`rm -rf`, `git reset --hard`, force push, `DROP TABLE`, ...)
 - **`build-strong` Agent Delegation** — tự động triệu hồi subagent chuyên biệt dựa trên ngữ cảnh
 - **`/power-build`** — quy trình đầu cuối: spec → architecture → implementation → QA → security → release
@@ -574,23 +574,17 @@ Phù hợp nhất cho project dùng: NestJS backend, React/Vite frontend, MySQL 
 
 ---
 
-## Quality Scorecard
+## Capabilities
 
-| Tiêu chí | Điểm | Vì sao đạt |
-|----------|:----:|-----------|
-| **Dễ cài** | 10/10 | One-command (`bash -c` / PowerShell) cho Linux/macOS/WSL/Git Bash + Windows. `opk one/go`, `opk doctor`, `opk verify` đều sẵn. |
-| **Mạnh full-stack** | 10/10 | Profile Node/NestJS/React/Vite/MySQL. 16 active agents. 71 commands. 23 skills. 15 root scripts. GSD reference-only in extras/. |
-| **Workflow agent** | 10/10 | Agent router (`/agent-router`), `build-strong` 7-phase fullstack autopilot, `power-build` end-to-end, delegation tới 16 subagent chuyên biệt. |
-| **Safety** | 10/10 cho trusted-local; 8/10 cho power mode mặc định | Guard rules: không `rm -rf`, không `git reset --hard`, không force push, không sửa `.env`/secrets, checkpoint trước thay đổi lớn, `/cleanup-safe` move an toàn, backup trước ghi đè. Tuy nhiên `permission: allow` có nghĩa agent không bị permission prompt — safety dựa vào instruction rules, không phải sandbox tuyệt đối. Khuyến nghị: dùng power mode cho máy/project cá nhân tin cậy. |
-| **Tài liệu** | 10/10 | README, `THIRD_PARTY.md`, `CHANGELOG.md`, `docs/`, credits rõ ràng, update path cho từng nhóm upstream. |
-| **Third-party packaging** | 10/10 | Phân loại rõ: target platform, plugin reference, install-time dependency, config-only, opt-in wrapper, detect-only, recommended ecosystem. Attribution đầy đủ. |
-
-> **Safety note:** `permission: allow` là "power mode" — agent tự động chạy
-> tool/sửa file mà không hỏi lại. Safety được enforce bằng instruction rules
-> trong `templates/AGENTS.md`, không phải OpenCode permission prompt. Phù
-> hợp cho máy/project cá nhân. Nếu cần safety tuyệt đối, hãy chuyển
-> `opencode.json` sang permission object safe-mode (hỏi trước mỗi hành
-> động nguy hiểm).
+| Capability | Evidence | Limitation | Verification |
+|-----------|----------|-----------|-------------|
+| Workflow consistency | 7-phase build-strong pipeline, reviewer read-only, verification-before-done | Improves consistency, does not increase model intelligence | `opk doctor` |
+| Agent routing | 16 specialized agents with explicit delegation | Routing is manual/explicit, not auto-dispatched | `grep -c "agent:" opencode-global/agents/*.md` |
+| Safety | CommonJS safety plugin, opk-command-guard, cleanup-safe | Instruction-based, not sandbox; depends on model compliance | `node scripts/test-safety-plugin.mjs` |
+| Build verification | 12 behavioral contracts, eval regression suite | Contracts verify workflow, not model output quality | `bash evals/run.sh` |
+| Cross-platform | Bash + PowerShell scripts, portable timeout fallback | PowerShell not runtime-verified if pwsh unavailable | `bash verify.sh && pwsh verify.ps1` |
+| Third-party integration | Superpowers v6.1.1, BMAD 6.9.0, GSD 1.6.1, ECC, Hermes, RAG, Headroom, AgentMemory | Opt-in only; no auto-enable; user installs per dependency | `python3 scripts/audit-upstreams.py --check` |
+| Model-agnostic | No model discovery/routing/benchmark/scoring | User selects model in OpenCode UI; OPK does not manage models | `grep -r "model:" opencode-global/agents/*.md \| grep -v "^#"` |
 
 ---
 
@@ -922,7 +916,7 @@ opk e lite
 | `/quality-gate` | Quality gate: verify code meets ECC standards before merge |
 | `/research-first` | Research-first approach: explore before implementing |
 | `/verify-loop` | Verification loop: test-before-done, iterate until passing |
-| `/model-route-review` | Model-routing review: verify AI model choice for task |
+| `/backend-route-review` | Backend HTTP/API route review: routing, auth, middleware, error handling |
 | `/harness-audit` | Harness audit: verify constraints, edge cases, invariants |
 
 ### ECC-lite Principles
@@ -957,7 +951,7 @@ opk e lite
 | `opencode-global/commands/quality-gate.md` | Quality gate command |
 | `opencode-global/commands/research-first.md` | Research-first command |
 | `opencode-global/commands/verify-loop.md` | Verification loop command |
-| `opencode-global/commands/model-route-review.md` | Model routing review command |
+| `opencode-global/commands/backend-route-review.md` | Backend HTTP/API route review command |
 | `opencode-global/commands/harness-audit.md` | Harness audit command |
 | `bin/opk` / `bin/opk.ps1` | CLI subcommands: `ec`, `e`, `ecc`, `update-ecc` |
 

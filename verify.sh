@@ -145,7 +145,7 @@ require_file "opencode-global/commands/ecc-audit.md"
 require_file "opencode-global/commands/quality-gate.md"
 require_file "opencode-global/commands/research-first.md"
 require_file "opencode-global/commands/verify-loop.md"
-require_file "opencode-global/commands/model-route-review.md"
+require_file "opencode-global/commands/backend-route-review.md"
 require_file "opencode-global/commands/harness-audit.md"
 require_file "bin/opk"
 require_file "templates/AGENTS.md"
@@ -416,7 +416,7 @@ require_file "opencode-global/commands/ecc-audit.md"
 require_file "opencode-global/commands/quality-gate.md"
 require_file "opencode-global/commands/research-first.md"
 require_file "opencode-global/commands/verify-loop.md"
-require_file "opencode-global/commands/model-route-review.md"
+require_file "opencode-global/commands/backend-route-review.md"
 require_file "opencode-global/commands/harness-audit.md"
 # Script content checks
 require_contains "scripts/audit-ecc.sh" "ECC"
@@ -450,7 +450,7 @@ require_contains "docs/ECC_INTEGRATION.md" "What is ECC?"
 require_contains "docs/ECC_INTEGRATION.md" "Why not full ECC?"
 require_contains "docs/ECC_INTEGRATION.md" "Safety Guarantees"
 # Command frontmatter checks — subtask: true, no subtask: admin
-for ecc_cmd in ecc-audit quality-gate research-first verify-loop model-route-review harness-audit; do
+for ecc_cmd in ecc-audit quality-gate research-first verify-loop backend-route-review harness-audit; do
 	require_contains "opencode-global/commands/${ecc_cmd}.md" "subtask: true"
 	if rg "subtask: admin" "opencode-global/commands/${ecc_cmd}.md" >/dev/null 2>&1; then
 		fail "opencode-global/commands/${ecc_cmd}.md must NOT contain subtask: admin"

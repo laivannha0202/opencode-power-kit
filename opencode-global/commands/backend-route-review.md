@@ -1,28 +1,27 @@
 ---
-description: Backend route review — kiểm tra routing, phân quyền, middleware, error handling
+description: Backend HTTP/API route review — review routing structure, auth, permissions, middleware, validation, error handling
 subtask: true
 agent: ecc-lite-strong
 ---
 
-# /model-route-review
+# /backend-route-review
 
 Review backend HTTP/API routes: routing structure, permissions, middleware, and error handling.
 
-**Lưu ý:** Command này review backend routes, KHÔNG liên quan đến model selection/routing.
-OPK model-agnostic — không có model routing command nào.
+**Scope:** Backend route review only — KHÔNG liên quan đến model selection, model routing, hay AI model choice.
 
 ## Cách dùng
 
 ```
-/model-route-review                       # review tất cả routes
-/model-route-review <path>                # review specific route
-/model-route-review --api-only            # chỉ review API routes
-/model-route-review --web-only            # chỉ review web routes
+/backend-route-review                       # review tất cả routes
+/backend-route-review <path>                # review specific route
+/backend-route-review --api-only            # chỉ review API routes
+/backend-route-review --web-only            # chỉ review web routes
 ```
 
-## ⚠️ Scope Guard — Review only
+## Scope Guard — Review only
 
-Model route review **CHỈ** đọc và phân tích routes. **KHÔNG** tự sửa code.
+`/backend-route-review` **CHỈ** đọc và phân tích routes. **KHÔNG** tự sửa code.
 
 ## Checks
 
