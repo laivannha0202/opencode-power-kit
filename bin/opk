@@ -220,7 +220,7 @@ opk — OpenCode Power Kit CLI (v$VERSION)
   opk tooling doctor         Detect + suggest install for dev tools
 
   v2.1.0 — Model-Agnostic Runtime:
-  opk model status           Hiển thị model-agnostic policy
+  opk model status           Hiển thị model-agnostic policy (OPK không quản lý model)
 
 Flags chung (forward cho sub-script):
   --yes   skip confirm
@@ -419,119 +419,7 @@ EOF
     esac
     ;;
 
-  # ─── v2.1.0 Model Routing ──────────────────────────────────────
-  model)
-    model_cmd="${1:-status}"
-    shift || true
-    case "$model_cmd" in
-      status)
-        echo "opk: === Model Routing Status ==="
-        echo ""
-        # Check project config
-        proj_config=""
-        if [ -f ".opencode/opencode.json" ]; then
-          proj_config=".opencode/opencode.json"
-        elif [ -f "opencode.json" ]; then
-          proj_config="opencode.json"
-        fi
-        if [ -n "$proj_config" ]; then
-          echo "opk: Project config: $proj_config"
-          # Parse model using python3 JSON parser
-          if command -v python3 >/dev/null 2>&1; then
-            model="$(python3 -c "
-import json, sys
-try:
-    d = json.load(open('$proj_config'))
-    print(d.get('model', '(not set)'))
-except Exception as e:
-    print('(parse error: ' + str(e) + ')')
-" 2>/dev/null)"
-            echo "opk:   Default model: $model"
-          else
-            echo "opk:   (python3 not found, cannot parse model)"
-          fi
-        else
-          echo "opk: No project config found (using template defaults)"
-          echo "opk: Template model: $(python3 -c "
-import json
-try:
-    d = json.load(open('$KIT_DIR/templates/opencode.json'))
-    print(d.get('model', '(not set)'))
-except:
-    print('(not set)')
-" 2>/dev/null || echo '(not set)')"
-        fi
-        echo ""
-        echo "opk: Model routing docs: docs/MODEL_ROUTING.md"
-        echo "opk: Model config example: templates/opencode.models.example.jsonc"
-        ;;
-      example)
-        example_file="$KIT_DIR/templates/opencode.models.example.jsonc"
-        if [ -f "$example_file" ]; then
-          echo "opk: === Model Routing Example ==="
-          echo ""
-          echo "Copy this to your project root or .opencode/opencode.json:"
-          echo ""
-          cat "$example_file"
-        else
-          echo "opk: Model routing example not found: $example_file"
-        fi
-        ;;
-      doctor)
-        echo "opk: === Model Routing Doctor ==="
-        echo ""
-        # Check python3
-        if command -v python3 >/dev/null 2>&1; then
-          echo "opk: ✅ python3 found: $(command -v python3)"
-        else
-          echo "opk: ❌ python3 not found (required for JSON config parsing)"
-        fi
-        echo ""
-        # Check project config
-        proj_config=""
-        if [ -f ".opencode/opencode.json" ]; then
-          proj_config=".opencode/opencode.json"
-        elif [ -f "opencode.json" ]; then
-          proj_config="opencode.json"
-        fi
-        if [ -n "$proj_config" ]; then
-          echo "opk: ✅ Project config found: $proj_config"
-          # Validate JSON
-          if command -v python3 >/dev/null 2>&1; then
-            if python3 -c "import json; json.load(open('$proj_config'))" 2>/dev/null; then
-              echo "opk: ✅ Config is valid JSON"
-            else
-              echo "opk: ❌ Config has invalid JSON"
-            fi
-          fi
-        else
-          echo "opk: ℹ️  No project config found"
-        fi
-        echo ""
-        # Check template
-        echo "opk: Template check:"
-        for tpl in opencode.json opencode.power.json opencode.safe.json; do
-          if [ -f "$KIT_DIR/templates/$tpl" ]; then
-            if command -v python3 >/dev/null 2>&1; then
-              if python3 -c "import json; json.load(open('$KIT_DIR/templates/$tpl'))" 2>/dev/null; then
-                echo "opk:   ✅ $tpl (valid JSON)"
-              else
-                echo "opk:   ⚠️  $tpl (invalid JSON)"
-              fi
-            else
-              echo "opk:   ℹ️  $tpl (cannot validate without python3)"
-            fi
-          fi
-        done
-        echo ""
-        echo "opk: Model routing docs: docs/MODEL_ROUTING.md"
-        ;;
-      *)
-        echo "opk: model: lệnh không hợp lệ '$model_cmd'. Dùng: status, example, doctor" >&2
-        exit 1
-        ;;
-    esac
-    ;;
+  # ─── v2.1.0 Model-Agnostic ──────────────────────────────────────
 
   safety-plugin)
     plugin_cmd="${1:-status}"

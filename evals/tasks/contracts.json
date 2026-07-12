@@ -59,23 +59,19 @@
   },
   {
     "id": "contract-005",
-    "name": "Safety plugin exists and uses correct pattern",
-    "description": "Safety plugin must exist and use tool.execute.before + throw new Error",
-    "check_type": "file_present",
-    "targets": [
-      "templates/plugins/opk-safety-guard.js"
-    ],
-    "expected": "all_present"
+    "name": "Safety plugin uses correct pattern",
+    "description": "test-safety-plugin.mjs must pass",
+    "check_type": "script_exec",
+    "command": "node scripts/test-safety-plugin.mjs",
+    "expected": "exit_0"
   },
   {
     "id": "contract-006",
     "name": "Permission ordering correct",
-    "description": "Permission wildcard must come before deny rules",
-    "check_type": "file_present",
-    "targets": [
-      "templates/opencode.json"
-    ],
-    "expected": "all_present"
+    "description": "test-permission-rules.py must pass — wildcard before deny",
+    "check_type": "script_exec",
+    "command": "python3 scripts/test-permission-rules.py",
+    "expected": "exit_0"
   },
   {
     "id": "contract-007",
@@ -97,6 +93,54 @@
       "model-agnostic",
       "không chọn",
       "không route"
+    ],
+    "expected": "all_present"
+  },
+  {
+    "id": "contract-009",
+    "name": "Model status via opk CLI",
+    "description": "bin/opk model status must run and output model-agnostic policy",
+    "check_type": "script_exec",
+    "command": "bin/opk model status",
+    "expected": "exit_0"
+  },
+  {
+    "id": "contract-010",
+    "name": "No model override in agent files",
+    "description": "Agent .md files must not contain model: override lines",
+    "check_type": "grep_absent",
+    "target": "opencode-global/agents/",
+    "patterns": [
+      "^model:"
+    ],
+    "expected": "all_absent"
+  },
+  {
+    "id": "contract-011",
+    "name": "Writer/read-only reviewer policy",
+    "description": "build-strong must define reviewer as read-only",
+    "check_type": "grep_present",
+    "target": "opencode-global/agents/build-strong.md",
+    "patterns": [
+      "Reviewer read-only",
+      "read-only"
+    ],
+    "expected": "all_present"
+  },
+  {
+    "id": "contract-012",
+    "name": "build-strong pipeline stages",
+    "description": "build-strong must define all 7 pipeline stages",
+    "check_type": "grep_present",
+    "target": "opencode-global/agents/build-strong.md",
+    "patterns": [
+      "Intake",
+      "Context",
+      "Plan",
+      "Implement",
+      "Review",
+      "Verify",
+      "Report"
     ],
     "expected": "all_present"
   }

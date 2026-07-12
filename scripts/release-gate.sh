@@ -91,7 +91,7 @@ SP="$KIT_DIR/templates/plugins/opk-safety-guard.js"
 if [ -f "$SP" ]; then
   pass "Safety plugin exists"
   if grep -q "tool.execute.before" "$SP"; then
-    pass "Uses tool.execute.before hook (ESM)"
+    pass "Uses tool.execute.before hook (CommonJS)"
   else
     fail "Missing tool.execute.before hook"
   fi

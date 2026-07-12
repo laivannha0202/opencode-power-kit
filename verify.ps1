@@ -69,6 +69,13 @@ function Require-Contains($path, $needle) {
         Fail "$path missing:  $needle"
     }
 }
+function Require-FileAbsent($path) {
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        Ok "$path correctly absent"
+    } else {
+        Fail "$path must not exist (model override template removed)"
+    }
+}
 
 # ─── Header ───────────────────────────────────────────────────────
 Write-Host '=== opencode-power-kit verify (PowerShell) ==='
@@ -711,37 +718,44 @@ if (Test-Path -LiteralPath $pyScript) {
 }
 Write-Host ''
 
-# ─── v2.1.0: Model Routing Schema ────────────────────────────────
-Write-Host '[v2.1.0 Model Routing Schema]'
-$modelsExample = Join-Path $KitDir 'templates/opencode.models.example.jsonc'
-if (Test-Path -LiteralPath $modelsExample -PathType Leaf) {
-    $modelsContent = Get-Content -LiteralPath $modelsExample -Raw -ErrorAction SilentlyContinue
-    if ($null -ne $modelsContent) {
-        # Must use "agent" (singular), not "agents" (plural)
-        if ($modelsContent.Contains('"agents"')) {
-            Fail 'templates/opencode.models.example.jsonc uses agents (plural) — must use agent (singular)'
-        } elseif ($modelsContent.Contains('"agent"')) {
-            Ok 'templates/opencode.models.example.jsonc uses agent (singular)'
-        } else {
-            Fail 'templates/opencode.models.example.jsonc missing agent key'
-        }
-        # Must use "mode", not "kind"
-        if ($modelsContent.Contains('"kind"')) {
-            Fail 'templates/opencode.models.example.jsonc uses kind — must use mode'
-        } else {
-            Ok 'templates/opencode.models.example.jsonc: no kind found (uses mode)'
-        }
-        # Must have $schema
-        if ($modelsContent.Contains('"$schema"')) {
-            Ok 'templates/opencode.models.example.jsonc has $schema'
-        } else {
-            Fail 'templates/opencode.models.example.jsonc missing $schema'
-        }
-    } else {
-        Fail 'templates/opencode.models.example.jsonc is empty'
+# ─── v2.1.0: Model-Agnostic Contract ─────────────────────────────
+Write-Host '[v2.1.0 Model-Agnostic Contract]'
+# OPK must not manage models — no discovery, no benchmark, no override
+Require-FileAbsent 'templates/opencode.models.example.jsonc'
+# Agent files must NOT contain model overrides
+$agentFiles = Get-ChildItem -Path (Join-Path $KitDir 'opencode-global/agents') -Filter '*.md' -ErrorAction SilentlyContinue
+foreach ($af in $agentFiles) {
+    $afContent = Get-Content -LiteralPath $af.FullName -Raw -ErrorAction SilentlyContinue
+    if ($null -ne $afContent -and $afContent -match '(?m)^model\s*:') {
+        Fail "Agent $($af.Name) contains model override — model-agnostic only"
     }
+}
+# bin/opk must NOT have model discovery/routing/benchmark commands
+$opkContent = Get-Content -LiteralPath (Join-Path $KitDir 'bin/opk') -Raw -ErrorAction SilentlyContinue
+if ($null -ne $opkContent) {
+    foreach ($forbidden in @('discover-free', 'list-free', 'benchmark-free', 'route-free', 'opencode run --model')) {
+        if ($opkContent.Contains($forbidden)) {
+            Fail "bin/opk still contains forbidden model pattern: $forbidden"
+        }
+    }
+    Ok 'bin/opk: no model discovery/routing/benchmark commands'
+}
+# bin/opk must have exactly one model) branch
+$modelBranches = ($opkContent | Select-String -Pattern '^\s*model\)' -AllMatches).Matches.Count
+if ($modelBranches -eq 1) {
+    Ok 'bin/opk has exactly 1 model branch'
+} elseif ($modelBranches -gt 1) {
+    Fail "bin/opk has $modelBranches model branches (expected 1)"
 } else {
-    Fail 'templates/opencode.models.example.jsonc missing'
+    Fail 'bin/opk has 0 model branches'
+}
+# Writer/read-only reviewer policy: build-strong must have review stage
+Require-Contains 'opencode-global/agents/build-strong.md' 'Review'
+Require-Contains 'opencode-global/agents/build-strong.md' 'Reviewer read-only'
+# build-strong pipeline stages
+$bsPipeline = @('Intake', 'Context', 'Plan', 'Implement', 'Review', 'Verify', 'Report')
+foreach ($stage in $bsPipeline) {
+    Require-Contains 'opencode-global/agents/build-strong.md' $stage
 }
 Write-Host ''
 

@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.1.0] - 2026-07-10
 
-### Runtime Hardening & Safety Fixes
+### Runtime Hardening, Model-Agnostic & Safety Fixes
 
 #### Added
 
@@ -19,11 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   shell syntax, and test coverage before release.
 - **`scripts/test-runtime-behavior.sh`** — orchestration script that runs all
   behavioral/integration tests in one pass.
-- **`docs/MODEL_ROUTING.md`** — documentation for model routing configuration.
-- **`templates/opencode.models.example.jsonc`** — example template with model
-  routing for different task types.
-- **`evals/`** — eval harness with task definitions and runner for testing
-  agent output quality (rule-based, extensible to LLM-as-judge).
+- **`docs/MODEL_ROUTING.md`** — model-agnostic policy documentation.
+- **`docs/SKILL_ROUTING.md`** — skill routing by task context, not model.
+- **`docs/UPSTREAM_CAPABILITY_MAP.md`** — OPK vs OpenCode native capability map.
+- **`evals/`** — eval harness with 12 workflow contracts and runner for testing
+  behavioral regression (no model routing, no API keys, no overrides).
 - **`scripts/test-permission-rules.py`** — behavioral test verifying permission
   deny-list ordering (wildcard first, deny last) in all templates.
 - **`scripts/test-safety-plugin.mjs`** — unit tests for safety plugin helpers
@@ -32,13 +32,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (POWER/SAFE/CUSTOM) via JSON parser.
 - **`scripts/test-installer-preservation.sh`** — integration test verifying
   installer idempotency and backup preservation.
+- **`verify.ps1`** — PowerShell verification with model-agnostic contract:
+  no model override template, no model override in agents, build-strong
+  pipeline stages, writer/read-only reviewer policy.
 
 #### Changed
 
 - **`scripts/merge-opk-project.py`** — fixed missing `import os` (used by
   `os.getpid()` in backup filename generation).
-- **`bin/opk`** — added `model status/example/doctor` subcommands for
-  model routing management.
+- **`bin/opk`** — model-agnostic policy: single `model)` branch outputs
+  "OPK không quản lý model". Removed model routing/discovery/benchmark commands.
 - **`templates/opencode.json`** — permission rule ordering fixed: wildcard
   `"*"` first, specific allows, deny rules last (OpenCode "last rule wins").
 - **`templates/opencode.power.json`** — same rule ordering fix.
@@ -46,6 +49,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`templates/plugins/opk-safety-guard.js`** — rewritten as ESM with
   `tool.execute.before` hook, `throw new Error()` for blocking (not
   `{ blocked: true }`). Sensitivity checks via string/regex, not glob.
+- **`opencode-global/agents/build-strong.md`** — rewritten as 7-phase
+  orchestrator pipeline: Intake → Context → Plan → Implement → Review
+  → Verify → Report. Writer/read-only reviewer policy enforced.
+- **`evals/run.sh`** — unknown check_type now FAIL (not SKIP). Added
+  `script_exec` check_type for running actual commands. Required missing
+  dependency → FAIL; optional → SKIP.
+- **`evals/tasks/contracts.json`** — 12 workflow contracts: safety plugin
+  test, permission rules test, model status CLI, agent model override scan,
+  build-strong pipeline stages, writer/read-only reviewer.
 - **GSD agents moved** — 34 GSD companion agents relocated from
   `opencode-global/agents/` to `extras/gsd-agent-reference/`. Active agents:
   16 (was 48+).
@@ -57,6 +69,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   timestamp for all managed files.
 - **VERSION** — bumped from 2.0.0 to 2.1.0.
 
+#### Removed
+
+- **`templates/opencode.models.example.jsonc`** — model override template
+  removed (model-agnostic policy).
+- **Model routing scripts** — `scripts/opk-model-discover.sh`,
+  `scripts/opk-model-route.sh`, `scripts/opk-model-benchmark.sh`,
+  `scripts/validate-free-model.sh` deleted.
+
 #### Security
 
 - Permission deny-list in all templates now follows OpenCode's "last matching
@@ -66,6 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   not just instruction-level.
 - No personal paths (`/home/nha`) in any runtime directory.
 - GSD agents no longer in active path — reference-only in extras/.
+- Model-agnostic policy: no model discovery, routing, benchmarking, or
+  override in any OPK file.
 
 ## [2.0.0] - 2026-06-14
 
