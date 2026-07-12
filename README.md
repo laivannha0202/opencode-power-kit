@@ -579,8 +579,8 @@ Phù hợp nhất cho project dùng: NestJS backend, React/Vite frontend, MySQL 
 | Tiêu chí | Điểm | Vì sao đạt |
 |----------|:----:|-----------|
 | **Dễ cài** | 10/10 | One-command (`bash -c` / PowerShell) cho Linux/macOS/WSL/Git Bash + Windows. `opk one/go`, `opk doctor`, `opk verify` đều sẵn. |
-| **Mạnh full-stack** | 10/10 | Profile Node/NestJS/React/Vite/MySQL. 14 core agents + 33 GSD-style + 1 ECC-lite. 66 commands. 23 skills. 15 root scripts. |
-| **Workflow agent** | 10/10 | Agent router (`/agent-router`), `build-strong` fullstack autopilot, `power-build` end-to-end, delegation tới 9+ subagent chuyên biệt. |
+| **Mạnh full-stack** | 10/10 | Profile Node/NestJS/React/Vite/MySQL. 16 active agents. 71 commands. 23 skills. 15 root scripts. GSD reference-only in extras/. |
+| **Workflow agent** | 10/10 | Agent router (`/agent-router`), `build-strong` 7-phase fullstack autopilot, `power-build` end-to-end, delegation tới 16 subagent chuyên biệt. |
 | **Safety** | 10/10 cho trusted-local; 8/10 cho power mode mặc định | Guard rules: không `rm -rf`, không `git reset --hard`, không force push, không sửa `.env`/secrets, checkpoint trước thay đổi lớn, `/cleanup-safe` move an toàn, backup trước ghi đè. Tuy nhiên `permission: allow` có nghĩa agent không bị permission prompt — safety dựa vào instruction rules, không phải sandbox tuyệt đối. Khuyến nghị: dùng power mode cho máy/project cá nhân tin cậy. |
 | **Tài liệu** | 10/10 | README, `THIRD_PARTY.md`, `CHANGELOG.md`, `docs/`, credits rõ ràng, update path cho từng nhóm upstream. |
 | **Third-party packaging** | 10/10 | Phân loại rõ: target platform, plugin reference, install-time dependency, config-only, opt-in wrapper, detect-only, recommended ecosystem. Attribution đầy đủ. |

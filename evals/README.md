@@ -1,86 +1,84 @@
-# Eval Harness
+# Eval Harness — Workflow Regression Suite
 
-Bộ đánh giá (eval) cho OpenCode Power Kit — kiểm tra chất lượng output
-của agents, commands, và skills trên các task thực tế.
+Workflow regression tests for OpenCode Power Kit. Verifies behavioral
+contracts: no model routing, no API keys, no overrides, no model selection.
 
-## Cấu trúc
+**This is NOT a model quality benchmark.** It does not call models,
+score model output, or compare providers.
+
+## Structure
 
 ```
 evals/
-├── README.md          # File này
-├── tasks/             # Task definitions (JSON)
-│   ├── code-gen.json  # Code generation eval
-│   ├── debug.json     # Debug investigation eval
-│   └── fullstack.json # Full-stack feature eval
-└── run.sh             # Runner script
+├── README.md          # This file
+├── tasks/
+│   └── contracts.json # 12 behavioral workflow contracts
+├── results/           # Test output (auto-generated)
+└── run.sh             # Test runner
 ```
 
-## Cách dùng
+## Usage
 
 ```bash
-# Chạy tất cả evals
+# Run all contracts
 bash evals/run.sh
 
-# Chạy eval cụ thể
-bash evals/run.sh evals/tasks/code-gen.json
-
-# Chạy với model cụ thể
-MODEL=anthropic/claude-sonnet-4-20250514 bash evals/run.sh
+# Dry run (structural check only)
+bash evals/run.sh --dry-run
 ```
 
-## Task Format
+## Contract Format
 
-Mỗi task file là một JSON array:
+Each contract in `contracts.json` is a JSON object:
 
 ```json
-[
-  {
-    "id": "code-gen-001",
-    "name": "Simple function implementation",
-    "description": "Write a function that...",
-    "input": "The user prompt to send",
-    "expected_contains": ["keyword1", "keyword2"],
-    "expected_not_contains": ["anti-pattern1"],
-    "max_tokens": 2000,
-    "timeout_seconds": 60
-  }
-]
+{
+  "id": "contract-001",
+  "name": "No model routing in bin/opk",
+  "description": "bin/opk must not contain model discovery, routing, or benchmark",
+  "check_type": "grep_absent",
+  "target": "bin/opk",
+  "patterns": ["discover-free", "benchmark-free"],
+  "expected": "all_absent"
+}
 ```
 
-## Fields
+## Check Types
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `id` | ✅ | Unique identifier |
-| `name` | ✅ | Human-readable name |
-| `description` | ✅ | What this eval tests |
-| `input` | ✅ | Prompt to send to the agent |
-| `expected_contains` | ❌ | Strings that MUST appear in output |
-| `expected_not_contains` | ❌ | Strings that MUST NOT appear |
-| `max_tokens` | ❌ | Token limit (default: 4096) |
-| `timeout_seconds` | ❌ | Timeout (default: 120) |
+| Check Type | Description | Required Tool |
+|-----------|-------------|---------------|
+| `grep_absent` | Patterns must NOT appear in target file/directory | `grep` |
+| `grep_present` | Patterns must appear in target file | `grep` |
+| `file_absent` | Target files must NOT exist | filesystem |
+| `file_present` | Target files must exist | filesystem |
+| `script_exec` | Run command, exit 0 = PASS | `python3`, `node`, `bash` |
 
-## Chạy
+**Unknown check_type → FAIL.** Runner does not silently skip unknown types.
 
-```bash
-# Yêu cầu: bash, python3, curl (nếu dùng remote API)
-bash evals/run.sh
-```
+**Missing required dependency → FAIL.** (e.g., `python3` not found for `script_exec`).
+Optional dependency → SKIP.
 
-Runner sẽ:
-1. Load task file
-2. Chạy từng task qua agent (hoặc mock)
-3. Kiểm tra expected_contains / expected_not_contains
-4. In kết quả PASS/FAIL
-5. Exit 0 nếu tất cả pass, exit 1 nếu có fail
+## Contracts
 
-## Thêm Task
+| ID | Check Type | What It Verifies |
+|----|-----------|-----------------|
+| contract-001 | grep_absent | No model routing/discovery/benchmark in bin/opk |
+| contract-002 | grep_absent | No API keys in templates |
+| contract-003 | grep_absent | .gitignore allows .opencode/ |
+| contract-004 | file_absent | Deleted model routing scripts |
+| contract-005 | script_exec | Safety plugin test (node) |
+| contract-006 | script_exec | Permission ordering test (python3) |
+| contract-007 | file_absent | No model override template |
+| contract-008 | grep_present | Model-agnostic policy documented |
+| contract-009 | script_exec | Model status via opk CLI |
+| contract-010 | grep_absent | No model override in agent files |
+| contract-011 | grep_present | Writer/read-only reviewer policy |
+| contract-012 | grep_present | build-strong pipeline stages |
 
-Tạo file JSON mới trong `evals/tasks/`, tuân theo format ở trên.
-Runner tự detect tất cả `*.json` trong `evals/tasks/`.
+## Notes
 
-## Note
-
-- Evals hiện tại là **rule-based** (string matching), chưa dùng LLM-as-judge.
-- Có thể nâng cấp lên LLM judge trong tương lai.
-- Mỗi eval chạy trong isolation — không shared state giữa tasks.
+- **Workflow regression only.** Tests verify file contents and CLI behavior.
+- **No model calls.** Contracts do not invoke models or score output.
+- **No benchmark.** No model comparison or quality ranking.
+- **Extensible.** Add new contracts to `contracts.json` following the format.
+- Runner auto-discovers all `*.json` in `evals/tasks/`.

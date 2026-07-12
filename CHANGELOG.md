@@ -46,9 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `"*"` first, specific allows, deny rules last (OpenCode "last rule wins").
 - **`templates/opencode.power.json`** — same rule ordering fix.
 - **`templates/opencode.safe.json`** — same rule ordering fix.
-- **`templates/plugins/opk-safety-guard.js`** — rewritten as ESM with
+- **`templates/plugins/opk-safety-guard.js`** — rewritten as CommonJS with
   `tool.execute.before` hook, `throw new Error()` for blocking (not
-  `{ blocked: true }`). Sensitivity checks via string/regex, not glob.
+  `{ blocked: true }`). Single `module.exports = OPKSafetyGuard` factory.
+  Sensitivity checks via string/regex, not glob.
 - **`opencode-global/agents/build-strong.md`** — rewritten as 7-phase
   orchestrator pipeline: Intake → Context → Plan → Implement → Review
   → Verify → Report. Writer/read-only reviewer policy enforced.
@@ -82,7 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Permission deny-list in all templates now follows OpenCode's "last matching
   rule wins" semantics: wildcard allow at top, specific allows middle, deny
   rules at bottom.
-- Safety plugin properly blocks at runtime (ESM `tool.execute.before` + throw),
+- Safety plugin properly blocks at runtime (CommonJS `tool.execute.before` + throw),
   not just instruction-level.
 - No personal paths (`/home/nha`) in any runtime directory.
 - GSD agents no longer in active path — reference-only in extras/.

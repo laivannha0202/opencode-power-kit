@@ -303,6 +303,14 @@ echo "--- Full Verification ---"
 run_cmd "verify.sh" \
   "bash $KIT_DIR/verify.sh"
 
+if command -v pwsh >/dev/null 2>&1; then
+  run_cmd "verify.ps1" \
+    "pwsh -NoProfile -File '$KIT_DIR/verify.ps1'"
+else
+  echo "  ⏭️  verify.ps1 — SKIP (pwsh not found)"
+  RESULTS+=("SKIP|verify.ps1|skip|pwsh not found")
+fi
+
 run_cmd "doctor.sh" \
   "bash $KIT_DIR/doctor.sh"
 
@@ -318,8 +326,8 @@ CMD_TIMEOUT=120
 # --- Git Checks ---
 echo ""
 echo "--- Git Checks ---"
-run_cmd "git-diff-check" \
-  "git diff --check"
+run_cmd "git-diff-check HEAD^ HEAD" \
+  "git -C '$KIT_DIR' diff --check HEAD^ HEAD"
 
 # ============================================================================
 # PHAN 3: Summary

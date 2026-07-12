@@ -741,7 +741,10 @@ if ($null -ne $opkContent) {
     Ok 'bin/opk: no model discovery/routing/benchmark commands'
 }
 # bin/opk must have exactly one model) branch
-$modelBranches = ($opkContent | Select-String -Pattern '^\s*model\)' -AllMatches).Matches.Count
+$modelBranches = [regex]::Matches(
+    $opkContent,
+    '(?m)^\s*model\)'
+).Count
 if ($modelBranches -eq 1) {
     Ok 'bin/opk has exactly 1 model branch'
 } elseif ($modelBranches -gt 1) {

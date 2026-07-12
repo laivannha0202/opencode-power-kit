@@ -4,31 +4,39 @@ OPK skills route by **task context**, never by model.
 
 ## Routing Rules
 
-| Task Context | Skill | Trigger |
-|-------------|-------|---------|
-| ADR, architecture decision | `adr-architecture-decision` | Architecture choice needed |
-| Agent memory, state persistence | `agentmemory-lite` | Multi-session, context handoff |
-| API contract, OpenAPI | `api-contract` | API endpoint design/review |
-| Database schema, migration | `database-migration-safe` | Schema change, migration |
-| Dependency update | `dependency-maintenance` | Package version bump |
-| Docker compose | `docker-compose-safe` | Container config |
-| Env config | `env-config-safe` | Environment variable setup |
-| Frontend UI review | `frontend-ui-review` | UI/UX audit |
-| Fullstack test strategy | `fullstack-test-strategy` | Cross-layer testing |
-| Context compression | `headroom-lite` | Token budget, output truncation |
-| JS/TS project setup | `js-ts-project` | New JS/TS project |
-| JS/TS quality | `js-ts-quality` | Code quality audit |
-| NestJS + React + MySQL | `nest-react-mysql` | Fullstack NestJS/React |
-| OpenAPI contract | `openapi-contract` | OpenAPI spec |
-| RAG planning | `rag-lite` | RAG, vector search, chunking |
-| Repo map | `repo-map` | Codebase overview |
-| Token optimization | `rtk-token-optimizer` | Token usage optimization |
-| Safe edit | `safe-edit` | Edit with safety guard |
-| Security fullstack | `secure-fullstack` | Security audit (full) |
-| Security review | `security-review` | Security review (quick) |
-| Serena first | `serena-first` | Semantic code navigation |
-| Test strategy | `test-strategy` | Test planning |
-| Token-smart code | `token-smart-code` | Token-efficient codegen |
+| Task Context | Skill | Agent | Trigger | Verification |
+|-------------|-------|-------|---------|-------------|
+| ADR, architecture decision | `adr-architecture-decision` | `architect-strong` | Architecture choice needed | Manual review |
+| Agent memory, state persistence | `agentmemory-lite` | `build-strong` | Multi-session, context handoff | Manual review |
+| API contract, OpenAPI | `api-contract` | `api-strong` | API endpoint design/review | Manual review |
+| Database schema, migration | `database-migration-safe` | `db-strong` | Schema change, migration | Manual review |
+| Dependency update | `dependency-maintenance` | `build-strong` | Package version bump | `npm audit` / manual |
+| Docker compose | `docker-compose-safe` | `devops-strong` | Container config | `docker compose config` |
+| Env config | `env-config-safe` | `build-strong` | Environment variable setup | Manual review |
+| Frontend UI review | `frontend-ui-review` | `ui-ux-strong` | UI/UX audit | Manual review |
+| Fullstack test strategy | `fullstack-test-strategy` | `qa-strong` | Cross-layer testing | Manual review |
+| Context compression | `headroom-lite` | `build-strong` | Token budget, output truncation | Manual review |
+| JS/TS project setup | `js-ts-project` | `build-strong` | New JS/TS project | Manual review |
+| JS/TS quality | `js-ts-quality` | `qa-strong` | Code quality audit | Lint/test pass |
+| NestJS + React + MySQL | `nest-react-mysql` | `build-strong` | Fullstack NestJS/React | Build + test pass |
+| OpenAPI contract | `openapi-contract` | `api-strong` | OpenAPI spec | Manual review |
+| RAG planning | `rag-lite` | `build-strong` | RAG, vector search, chunking | Manual review |
+| Repo map | `repo-map` | `build-strong` | Codebase overview | Manual review |
+| Token optimization | `rtk-token-optimizer` | `build-strong` | Token usage optimization | Manual review |
+| Safe edit | `safe-edit` | `build-strong` | Edit with safety guard | Manual review |
+| Security fullstack | `secure-fullstack` | `security-strong` | Security audit (full) | Manual review |
+| Security review | `security-review` | `security-strong` | Security review (quick) | Manual review |
+| Serena first | `serena-first` | `build-strong` | Semantic code navigation | Manual review |
+| Test strategy | `test-strategy` | `qa-strong` | Test planning | Manual review |
+| Token-smart code | `token-smart-code` | `build-strong` | Token-efficient codegen | Manual review |
+
+## Policy
+
+- **This is documentation, not runtime enforcement.** Skills are loaded manually by the agent or user, not auto-dispatched.
+- **No model routing.** Skills do not select models. Model selection is in OpenCode UI.
+- **No per-skill model override.** All skills inherit the user-selected model.
+- **No runtime auto-load on-demand** without test evidence. Current skills require explicit invocation.
+- **Verification is manual** unless a specific test is listed.
 
 ## No Model Override
 
