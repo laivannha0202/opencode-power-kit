@@ -225,10 +225,10 @@ run_cmd() {
       ;;
   esac
 
-  # Chay command voi timeout, bat exit code
+  # Chay command voi timeout qua portable timeout helper, bat exit code
   local output
   local rc
-  output=$(timeout "$CMD_TIMEOUT" bash -c "$cmd_str" 2>&1) && rc=0 || rc=$?
+  output=$(bash "$KIT_DIR/scripts/timeout.sh" "$CMD_TIMEOUT" bash -c "$cmd_str" 2>&1) && rc=0 || rc=$?
 
   if [ "$rc" -eq 0 ]; then
     echo "  ✅ $label — PASS (exit $rc)"
@@ -327,9 +327,28 @@ CMD_TIMEOUT=120
 echo ""
 echo "--- Git Checks ---"
 # Check for whitespace errors in all changes from base branch
-MERGE_BASE=$(git -C "$KIT_DIR" merge-base origin/main HEAD 2>/dev/null || echo "HEAD")
-run_cmd "git-diff-check (from main)" \
-  "git -C '$KIT_DIR' diff --check '$MERGE_BASE' HEAD"
+# Resolve merge-base: try OPK_BASE_REF → origin/main → main → FAIL
+MERGE_BASE=""
+if [ -n "${OPK_BASE_REF:-}" ]; then
+  MERGE_BASE=$(git -C "$KIT_DIR" merge-base "$OPK_BASE_REF" HEAD 2>/dev/null) || true
+  if [ -z "$MERGE_BASE" ]; then
+    fail "Cannot compute merge-base with OPK_BASE_REF=$OPK_BASE_REF"
+  fi
+fi
+if [ -z "$MERGE_BASE" ] && git -C "$KIT_DIR" rev-parse --verify origin/main >/dev/null 2>&1; then
+  MERGE_BASE=$(git -C "$KIT_DIR" merge-base origin/main HEAD 2>/dev/null) || true
+fi
+if [ -z "$MERGE_BASE" ] && git -C "$KIT_DIR" rev-parse --verify main >/dev/null 2>&1; then
+  MERGE_BASE=$(git -C "$KIT_DIR" merge-base main HEAD 2>/dev/null) || true
+fi
+if [ -z "$MERGE_BASE" ]; then
+  fail "Cannot determine merge-base (tried OPK_BASE_REF, origin/main, main). Skipping git diff --check."
+  MERGE_BASE="SKIP"
+fi
+if [ "$MERGE_BASE" != "SKIP" ]; then
+  run_cmd "git-diff-check (from base)" \
+    "git -C '$KIT_DIR' diff --check '$MERGE_BASE' HEAD"
+fi
 
 # ============================================================================
 # PHAN 3: Summary

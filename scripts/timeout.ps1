@@ -20,10 +20,10 @@
 param(
     [Parameter(Mandatory=$true)]
     [int]$Seconds,
-    
+
     [Parameter(Mandatory=$true)]
     [string]$Command,
-    
+
     [string[]]$Args = @()
 )
 
@@ -32,13 +32,46 @@ if ($Seconds -le 0) {
     exit 125
 }
 
+$process = $null
 try {
-    $process = Start-Process -FilePath $Command -ArgumentList $Args -NoNewWindow -PassThru -Wait -ErrorAction Stop
-    exit $process.ExitCode
-} catch {
-    if ($_.Exception.Message -match "timed out|timeout") {
+    # Build start info for process tree kill
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = $Command
+    if ($Args.Count -gt 0) {
+        $psi.Arguments = ($Args -join ' ')
+    }
+    $psi.UseShellExecute = $false
+    $psi.CreateNoWindow = $false
+
+    $process = [System.Diagnostics.Process]::Start($psi)
+
+    # Wait with timeout (milliseconds)
+    $timeoutMs = $Seconds * 1000
+    $exited = $process.WaitForExit($timeoutMs)
+
+    if (-not $exited) {
+        # Timeout — kill process tree
+        try {
+            $process.Kill($true)
+        } catch {
+            # Fallback: try taskkill /T /F
+            try {
+                taskkill /PID $process.Id /T /F 2>$null
+            } catch {
+                # Last resort
+                $process.Kill()
+            }
+        }
         exit 124
     }
+
+    # Command completed — return its exit code
+    exit $process.ExitCode
+} catch {
     Write-Error "Error running command: $_"
     exit 125
+} finally {
+    if ($process -ne $null) {
+        $process.Dispose()
+    }
 }

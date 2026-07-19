@@ -149,7 +149,7 @@
     "name": "Timeout helper exists and runs",
     "description": "scripts/timeout.sh must exist and run without error",
     "check_type": "script_exec",
-    "command": "bash scripts/timeout.sh 1 true; echo $?",
+    "command": "bash scripts/timeout.sh 5 true",
     "expected_exit": 0
   },
   {
@@ -157,7 +157,7 @@
     "name": "Timeout helper exits 124 on timeout",
     "description": "scripts/timeout.sh must return exit code 124 when command exceeds timeout",
     "check_type": "script_exec",
-    "command": "bash scripts/timeout.sh 1 sleep 10; echo $?",
+    "command": "env OPK_TIMEOUT_FORCE_FALLBACK=1 bash scripts/timeout.sh 1 sleep 10",
     "expected_exit": 124
   },
   {
@@ -165,13 +165,23 @@
     "name": "Timeout helper passes through exit code",
     "description": "scripts/timeout.sh must pass through command exit code when not timed out",
     "check_type": "script_exec",
-    "command": "bash scripts/timeout.sh 5 sh -c 'exit 42'; echo $?",
+    "command": "env OPK_TIMEOUT_FORCE_FALLBACK=1 bash scripts/timeout.sh 5 sh -c 'exit 42'",
     "expected_exit": 42
   },
   {
-    "id": "contract-016",
-    "name": "backend-route-review exists, model-route-review deleted",
-    "description": "backend-route-review.md must exist, model-route-review.md must not exist",
+    "id": "contract-016a",
+    "name": "backend-route-review exists",
+    "description": "backend-route-review.md must exist",
+    "check_type": "file_present",
+    "targets": [
+      "opencode-global/commands/backend-route-review.md"
+    ],
+    "expected": "all_present"
+  },
+  {
+    "id": "contract-016b",
+    "name": "model-route-review deleted",
+    "description": "model-route-review.md must not exist",
     "check_type": "file_absent",
     "targets": [
       "opencode-global/commands/model-route-review.md"
@@ -227,12 +237,18 @@
   },
   {
     "id": "contract-021",
-    "name": "UPSTREAM_CAPABILITY_MAP has verified pins",
-    "description": "UPSTREAM_CAPABILITY_MAP.md must show Superpowers v6.1.1",
+    "name": "UPSTREAM_CAPABILITY_MAP has correct URLs and pins",
+    "description": "UPSTREAM_CAPABILITY_MAP.md must have correct repo URLs and version pins for all upstreams",
     "check_type": "grep_present",
     "target": "docs/UPSTREAM_CAPABILITY_MAP.md",
     "patterns": [
-      "v6.1.1"
+      "v6.1.1 (template pin)",
+      "6.9.0 (pinned)",
+      "@1.6.1 (pinned)",
+      "https://github.com/obra/superpowers.git",
+      "https://github.com/bmad-code-org/BMAD-METHOD",
+      "https://github.com/open-gsd/gsd-core",
+      "https://github.com/rohitg00/agentmemory"
     ],
     "expected": "all_present"
   }

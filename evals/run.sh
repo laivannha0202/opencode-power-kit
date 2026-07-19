@@ -165,69 +165,37 @@ for x in tg: print(x)
       check_output=$(check_file_present "${tgt_arr[@]}") || check_result=$?
       ;;
     script_exec)
-      local cmd_str
+      local cmd_str expected_exit actual_exit output rc
       cmd_str=$(echo "$result" | python3 -c "import json,sys; print(json.load(sys.stdin).get('command',''))" 2>/dev/null)
+      expected_exit=$(echo "$result" | python3 -c "import json,sys; print(json.load(sys.stdin).get('expected_exit', 0))" 2>/dev/null)
+      if [ -z "$expected_exit" ]; then expected_exit=0; fi
+
       if [ -z "$cmd_str" ]; then
         check_output="FAIL|$task_id: script_exec missing command"
         check_result=1
       else
+        # Check interpreter availability
         local interp="${cmd_str%% *}"
+        local interp_avail=1
         case "$interp" in
-          python3)
-            if ! command -v python3 >/dev/null 2>&1; then
-              check_output="FAIL|$task_id: python3 not found (required dependency)"
-              check_result=1
-            else
-              local output rc=0
-              output=$(cd "$KIT_DIR" && timeout 60 bash -c "$cmd_str" 2>&1) && rc=0 || rc=$?
-              if [ "$rc" -eq 0 ]; then
-                check_output="PASS|$task_id: $cmd_str exited 0"
-                check_result=0
-              else
-                check_output="FAIL|$task_id: $cmd_str exited $rc"
-                check_result=1
-              fi
-            fi
-            ;;
-          node)
-            if ! command -v node >/dev/null 2>&1; then
-              check_output="FAIL|$task_id: node not found (required dependency)"
-              check_result=1
-            else
-              local output rc=0
-              output=$(cd "$KIT_DIR" && timeout 60 bash -c "$cmd_str" 2>&1) && rc=0 || rc=$?
-              if [ "$rc" -eq 0 ]; then
-                check_output="PASS|$task_id: $cmd_str exited 0"
-                check_result=0
-              else
-                check_output="FAIL|$task_id: $cmd_str exited $rc"
-                check_result=1
-              fi
-            fi
-            ;;
-          bin/opk|./bin/opk)
-            local output rc=0
-            output=$(cd "$KIT_DIR" && timeout 60 bash -c "$cmd_str" 2>&1) && rc=0 || rc=$?
-            if [ "$rc" -eq 0 ]; then
-              check_output="PASS|$task_id: $cmd_str exited 0"
-              check_result=0
-            else
-              check_output="FAIL|$task_id: $cmd_str exited $rc"
-              check_result=1
-            fi
-            ;;
-          *)
-            local output rc=0
-            output=$(cd "$KIT_DIR" && timeout 60 bash -c "$cmd_str" 2>&1) && rc=0 || rc=$?
-            if [ "$rc" -eq 0 ]; then
-              check_output="PASS|$task_id: $cmd_str exited 0"
-              check_result=0
-            else
-              check_output="FAIL|$task_id: $cmd_str exited $rc"
-              check_result=1
-            fi
-            ;;
+          python3) command -v python3 >/dev/null 2>&1 || interp_avail=0 ;;
+          node) command -v node >/dev/null 2>&1 || interp_avail=0 ;;
         esac
+        if [ "$interp_avail" -eq 0 ]; then
+          check_output="FAIL|$task_id: $interp not found (required dependency)"
+          check_result=1
+        else
+          # Run via portable timeout helper
+          output=$(cd "$KIT_DIR" && bash "$KIT_DIR/scripts/timeout.sh" 60 bash -c "$cmd_str" 2>&1) && rc=0 || rc=$?
+          actual_exit="$rc"
+          if [ "$actual_exit" -eq "$expected_exit" ]; then
+            check_output="PASS|$task_id: $cmd_str (expected=$expected_exit actual=$actual_exit)"
+            check_result=0
+          else
+            check_output="FAIL|$task_id: $cmd_str (expected=$expected_exit actual=$actual_exit)"
+            check_result=1
+          fi
+        fi
       fi
       ;;
     *)

@@ -6,7 +6,7 @@
 #
 # Optional integration with the official GSD Core installer:
 #
-#     npx @opengsd/gsd-core@latest
+#     npx @opengsd/gsd-core@1.6.1
 #
 # This script does NOT vendor or copy GSD source. It only forwards
 # to the official installer. See THIRD_PARTY.md.
@@ -23,12 +23,13 @@ $ErrorActionPreference = 'Stop'
 
 $ScriptName = 'install-gsd-core.ps1'
 $GsdPackage = '@opengsd/gsd-core'
+$GsdVersion = '1.6.1'
 
 # ─── Helpers ──────────────────────────────────────────────────────
 function Write-Plan($cmdArgs) {
     Write-Host '=== install-gsd-core (PowerShell) ==='
     Write-Host "Mode:     $(if ($DryRun) { 'dry-run' } elseif ($Yes) { 'yes' } else { 'interactive' })"
-    Write-Host "Package:  ${GsdPackage}@latest"
+    Write-Host "Package:  ${GsdPackage}@${GsdVersion}"
     Write-Host "Command:  $cmdArgs"
     if ($Target) { Write-Host "Target:   $Target" } else { Write-Host 'Target:   (no --target; installer will prompt or use cwd)' }
     Write-Host ''
@@ -48,7 +49,7 @@ if ($missing.Count -gt 0) {
 }
 
 # ─── Build command ────────────────────────────────────────────────
-$cmdParts = @('npx', "${GsdPackage}@latest")
+$cmdParts = @('npx', "${GsdPackage}@${GsdVersion}")
 if ($Target) { $cmdParts += $Target }
 $cmdString = $cmdParts -join ' '
 
