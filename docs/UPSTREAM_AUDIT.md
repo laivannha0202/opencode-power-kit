@@ -231,7 +231,7 @@
 
 - `CHANGELOG.md:65` → `npx runtime`
 - `CHANGELOG.md:77` → `npm install -g`
-- `CHANGELOG.md:874` → `npx @opengsd/gsd-core@latest`
+- `CHANGELOG.md:874` → `npx @opengsd/gsd-core@1.6.1` (historical; now pinned)
 - `CHANGELOG.md:1132` → `npx kh`
 - `CHANGELOG.md:1169` → `npx ...`
 - `CHANGELOG.md:1208` → `npx bmad-method`

@@ -954,7 +954,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **GSD Core opt-in integration** — `opk gsd` and `opk update-gsd`
   forward to the official GSD Core installer
-  (`npx @opengsd/gsd-core@latest`). The kit does NOT vendor or
+  (`npx @opengsd/gsd-core@1.6.1`). The kit does NOT vendor or
   copy GSD source. Supported via:
   - `scripts/install-gsd-core.sh` (Linux / macOS / Git Bash / WSL)
   - `scripts/install-gsd-core.ps1` (Windows PowerShell)
