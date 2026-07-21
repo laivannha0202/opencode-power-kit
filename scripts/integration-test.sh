@@ -46,6 +46,16 @@ for tool in bash git python3; do
 	fi
 done
 
+# --- Root check (bypass with OPK_TEST_MODE=1 in containers) ---
+if [ "$(id -u)" -eq 0 ]; then
+	if [ "${OPK_TEST_MODE:-0}" = "1" ]; then
+		warn "OPK_TEST_MODE=1: bypassing root check"
+	else
+		err "Root detected. Set OPK_TEST_MODE=1 to bypass."
+		exit 1
+	fi
+fi
+
 # --- Create scratch project inside kit's .tmp (NOT /tmp) ---
 SCRATCH_ROOT="$KIT_DIR/.tmp"
 mkdir -p "$SCRATCH_ROOT"
@@ -238,7 +248,7 @@ if [ -x "$KIT_DIR/scripts/install-fullstack-profile.sh" ]; then
 	fi
 
 	if [ -d "$TMP_DIR/.opencode/commands/fullstack" ]; then
-		cmd_n=$(find "$TMP_DIR/.opencode/commands/fullstack" -maxdepth 1 -name "*.md" | wc -l)
+		cmd_n=$(find "$TMP_DIR/.opencode/commands/fullstack" -maxdepth 1 -name "*.md" 2>/dev/null | wc -l) || cmd_n=0
 		if [ "$cmd_n" -gt 0 ]; then
 			ok ".opencode/commands/fullstack/ ($cmd_n files)"
 		else
@@ -249,7 +259,7 @@ if [ -x "$KIT_DIR/scripts/install-fullstack-profile.sh" ]; then
 	fi
 
 	if [ -d "$TMP_DIR/.agents/skills" ]; then
-		skill_n=$(find "$TMP_DIR/.agents/skills" -mindepth 1 -maxdepth 1 -type d | wc -l)
+		skill_n=$(find "$TMP_DIR/.agents/skills" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l) || skill_n=0
 		if [ "$skill_n" -gt 0 ]; then
 			ok ".agents/skills/ ($skill_n skills)"
 		else

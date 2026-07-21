@@ -83,17 +83,31 @@ fi
 # --- Create target dir ---
 mkdir -p "$TARGET_DIR"
 
-# --- Backup if exists ---
+# --- Backup / skip logic ---
+# Chỉ ghi đè nếu file hiện tại LÀ OPK plugin (có marker). Nếu là plugin
+# tùy chỉnh của user (không có marker), KHÔNG ghi đè.
+OPK_MARKER="@opk-plugin opk-safety-guard"
 if [ -f "$TARGET_FILE" ]; then
-	BACKUP_FILE="${TARGET_FILE}.bak.$(date +%Y%m%d-%H%M%S)"
-	cp "$TARGET_FILE" "$BACKUP_FILE"
-	echo "install-safety-plugin: Backup -> $BACKUP_FILE"
+	if grep -qF "$OPK_MARKER" "$TARGET_FILE" 2>/dev/null; then
+		BACKUP_FILE="${TARGET_FILE}.bak.$(date +%Y%m%d-%H%M%S)"
+		cp "$TARGET_FILE" "$BACKUP_FILE"
+		echo "install-safety-plugin: Backup OPK plugin cũ -> $BACKUP_FILE"
+	else
+		echo "install-safety-plugin: ⚠️  File đã tồn tại nhưng KHÔNG phải OPK plugin."
+		echo "   Bỏ qua để không ghi đè plugin tùy chỉnh của bạn."
+		echo "   Nếu muốn cài OPK plugin, hãy xóa/đổi tên file rồi chạy lại."
+		exit 0
+	fi
 fi
 
 # --- Install ---
 cp "$TEMPLATE_FILE" "$TARGET_FILE"
-echo "install-safety-plugin: ✅ Đã cài safety plugin guard."
+echo "install-safety-plugin: ✅ Đã cài safety plugin guard (runtime OpenCode plugin)."
 echo "   File: $(pwd)/$TARGET_FILE"
 echo ""
+echo "   Đây là RUNTIME plugin — OpenCode sẽ gọi hook tool.execute.before"
+echo "   để chặn đọc file nhạy cảm và command nguy hiểm."
+echo "   (KHÁC với scripts/opk-command-guard.sh — đó là manual CLI shell guard,"
+echo "   không intercept OpenCode tool call.)"
+echo ""
 echo "   Để kiểm tra: opk safety-plugin status"
-echo "   Để gỡ: rm $TARGET_FILE"

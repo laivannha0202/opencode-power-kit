@@ -1,0 +1,301 @@
+[
+  {
+    "id": "contract-001",
+    "name": "No model routing in bin/opk",
+    "description": "bin/opk must not contain model discovery, routing, or benchmark commands",
+    "check_type": "grep_absent",
+    "target": "bin/opk",
+    "patterns": [
+      "discover-free",
+      "list-free",
+      "benchmark-free",
+      "route-free",
+      "opk-model-discover",
+      "opk-model-route",
+      "opk-model-benchmark",
+      "FREE_ONLY",
+      "opencode run --model"
+    ],
+    "expected": "all_absent"
+  },
+  {
+    "id": "contract-002",
+    "name": "No API keys in templates",
+    "description": "Template files must not contain API key references",
+    "check_type": "grep_absent",
+    "target": "templates/",
+    "patterns": [
+      "ANTHROPIC_API_KEY",
+      "OPENAI_API_KEY",
+      "api_key",
+      "API_KEY"
+    ],
+    "expected": "all_absent"
+  },
+  {
+    "id": "contract-003",
+    "name": ".gitignore allows .opencode/",
+    "description": ".gitignore must not block .opencode/ directory",
+    "check_type": "grep_absent",
+    "target": ".gitignore",
+    "patterns": [
+      "^\\.opencode/$",
+      "opk-free-models"
+    ],
+    "expected": "all_absent"
+  },
+  {
+    "id": "contract-004",
+    "name": "No model routing scripts exist",
+    "description": "Deleted model scripts must not exist",
+    "check_type": "file_absent",
+    "targets": [
+      "scripts/opk-model-discover.sh",
+      "scripts/opk-model-route.sh",
+      "scripts/opk-model-benchmark.sh",
+      "scripts/validate-free-model.sh"
+    ],
+    "expected": "all_absent"
+  },
+  {
+    "id": "contract-005",
+    "name": "Safety plugin uses correct pattern",
+    "description": "test-safety-plugin.mjs must pass",
+    "check_type": "script_exec",
+    "command": "node scripts/test-safety-plugin.mjs",
+    "expected": "exit_0"
+  },
+  {
+    "id": "contract-006",
+    "name": "Permission ordering correct",
+    "description": "test-permission-rules.py must pass — wildcard before deny",
+    "check_type": "script_exec",
+    "command": "python3 scripts/test-permission-rules.py",
+    "expected": "exit_0"
+  },
+  {
+    "id": "contract-007",
+    "name": "No model override template",
+    "description": "opencode.models.example.jsonc must not exist",
+    "check_type": "file_absent",
+    "targets": [
+      "templates/opencode.models.example.jsonc"
+    ],
+    "expected": "all_absent"
+  },
+  {
+    "id": "contract-008",
+    "name": "Model-agnostic policy documented",
+    "description": "docs/MODEL_ROUTING.md must exist and contain model-agnostic language",
+    "check_type": "grep_present",
+    "target": "docs/MODEL_ROUTING.md",
+    "patterns": [
+      "model-agnostic",
+      "không chọn",
+      "không route"
+    ],
+    "expected": "all_present"
+  },
+  {
+    "id": "contract-009",
+    "name": "Model status via opk CLI",
+    "description": "bin/opk model status must run and output model-agnostic policy",
+    "check_type": "script_exec",
+    "command": "bin/opk model status",
+    "expected": "exit_0"
+  },
+  {
+    "id": "contract-010",
+    "name": "No model override in agent files",
+    "description": "Agent .md files must not contain model: override lines",
+    "check_type": "grep_absent",
+    "target": "opencode-global/agents/",
+    "patterns": [
+      "^model:"
+    ],
+    "expected": "all_absent"
+  },
+  {
+    "id": "contract-011",
+    "name": "Writer/read-only reviewer policy",
+    "description": "build-strong must define reviewer as read-only",
+    "check_type": "grep_present",
+    "target": "opencode-global/agents/build-strong.md",
+    "patterns": [
+      "Reviewer read-only",
+      "read-only"
+    ],
+    "expected": "all_present"
+  },
+  {
+    "id": "contract-012",
+    "name": "build-strong pipeline stages",
+    "description": "build-strong must define all 7 pipeline stages",
+    "check_type": "grep_present",
+    "target": "opencode-global/agents/build-strong.md",
+    "patterns": [
+      "Intake",
+      "Context",
+      "Plan",
+      "Implement",
+      "Review",
+      "Verify",
+      "Report"
+    ],
+    "expected": "all_present"
+  },
+  {
+    "id": "contract-013",
+    "name": "Timeout helper exists and runs",
+    "description": "scripts/timeout.sh must exist and run without error",
+    "check_type": "script_exec",
+    "command": "bash scripts/timeout.sh 5 true",
+    "expected_exit": 0
+  },
+  {
+    "id": "contract-014",
+    "name": "Timeout helper exits 124 on timeout",
+    "description": "scripts/timeout.sh must return exit code 124 when command exceeds timeout",
+    "check_type": "script_exec",
+    "command": "env OPK_TIMEOUT_FORCE_FALLBACK=1 bash scripts/timeout.sh 1 sleep 10",
+    "expected_exit": 124
+  },
+  {
+    "id": "contract-015",
+    "name": "Timeout helper passes through exit code",
+    "description": "scripts/timeout.sh must pass through command exit code when not timed out",
+    "check_type": "script_exec",
+    "command": "env OPK_TIMEOUT_FORCE_FALLBACK=1 bash scripts/timeout.sh 5 sh -c 'exit 42'",
+    "expected_exit": 42
+  },
+  {
+    "id": "contract-016a",
+    "name": "backend-route-review exists",
+    "description": "backend-route-review.md must exist",
+    "check_type": "file_present",
+    "targets": [
+      "opencode-global/commands/backend-route-review.md"
+    ],
+    "expected": "all_present"
+  },
+  {
+    "id": "contract-016b",
+    "name": "model-route-review deleted",
+    "description": "model-route-review.md must not exist",
+    "check_type": "file_absent",
+    "targets": [
+      "opencode-global/commands/model-route-review.md"
+    ],
+    "expected": "all_absent"
+  },
+  {
+    "id": "contract-017",
+    "name": "No model routing commands in backend-route-review",
+    "description": "backend-route-review.md must not contain model routing commands",
+    "check_type": "grep_absent",
+    "target": "opencode-global/commands/backend-route-review.md",
+    "patterns": [
+      "discover-free",
+      "list-free",
+      "opk-model-route"
+    ],
+    "expected": "all_absent"
+  },
+  {
+    "id": "contract-018",
+    "name": "README agent count accurate",
+    "description": "README.md must show 16 active agents, not 49",
+    "check_type": "grep_present",
+    "target": "README.md",
+    "patterns": [
+      "16 active agents"
+    ],
+    "expected": "all_present"
+  },
+  {
+    "id": "contract-019",
+    "name": "README command count accurate",
+    "description": "README.md must show 71 commands, not 66",
+    "check_type": "grep_present",
+    "target": "README.md",
+    "patterns": [
+      "71 commands"
+    ],
+    "expected": "all_present"
+  },
+  {
+    "id": "contract-020",
+    "name": "No Quality Scorecard in README",
+    "description": "README.md must not contain Quality Scorecard with 10/10 scores",
+    "check_type": "grep_absent",
+    "target": "README.md",
+    "patterns": [
+      "Quality Scorecard",
+      "10/10"
+    ],
+    "expected": "all_absent"
+  },
+  {
+    "id": "contract-021",
+    "name": "UPSTREAM_CAPABILITY_MAP has correct URLs and pins",
+    "description": "UPSTREAM_CAPABILITY_MAP.md must have correct repo URLs and version pins for all upstreams",
+    "check_type": "grep_present",
+    "target": "docs/UPSTREAM_CAPABILITY_MAP.md",
+    "patterns": [
+      "v6.1.1 (template pin)",
+      "6.9.0 (pinned)",
+      "@1.6.1 (pinned)",
+      "https://github.com/obra/superpowers.git",
+      "https://github.com/bmad-code-org/BMAD-METHOD",
+      "https://github.com/open-gsd/gsd-core",
+      "https://github.com/rohitg00/agentmemory"
+    ],
+    "expected": "all_present"
+  },
+  {
+    "id": "contract-022",
+    "name": "Default timeout path returns 124",
+    "description": "GNU/system timeout must return exit code 124 without OPK_TIMEOUT_FORCE_FALLBACK",
+    "check_type": "script_exec",
+    "command": "bash scripts/timeout.sh 1 sleep 10",
+    "expected_exit": 124
+  },
+  {
+    "id": "contract-023",
+    "name": "Timeout kills grandchild processes",
+    "description": "Timeout must kill all child/grandchild processes on timeout — delegates to test-timeout.sh",
+    "check_type": "script_exec",
+    "command": "bash scripts/test-timeout.sh --grandchild",
+    "expected_exit": 0
+  },
+  {
+    "id": "contract-024",
+    "name": "Default timeout path preserves exit code",
+    "description": "GNU/system timeout must preserve command exit code when command completes before timeout",
+    "check_type": "script_exec",
+    "command": "bash scripts/timeout.sh 5 sh -c 'exit 42'",
+    "expected_exit": 42
+  },
+  {
+    "id": "contract-025",
+    "name": "install-gsd-core.sh status runs without unbound variable error",
+    "description": "install-gsd-core.sh status must not fail with unbound variable under set -u",
+    "check_type": "script_exec",
+    "command": "bash scripts/install-gsd-core.sh status",
+    "expected_exit": 0
+  },
+  {
+    "id": "contract-026",
+    "name": "THIRD_PARTY.md has correct upstream references",
+    "description": "THIRD_PARTY.md must reference correct version pins and upstream repos",
+    "check_type": "grep_present",
+    "target": "THIRD_PARTY.md",
+    "patterns": [
+      "6.9.0",
+      "@1.6.1",
+      "rohitg00/agentmemory",
+      "obra/superpowers"
+    ],
+    "expected": "all_present"
+  }
+]

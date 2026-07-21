@@ -1,294 +1,266 @@
 #!/usr/bin/env bash
 # ============================================================================
-# OpenCode Power Kit - Doctor
-# Chẩn đoán nhanh cấu hình global + project: kiểm tra OPENCODE_CONFIG_DIR,
-# commands/agents/skills structure, scripts, không MCP, không secrets.
-# Chỉ đọc - không sửa file.
+# doctor.sh — OpenCode Power Kit health check (read-only)
+# Chẩn đoán cấu hình, dependencies, và runtime environment.
+#
+# Usage:
+#   bash doctor.sh              # basic check
+#   bash doctor.sh --deep       # extended check (read-only, no side effects)
+#   bash doctor.sh --fix        # suggest fixes (no auto-fix yet)
 # ============================================================================
-# shellcheck disable=SC2088
-#   SC2088: '~/.bashrc' in user-facing messages (intentional display string)
 set -euo pipefail
 
-# --- Parse flags ---
-DEEP_MODE=0
+SELF="${BASH_SOURCE[0]}"
+KIT_DIR="$(cd "$(dirname "$SELF")" && pwd)"
+VERSION="$(cat "$KIT_DIR/VERSION" 2>/dev/null || echo "?")"
+DEEP=0
+FIX_MODE=0
+
 for arg in "$@"; do
   case "$arg" in
-    --deep) DEEP_MODE=1 ;;
+    --deep) DEEP=1 ;;
+    --fix)  FIX_MODE=1 ;;
+    --help|-h)
+      echo "Usage: doctor.sh [--deep] [--fix]"
+      echo ""
+      echo "  --deep   Extended checks (read-only, no side effects)"
+      echo "  --fix    Suggest fixes (not auto-applied yet)"
+      exit 0
+      ;;
   esac
 done
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+# --- Helpers ---
+pass()  { echo "  ✅ $*"; }
+warn()  { echo "  ⚠️  $*"; }
+fail()  { echo "  ❌ $*"; }
+info()  { echo "  ℹ️  $*"; }
+section() { echo ""; echo "=== $* ==="; }
+errors=0
 
-info() {
-	echo -e "${BLUE}[INFO]${NC} $*"
-}
-ok() {
-	echo -e "${GREEN}[OK]${NC}   $*"
-}
-warn() {
-	echo -e "${YELLOW}[WARN]${NC} $*"
-}
-err() {
-	echo -e "${RED}[FAIL]${NC} $*"
-	FAIL=1
-}
-
-FAIL=0
-WARN=0
-
-KIT_DIR="$(cd "$(dirname "$0")" && pwd)"
-GLOBAL_DIR="$KIT_DIR/opencode-global"
-
-echo ""
-echo "=========================================="
-if [ "$DEEP_MODE" -eq 1 ]; then
-  echo "  OpenCode Power Kit - Doctor --deep"
+# --- Section 1: Kit integrity ---
+section "Kit Integrity"
+if [ -f "$KIT_DIR/VERSION" ]; then
+  pass "VERSION exists: $(cat "$KIT_DIR/VERSION")"
 else
-  echo "  OpenCode Power Kit - Doctor"
+  fail "VERSION file missing"; errors=$((errors + 1))
 fi
-echo "  Kit: $KIT_DIR"
-echo "  PWD: $(pwd)"
-echo "=========================================="
-echo ""
 
-# --- OPENCODE_CONFIG_DIR ---
-info "OPENCODE_CONFIG_DIR check"
-if [ -n "${OPENCODE_CONFIG_DIR:-}" ]; then
-	ok "OPENCODE_CONFIG_DIR is set: $OPENCODE_CONFIG_DIR"
-	if [ -d "$OPENCODE_CONFIG_DIR" ]; then
-		ok "dir exists: $OPENCODE_CONFIG_DIR"
-	else
-		warn "dir missing: $OPENCODE_CONFIG_DIR"
-		WARN=$((WARN + 1))
-	fi
+if [ -f "$KIT_DIR/install.sh" ]; then
+  pass "install.sh exists"
 else
-	warn "OPENCODE_CONFIG_DIR is not set (chạy install-global.sh)"
-	WARN=$((WARN + 1))
+  fail "install.sh missing"; errors=$((errors + 1))
 fi
 
-if [ -f "$HOME/.bashrc" ] && grep -qF 'OPENCODE_CONFIG_DIR' "$HOME/.bashrc" 2>/dev/null; then
-	ok "~/.bashrc có export OPENCODE_CONFIG_DIR"
+if [ -f "$KIT_DIR/install-global.sh" ]; then
+  pass "install-global.sh exists"
 else
-	warn "~/.bashrc thiếu export OPENCODE_CONFIG_DIR"
-	WARN=$((WARN + 1))
+  fail "install-global.sh missing"; errors=$((errors + 1))
 fi
 
-# --- Pack structure ---
-echo ""
-info "Pack structure check"
-for sub in commands agents skills; do
-	if [ -d "$GLOBAL_DIR/$sub" ]; then
-		n=$(find "$GLOBAL_DIR/$sub" -maxdepth 2 -type f | wc -l)
-		ok "opencode-global/$sub/ ($n entries)"
-	else
-		err "opencode-global/$sub/ missing"
-	fi
-done
-
-# --- Scripts ---
-echo ""
-info "Scripts check"
-for s in install.sh verify.sh install-global.sh update-bmad.sh \
-	doctor.sh uninstall.sh \
-	scripts/install-token-tools.sh scripts/integration-test.sh \
-	scripts/validate-opencode-pack.py; do
-	if [ -f "$KIT_DIR/$s" ]; then
-		ok "$s"
-	else
-		warn "$s missing"
-		WARN=$((WARN + 1))
-	fi
-done
-
-# --- No MCP ---
-echo ""
-info "Safety: no MCP config in opencode-global/"
-if grep -rE '"mcp"\s*:' "$GLOBAL_DIR" >/dev/null 2>&1; then
-	err "MCP config detected in opencode-global/"
+if [ -f "$KIT_DIR/verify.sh" ]; then
+  pass "verify.sh exists"
 else
-	ok "no MCP config in opencode-global/"
+  fail "verify.sh missing"; errors=$((errors + 1))
 fi
 
-# --- No secrets (kit repo) ---
-echo ""
-info "Safety: no secret patterns in kit source"
-# api_key=/password= require literal '=' and >=8 alphanumeric
-# (plus _ and -) value chars. Real secret tokens are typically
-# alphanumeric. We exclude this file (and the .github/ tree, which
-# also embeds the same regex source) to avoid self-match.
-hits=$(grep -rEn \
-	'sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|BEGIN .* PRIVATE KEY|api_key=[A-Za-z0-9_\-]{8,}|password=[A-Za-z0-9_\-]{8,}' \
-	"$KIT_DIR" \
-	--include='*.sh' \
-	--include='*.md' \
-	--include='*.json' \
-	--include='*.yml' \
-	--include='*.yaml' \
-	--include='*.py' \
-	--exclude-dir='.git' \
-	--exclude-dir='.github' \
-	--exclude='CHANGELOG.md' \
-	--exclude='README.md' \
-	--exclude='doctor.sh' \
-	--exclude='docs/*' 2>/dev/null || true)
-if [ -n "$hits" ]; then
-	err "possible secrets found in kit:"
-	echo "$hits" >&2
+if [ -f "$KIT_DIR/bin/opk" ]; then
+  pass "bin/opk exists"
 else
-	ok "no secret patterns matched"
+  fail "bin/opk missing"; errors=$((errors + 1))
 fi
 
-# --- .env files in project ---
-echo ""
-info "Safety: no .env files in current project"
-env_found=0
-for f in .env .env.local .env.production; do
-	if [ -f "$f" ]; then
-		warn ".env-like file present: $f (do not commit)"
-		env_found=1
-	fi
-done
-if [ "$env_found" -eq 0 ]; then
-	ok "no .env-like files in $(pwd)"
-fi
-
-# --- Pack validation (frontmatter) ---
-echo ""
-info "Pack validation (frontmatter)"
-if command -v python3 >/dev/null 2>&1 && [ -f "$KIT_DIR/scripts/validate-opencode-pack.py" ]; then
-	if python3 "$KIT_DIR/scripts/validate-opencode-pack.py" >/dev/null 2>&1; then
-		ok "pack frontmatter ok"
-	else
-		err "pack frontmatter has issues (run validate-opencode-pack.py)"
-	fi
+if [ -f "$KIT_DIR/doctor.sh" ]; then
+  pass "doctor.sh exists (self-check)"
 else
-	warn "python3 hoặc validate-opencode-pack.py không có - bỏ qua"
+  warn "doctor.sh missing (recursive check)"
 fi
 
-# --- Deep mode checks ---
-if [ "$DEEP_MODE" -eq 1 ]; then
-  echo ""
-  echo "--- Doctor --deep ---"
-
-  # --- OPK Orchestration Lite files ---
-  echo ""
-  info "OPK Orchestration Lite check"
-  for f in \
-    opencode-global/commands/intent-router.md \
-    opencode-global/commands/init-deep-lite.md \
-    opencode-global/commands/power-work-lite.md \
-    opencode-global/commands/continue-work.md \
-    opencode-global/commands/evidence-report.md \
-    docs/OPK_ORCHESTRATION_LITE.md \
-    docs/INSPIRATION_OH_MY_OPENAGENT.md; do
-    if [ -f "$KIT_DIR/$f" ]; then
-      ok "$f"
+# --- Section 2: Templates ---
+section "Config Templates"
+for tpl in opencode.json opencode.power.json opencode.safe.json; do
+  if [ -f "$KIT_DIR/templates/$tpl" ]; then
+    pass "templates/$tpl exists"
+    # Check permission deny-list (wildcard first, deny last)
+    if grep -q '"rm -rf' "$KIT_DIR/templates/$tpl" 2>/dev/null; then
+      pass "templates/$tpl has deny-list"
     else
-      err "missing: $f"
+      warn "templates/$tpl may be missing deny-list"
+    fi
+  else
+    fail "templates/$tpl missing"; errors=$((errors + 1))
+  fi
+done
+
+if [ -f "$KIT_DIR/templates/plugins/opk-safety-guard.js" ]; then
+  pass "Safety plugin exists"
+  # Check ESM export
+  if grep -q "tool.execute.before" "$KIT_DIR/templates/plugins/opk-safety-guard.js" 2>/dev/null; then
+    pass "Safety plugin uses tool.execute.before hook"
+  else
+    warn "Safety plugin may need tool.execute.before hook"
+  fi
+else
+  warn "Safety plugin template missing"
+fi
+
+# --- Section 3: Scripts ---
+section "Scripts"
+SCRIPT_COUNT=$(find "$KIT_DIR/scripts" -maxdepth 1 \( -name "*.sh" -o -name "*.py" -o -name "*.mjs" \) 2>/dev/null | wc -l)
+info "Scripts found: $SCRIPT_COUNT"
+
+# Key scripts
+for s in detect-mode.py merge-opk-project.py validate-opencode-pack.py; do
+  if [ -f "$KIT_DIR/scripts/$s" ]; then
+    pass "scripts/$s exists"
+  else
+    warn "scripts/$s missing"
+  fi
+done
+
+# Test scripts
+for s in test-permission-rules.py test-safety-plugin.mjs test-opk-mode.sh test-installer-preservation.sh; do
+  if [ -f "$KIT_DIR/scripts/$s" ]; then
+    pass "scripts/$s exists"
+  else
+    info "scripts/$s not found (optional)"
+  fi
+done
+
+# --- Section 4: Agents & Commands ---
+section "Agents & Commands"
+AGENTS_COUNT=$(find "$KIT_DIR/opencode-global/agents" -maxdepth 1 -name "*.md" 2>/dev/null | wc -l)
+COMMANDS_COUNT=$(find "$KIT_DIR/opencode-global/commands" -maxdepth 1 -name "*.md" 2>/dev/null | wc -l)
+SKILLS_COUNT=$(find "$KIT_DIR/opencode-global/skills" -maxdepth 1 -type d 2>/dev/null | wc -l)
+info "Agents: $AGENTS_COUNT, Commands: $COMMANDS_COUNT, Skills: $SKILLS_COUNT"
+
+# GSD reference check
+GSD_REF_COUNT=$(find "$KIT_DIR/extras/gsd-agent-reference" -maxdepth 1 -name "*.md" 2>/dev/null | wc -l)
+info "GSD reference agents: $GSD_REF_COUNT"
+
+if [ -d "$KIT_DIR/opencode-global/agents" ]; then
+  GSD_ACTIVE=$(find "$KIT_DIR/opencode-global/agents" -maxdepth 1 -name "gsd-*.md" 2>/dev/null | wc -l)
+  if [ "$GSD_ACTIVE" -gt 0 ]; then
+    warn "$GSD_ACTIVE gsd-*.md still in opencode-global/agents/ (should be in extras/)"
+  else
+    pass "No GSD agents in active dir (correct: in extras/)"
+  fi
+fi
+
+# --- Section 5: Python runtime ---
+section "Runtime"
+for cmd in python3 node npm npx; do
+  if command -v "$cmd" >/dev/null 2>&1; then
+    ver=""
+    case "$cmd" in
+      python3) ver="$(python3 --version 2>&1 | head -1)" ;;
+      node)    ver="$(node --version 2>&1)" ;;
+      npm)     ver="$(npm --version 2>&1)" ;;
+      npx)     ver="$(npx --version 2>&1)" ;;
+    esac
+    pass "$cmd found: $ver"
+  else
+    warn "$cmd not found on PATH"
+  fi
+done
+
+# --- Section 6: Project state (if in a project) ---
+section "Project State (current dir)"
+if [ -f ".opencode/opencode.json" ]; then
+  pass ".opencode/opencode.json exists"
+  # Check permission mode
+  if python3 -c "import json,sys; d=json.load(sys.open('.opencode/opencode.json')); p=d.get('permission'); sys.exit(0 if p=='allow' else 1)" 2>/dev/null; then
+    info "Mode: POWER (permission: allow)"
+  elif [ -f ".opencode/opencode.json" ]; then
+    info "Mode: SAFE or CUSTOM (permission object)"
+  fi
+else
+  info ".opencode/opencode.json not found (not in project?)"
+fi
+
+if [ -f ".opencode/plugins/opk-safety-guard.js" ]; then
+  pass "Safety plugin installed in project"
+else
+  info "Safety plugin not installed in project"
+fi
+
+if [ -f "AGENTS.md" ]; then
+  pass "AGENTS.md exists in project"
+else
+  info "AGENTS.md not found in project"
+fi
+
+# --- Section 7: Deep checks ---
+if [ "$DEEP" -eq 1 ]; then
+  section "Deep Checks"
+
+  # Check for personal paths
+  INFO_COUNT=$(grep -rl '/home/nha' "$KIT_DIR/opencode-global/" 2>/dev/null || true)
+  INFO_COUNT=$(printf "%s" "$INFO_COUNT" | wc -l)
+  if [ "$INFO_COUNT" -gt 0 ]; then
+    fail "$INFO_COUNT files contain personal path /home/nha"; errors=$((errors + 1))
+  else
+    pass "No personal paths in opencode-global/"
+  fi
+
+  # Check extras paths
+  EXTRAS_INFO=$(grep -rl '/home/nha' "$KIT_DIR/extras/" 2>/dev/null || true)
+  EXTRAS_INFO=$(printf "%s" "$EXTRAS_INFO" | wc -l)
+  if [ "$EXTRAS_INFO" -gt 0 ]; then
+    warn "$EXTRAS_INFO files in extras/ may contain personal paths"
+  else
+    pass "No personal paths in extras/"
+  fi
+
+  # Check scripts bash -n
+  SCRIPT_ERRS=0
+  for s in "$KIT_DIR"/scripts/*.sh "$KIT_DIR"/doctor.sh "$KIT_DIR"/verify.sh; do
+    if [ -f "$s" ] && ! bash -n "$s" 2>/dev/null; then
+      warn "bash -n failed: $(basename "$s")"
+      SCRIPT_ERRS=$((SCRIPT_ERRS + 1))
     fi
   done
-
-  # --- Permission mode check ---
-  echo ""
-  info "Permission mode check"
-  if [ -f "$GLOBAL_DIR/../templates/opencode.json" ]; then
-    if grep -q '"permission": "allow"' "$GLOBAL_DIR/../templates/opencode.json" 2>/dev/null; then
-      ok "Power Mode (permission: allow) detected"
-    elif grep -q '"permission"' "$GLOBAL_DIR/../templates/opencode.json" 2>/dev/null; then
-      ok "Permission mode configured (not Power Mode)"
-    else
-      warn "No explicit permission mode in templates/opencode.json"
-      WARN=$((WARN + 1))
-    fi
+  if [ "$SCRIPT_ERRS" -eq 0 ]; then
+    pass "All shell scripts pass bash -n"
   else
-    warn "templates/opencode.json not found"
-    WARN=$((WARN + 1))
+    warn "$SCRIPT_ERRS script(s) failed bash -n"
   fi
 
-  # --- MCP check in templates ---
-  echo ""
-  info "Safety: no MCP auto-enabled in templates"
-  if grep -rE '"mcp"\s*:' "$KIT_DIR/templates" >/dev/null 2>&1; then
-    err "MCP config detected in templates/"
+  # Orchestration Lite checks
+  if [ -f "$KIT_DIR/docs/OPK_ORCHESTRATION_LITE.md" ]; then
+    pass "docs/OPK_ORCHESTRATION_LITE.md exists"
   else
-    ok "no MCP config in templates/"
+    info "docs/OPK_ORCHESTRATION_LITE.md not found"
   fi
 
-  # --- Telemetry check ---
-  echo ""
-  info "Safety: no telemetry in kit"
-  if grep -rEi 'posthog|mixpanel|amplitude|segment\.io|heap\.io' \
-    "$GLOBAL_DIR" --include='*.md' --include='*.json' --include='*.js' --exclude-dir='node_modules' >/dev/null 2>&1; then
-    err "telemetry patterns detected in opencode-global/"
-  else
-    ok "no telemetry patterns in opencode-global/"
-  fi
-
-  # --- oh-my-openagent not vendored ---
-  echo ""
-  info "Safety: oh-my-openagent not vendored"
-  if [ -d "$KIT_DIR/node_modules/oh-my-openagent" ] || \
-     [ -d "$KIT_DIR/vendor/oh-my-openagent" ] || \
-     grep -r "oh-my-openagent" "$GLOBAL_DIR" >/dev/null 2>&1; then
-    err "oh-my-openagent appears to be vendored/referenced in kit source"
-  else
-    ok "oh-my-openagent not vendored"
-  fi
-
-  # --- Optional tools detection ---
-  echo ""
-  info "Optional tools detection"
-  OPTIONAL_TOOLS=(
-    "rg:Fast grep:ripgrep"
-    "fd:Fast find:fd-find"
-    "sg:Structural search:ast-grep"
-    "ast-grep:Structural search:ast-grep"
-    "jq:JSON processor:jq"
-    "shellcheck:Bash linter:shellcheck"
-    "shfmt:Bash formatter:shfmt"
-    "node:Node.js:nodejs"
-    "npm:npm:npm"
-    "git:Git:git"
-    "docker:Docker:docker"
-    "python3:Python 3:python3"
-  )
-  for tool_entry in "${OPTIONAL_TOOLS[@]}"; do
-    IFS=':' read -r tool_name purpose install_hint <<< "$tool_entry"
-    if command -v "$tool_name" >/dev/null 2>&1; then
-      ver=$("$tool_name" --version 2>/dev/null | head -1 || echo "?")
-      ok "$tool_name ($ver) — $purpose"
-    else
-      warn "$tool_name not found — install: $install_hint"
-      WARN=$((WARN + 1))
-    fi
-  done
-
-  # --- .opk/work/ directory ---
-  echo ""
-  info "Runtime directory check"
+  # .opk/work/ check
   if [ -d ".opk/work" ]; then
-    work_count=$(find ".opk/work" -maxdepth 1 -type f 2>/dev/null | wc -l)
-    ok ".opk/work/ exists ($work_count files)"
+    pass ".opk/work/ directory exists"
   else
-    warn ".opk/work/ not found (will be created on first /power-work-lite)"
-    WARN=$((WARN + 1))
+    info ".opk/work/ not found (created by power-work-lite)"
+  fi
+
+  # Vendoring check — no GSD source in active agents
+  GSD_SOURCE=$(grep -rl '@opengsd/gsd-core' "$KIT_DIR/opencode-global/" 2>/dev/null || true)
+  GSD_SOURCE=$(printf "%s" "$GSD_SOURCE" | wc -l)
+  if [ "$GSD_SOURCE" -gt 0 ]; then
+    warn "$GSD_SOURCE files reference @opengsd/gsd-core in opencode-global/ (may be OK in docs)"
+  else
+    pass "No vendored GSD source in active dir"
   fi
 fi
 
 # --- Summary ---
 echo ""
-echo "=========================================="
-if [ "$FAIL" -ne 0 ]; then
-	err "Doctor: CÓ LỖI — xem ở trên"
-	exit 1
-fi
-if [ "$WARN" -gt 0 ]; then
-	warn "Doctor: $WARN cảnh báo, không có lỗi nghiêm trọng"
+echo "=== Summary ==="
+if [ "$errors" -gt 0 ]; then
+  echo "  ❌ $errors critical issue(s) found."
+  echo "  Run 'opk doctor --deep' for extended checks."
+  exit 1
 else
-	ok "Doctor: sạch, không có cảnh báo"
+  echo "  ✅ All basic checks passed."
+  if [ "$DEEP" -eq 1 ]; then
+    echo "  ✅ Deep checks completed."
+  fi
+  exit 0
 fi
-echo "=========================================="

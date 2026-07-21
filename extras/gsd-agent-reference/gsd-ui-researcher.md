@@ -240,7 +240,7 @@ Scan the output for suspicious patterns:
 
 ## Output: UI-SPEC.md
 
-Use template from `/home/nha/opencode-power-kit/opencode-global/gsd-core/templates/UI-SPEC.md`.
+Use template from `${OPK_GSD_CORE_DIR}/gsd-core/templates/UI-SPEC.md`.
 
 Write to: `$PHASE_DIR/$PADDED_PHASE-UI-SPEC.md`
 
@@ -299,7 +299,7 @@ Batch questions into a single interaction where possible.
 
 ## Step 5: Compile UI-SPEC.md
 
-Read template: `/home/nha/opencode-power-kit/opencode-global/gsd-core/templates/UI-SPEC.md`
+Read template: `${OPK_GSD_CORE_DIR}/gsd-core/templates/UI-SPEC.md`
 
 Fill all sections. Write to `$PHASE_DIR/$PADDED_PHASE-UI-SPEC.md`.
 

@@ -1,6 +1,6 @@
 # ─────────────────────────────────────────────────────────────────
 # verify.ps1
-# opencode-power-kit v1.6.6
+# opencode-power-kit v2.1.0
 #
 # PowerShell mirror of verify.sh. Read-only sanity check.
 #
@@ -67,6 +67,13 @@ function Require-Contains($path, $needle) {
         Ok "$path contains: $needle"
     } else {
         Fail "$path missing:  $needle"
+    }
+}
+function Require-FileAbsent($path) {
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        Ok "$path correctly absent"
+    } else {
+        Fail "$path must not exist (model override template removed)"
     }
 }
 
@@ -142,7 +149,7 @@ Require-File 'opencode-global/commands/ecc-audit.md'
 Require-File 'opencode-global/commands/quality-gate.md'
 Require-File 'opencode-global/commands/research-first.md'
 Require-File 'opencode-global/commands/verify-loop.md'
-Require-File 'opencode-global/commands/model-route-review.md'
+Require-File 'opencode-global/commands/backend-route-review.md'
 Require-File 'opencode-global/commands/harness-audit.md'
 Require-File 'bin/opk'
 Require-File 'templates/AGENTS.md'
@@ -708,6 +715,109 @@ if (Test-Path -LiteralPath $pyScript) {
     }
 } else {
     Fail 'scripts/validate-opencode-pack.py missing'
+}
+Write-Host ''
+
+# ─── v2.1.0: Model-Agnostic Contract ─────────────────────────────
+Write-Host '[v2.1.0 Model-Agnostic Contract]'
+# OPK must not manage models — no discovery, no benchmark, no override
+Require-FileAbsent 'templates/opencode.models.example.jsonc'
+# Agent files must NOT contain model overrides
+$agentFiles = Get-ChildItem -Path (Join-Path $KitDir 'opencode-global/agents') -Filter '*.md' -ErrorAction SilentlyContinue
+foreach ($af in $agentFiles) {
+    $afContent = Get-Content -LiteralPath $af.FullName -Raw -ErrorAction SilentlyContinue
+    if ($null -ne $afContent -and $afContent -match '(?m)^model\s*:') {
+        Fail "Agent $($af.Name) contains model override — model-agnostic only"
+    }
+}
+# bin/opk must NOT have model discovery/routing/benchmark commands
+$opkContent = Get-Content -LiteralPath (Join-Path $KitDir 'bin/opk') -Raw -ErrorAction SilentlyContinue
+if ($null -ne $opkContent) {
+    foreach ($forbidden in @('discover-free', 'list-free', 'benchmark-free', 'route-free', 'opencode run --model')) {
+        if ($opkContent.Contains($forbidden)) {
+            Fail "bin/opk still contains forbidden model pattern: $forbidden"
+        }
+    }
+    Ok 'bin/opk: no model discovery/routing/benchmark commands'
+}
+# bin/opk must have exactly one model) branch
+$modelBranches = [regex]::Matches(
+    $opkContent,
+    '(?m)^\s*model\)'
+).Count
+if ($modelBranches -eq 1) {
+    Ok 'bin/opk has exactly 1 model branch'
+} elseif ($modelBranches -gt 1) {
+    Fail "bin/opk has $modelBranches model branches (expected 1)"
+} else {
+    Fail 'bin/opk has 0 model branches'
+}
+# Writer/read-only reviewer policy: build-strong must have review stage
+Require-Contains 'opencode-global/agents/build-strong.md' 'Review'
+Require-Contains 'opencode-global/agents/build-strong.md' 'Reviewer read-only'
+# build-strong pipeline stages
+$bsPipeline = @('Intake', 'Context', 'Plan', 'Implement', 'Review', 'Verify', 'Report')
+foreach ($stage in $bsPipeline) {
+    Require-Contains 'opencode-global/agents/build-strong.md' $stage
+}
+Write-Host ''
+
+# ─── v2.1.0: Safety Plugin Contract ──────────────────────────────
+Write-Host '[v2.1.0 Safety Plugin Contract]'
+$spFile = Join-Path $KitDir 'templates/plugins/opk-safety-guard.js'
+if (Test-Path -LiteralPath $spFile -PathType Leaf) {
+    $spContent = Get-Content -LiteralPath $spFile -Raw -ErrorAction SilentlyContinue
+    if ($null -ne $spContent) {
+        if ($spContent.Contains('tool.execute.before')) {
+            Ok 'safety plugin: uses tool.execute.before hook'
+        } else {
+            Fail 'safety plugin: missing tool.execute.before hook'
+        }
+        if ($spContent.Contains('throw new Error')) {
+            Ok 'safety plugin: uses throw new Error for blocking'
+        } else {
+            Fail 'safety plugin: missing throw new Error pattern'
+        }
+        if ($spContent.Contains('module.exports')) {
+            Ok 'safety plugin: has factory export (module.exports)'
+        } else {
+            Fail 'safety plugin: missing factory export'
+        }
+    }
+} else {
+    Fail 'templates/plugins/opk-safety-guard.js missing'
+}
+Write-Host ''
+
+# ─── v2.1.0: GSD agents only in extras/ reference ────────────────
+Write-Host '[v2.1.0 GSD agents reference-only]'
+$gsdActive = Get-ChildItem -Path (Join-Path $KitDir 'opencode-global/agents') -Filter 'gsd-*.md' -ErrorAction SilentlyContinue
+if ($gsdActive -and $gsdActive.Count -gt 0) {
+    Fail "GSD agents still in active agents/ ($($gsdActive.Count) files)"
+} else {
+    Ok 'No GSD agents in active agents/ directory'
+}
+$gsdRefDir = Join-Path $KitDir 'extras/gsd-agent-reference'
+if (Test-Path -LiteralPath $gsdRefDir -PathType Container) {
+    $gsdRefFiles = Get-ChildItem -Path $gsdRefDir -Filter '*.md' -ErrorAction SilentlyContinue
+    if ($gsdRefFiles -and $gsdRefFiles.Count -gt 0) {
+        Ok "GSD reference agents in extras/gsd-agent-reference/ ($($gsdRefFiles.Count) files)"
+    } else {
+        Fail 'extras/gsd-agent-reference/ exists but no .md files'
+    }
+} else {
+    Fail 'extras/gsd-agent-reference/ directory missing'
+}
+Write-Host ''
+
+# ─── v2.1.0: Active-agent scope — no GSD in active dir ───────────
+Write-Host '[v2.1.0 Active-agent scope]'
+$activeAgents = Get-ChildItem -Path (Join-Path $KitDir 'opencode-global/agents') -Filter '*.md' -ErrorAction SilentlyContinue
+$gsdInActive = $activeAgents | Where-Object { $_.Name -like 'gsd-*' }
+if ($gsdInActive -and $gsdInActive.Count -gt 0) {
+    Fail "GSD agents found in active agents/: $($gsdInActive.Name -join ', ')"
+} else {
+    Ok 'No GSD agents in active agents/ directory'
 }
 Write-Host ''
 

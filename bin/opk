@@ -156,7 +156,8 @@ opk — OpenCode Power Kit CLI (v$VERSION)
   opk safety-plugin status   Kiểm tra trạng thái safety plugin
 
   v1.3.4 — GSD Core opt-in:
-  opk gsd         Forward sang official GSD installer (opt-in, --dry-run / --yes)
+  opk gsd         Forward sang official GSD installer (opt-in, version-pinned, --dry-run / --yes)
+  opk gsd status  Kiểm tra GSD Core đã cài chưa (KHÔNG báo ready chỉ vì snapshot)
   opk update-gsd  Tương tự opk gsd, explicit refresh intent
   opk update-all  Pull kit (ff-only) + refresh bmad (+ optional GSD với --with-gsd)
 
@@ -217,6 +218,9 @@ opk — OpenCode Power Kit CLI (v$VERSION)
   opk bmad update --next     Update BMAD (experimental)
   opk bmad update --version X.Y.Z  Pin BMAD to specific version
   opk tooling doctor         Detect + suggest install for dev tools
+
+  v2.1.0 — Model-Agnostic Runtime:
+  opk model status           Hiển thị model-agnostic policy (OPK không quản lý model)
 
 Flags chung (forward cho sub-script):
   --yes   skip confirm
@@ -350,13 +354,31 @@ EOF
         echo "Template: $KIT_DIR/templates/opencode.json"
         echo "Project:  $(test -f .opencode/opencode.json && echo '.opencode/opencode.json' || echo '(none)')"
         echo ""
-        if grep -q '"permission": "allow"' "$proj_config" 2>/dev/null; then
-          echo "Current mode: POWER (permission: allow)"
-          echo "  Agent tự động chạy tool, sửa file, bash — không hỏi lại."
+        detect_py="$KIT_DIR/scripts/detect-mode.py"
+        if [ -f "$detect_py" ] && command -v python3 >/dev/null 2>&1; then
+          resolved="$(python3 "$detect_py" "$proj_config" 2>/dev/null || echo CUSTOM)"
         else
-          echo "Current mode: SAFE (permission object)"
-          echo "  Agent hỏi trước khi write/edit/bash/task."
+          # Fallback cổ điển: parse chuỗi đơn giản.
+          if grep -q '"permission": "allow"' "$proj_config" 2>/dev/null; then
+            resolved="POWER"
+          else
+            resolved="SAFE"
+          fi
         fi
+        case "$resolved" in
+          POWER)
+            echo "Current mode: POWER"
+            echo "  permission == allow: Agent tự động chạy tool, sửa file, bash — không hỏi lại."
+            ;;
+          SAFE)
+            echo "Current mode: SAFE"
+            echo "  permission object: Agent hỏi trước khi write/edit/bash/task."
+            ;;
+          *)
+            echo "Current mode: CUSTOM"
+            echo "  Cấu hình không khớp POWER hay SAFE — dùng thiết lập tùy chỉnh của bạn."
+            ;;
+        esac
         ;;
       power)
         require_file "$KIT_DIR/templates/opencode.power.json"
@@ -379,7 +401,7 @@ EOF
         target=".opencode/opencode.json"
         if [ ! -f "$target" ]; then
           target="$KIT_DIR/templates/opencode.json"
-          echo "opk: Không tìm thấy .opencode/opencode.json — cập nhật template mặc định."
+          echo "opk: Không tìm thấy .opencode/opencode.json — cập nhật template mạĐịnh."
         fi
         backup="${target}.bak.$(date +%Y%m%d-%H%M%S)"
         cp "$target" "$backup"
@@ -396,6 +418,8 @@ EOF
         ;;
     esac
     ;;
+
+  # ─── v2.1.0 Model-Agnostic ──────────────────────────────────────
 
   safety-plugin)
     plugin_cmd="${1:-status}"
@@ -542,10 +566,23 @@ EOF
 
   # ─── v1.3.4 GSD Core opt-in integration ────────────────────────
   # Forwards to scripts/install-gsd-core.sh (calls official
-  # `npx @opengsd/gsd-core@latest`). Never vendors GSD source.
+  # `npx @opengsd/gsd-core@<pinned>`). Never vendors GSD source.
   gsd)
-    require_file "$KIT_DIR/scripts/install-gsd-core.sh"
-    exec bash "$KIT_DIR/scripts/install-gsd-core.sh" "$@"
+    gsd_cmd="${1:-install}"
+    case "$gsd_cmd" in
+      status)
+        require_file "$KIT_DIR/scripts/install-gsd-core.sh"
+        exec bash "$KIT_DIR/scripts/install-gsd-core.sh" status
+        ;;
+      install|"")
+        require_file "$KIT_DIR/scripts/install-gsd-core.sh"
+        exec bash "$KIT_DIR/scripts/install-gsd-core.sh" "$@"
+        ;;
+      *)
+        echo "opk: gsd: lệnh không hợp lệ '$gsd_cmd'. Dùng: status, install (default)" >&2
+        exit 1
+        ;;
+    esac
     ;;
 
   update-gsd)
@@ -1109,7 +1146,7 @@ EOF
           fi
         fi
         # Remove ECC commands
-        for cmd_file in ecc-audit.md quality-gate.md research-first.md verify-loop.md model-route-review.md harness-audit.md; do
+        for cmd_file in ecc-audit.md quality-gate.md research-first.md verify-loop.md backend-route-review.md harness-audit.md; do
           cmd_path="${ECC_CONFIG_BASE}/commands/$cmd_file"
           if [[ -f "$cmd_path" ]]; then
             rm -f "$cmd_path"
@@ -1234,6 +1271,36 @@ EOF
     echo "opk: Converting $input -> $output"
     markitdown "$input" > "$output"
     echo "opk: ✅ Done ($(wc -c < "$output") bytes)"
+    ;;
+
+  # ─── Model-Agnostic: OPK không quản lý model ─────────────────
+  model)
+    model_cmd="${1:-status}"
+    shift || true
+
+    case "$model_cmd" in
+      status)
+        echo "opk: Model-agnostic mode — OPK không quản lý model."
+        echo "    Chọn model trong OpenCode UI (Settings → Model)."
+        echo "    Tất cả agent OPK inherit model đó."
+        echo ""
+        if command -v opencode &>/dev/null; then
+          echo "    OpenCode version: $(opencode --version 2>/dev/null || echo 'unknown')"
+        fi
+        exit 0
+        ;;
+      help|--help|-h)
+        echo "opk model status    Hiển thị model-agnostic policy"
+        echo ""
+        echo "OPK không chọn, route, benchmark, hay override model."
+        echo "User tự chọn model trong OpenCode UI."
+        exit 0
+        ;;
+      *)
+        echo "opk: model: '$model_cmd' không hỗ trợ. OPK model-agnostic — chỉ dùng 'opk model status'." >&2
+        exit 1
+        ;;
+    esac
     ;;
 
   *)

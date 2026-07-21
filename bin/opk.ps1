@@ -926,7 +926,7 @@ switch ($Command.ToLower()) {
                 $eccAgent = Join-Path $HOME '.config\opencode\agents\ecc-lite-strong.md'
                 $eccCommands = @(
                     'ecc-audit.md','quality-gate.md','research-first.md',
-                    'verify-loop.md','model-route-review.md','harness-audit.md'
+                    'verify-loop.md','backend-route-review.md','harness-audit.md'
                 )
                 $removed = $false
                 if (Test-Path $eccAgent) {

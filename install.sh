@@ -40,6 +40,7 @@ TARGET_DIR="$(pwd)"
 REPORT_FILE="$TARGET_DIR/opencode-power-install-report.md"
 BACKUP_DIR="$TARGET_DIR/.opencode-power-kit-backup-$(date +%Y%m%d%H%M%S)"
 BMAD_LOG="$TARGET_DIR/.opencode-power-bmad-install.log"
+BACKUP_NEEDED=false
 
 # --- User name (env > git config > $USER > "User") ---
 # Để BMAD output ghi đúng tên người dùng. Không hardcode.
@@ -100,39 +101,34 @@ info "Target project: $TARGET_DIR"
 info "Power Kit source: $KIT_DIR"
 info "BMAD Method version: $BMAD_METHOD_VERSION"
 
-# --- Backup existing files ---
-BACKUP_NEEDED=false
-for f in AGENTS.md OPENCODE.md .opencode/opencode.json; do
-	if [ -e "$TARGET_DIR/$f" ]; then
-		BACKUP_NEEDED=true
-		break
+# --- Merge OPK vào project (KHÔNG ghi đè cấu hình user) ---
+# Dùng scripts/merge-opk-project.py: giữ nguyên model/provider/MCP/plugin
+# tùy chỉnh, dùng managed marker cho AGENTS.md/OPENCODE.md, backup trước
+# mọi thay đổi, và cài safety plugin mặc định (không ghi đè plugin user).
+#
+# FAIL-CLOSED: python3 bắt buộc cho JSONC merge an toàn.
+# Set OPK_CONFIG_MERGE_SKIP=1 CHỈ trong OPK_TEST_MODE=1 (test-only).
+# Production PHẢI fail-closed và giữ nguyên config user.
+info "Merge OPK vào project (giữ cấu hình tùy chỉnh)..."
+if [ "${OPK_CONFIG_MERGE_SKIP:-0}" = "1" ]; then
+	if [ "${OPK_TEST_MODE:-0}" != "1" ]; then
+		err "OPK_CONFIG_MERGE_SKIP=1 chỉ được phép trong OPK_TEST_MODE=1 (test-only).
+  Production phải fail-closed — KHÔNG bypass config merge."
 	fi
-done
-
-if [ "$BACKUP_NEEDED" = true ]; then
-	info "Backup files cũ vào $BACKUP_DIR ..."
-	mkdir -p "$BACKUP_DIR"
-	for f in AGENTS.md OPENCODE.md .opencode/opencode.json; do
-		if [ -e "$TARGET_DIR/$f" ]; then
-			mkdir -p "$BACKUP_DIR/$(dirname "$f")"
-			cp "$TARGET_DIR/$f" "$BACKUP_DIR/$f"
-			ok "Đã backup: $f"
-		fi
-	done
+	warn "OPK_CONFIG_MERGE_SKIP=1 — bỏ qua config merge (OPK_TEST_MODE=1, test-only)."
+else
+	if ! command -v python3 >/dev/null 2>&1; then
+		err "python3 không tìm thấy — cần thiết cho JSONC merge an toàn.
+  Set OPK_CONFIG_MERGE_SKIP=1 để bỏ qua (không recommended)."
+	fi
+	if ! python3 "$KIT_DIR/scripts/merge-opk-project.py" --project-dir "$TARGET_DIR"; then
+		err "merge-opk-project.py thất bại — kiểm tra lỗi ở trên.
+  KHÔNG fallback copy thô để tránh ghi đè config user."
+	fi
+	BACKUP_NEEDED=true
+	ok "AGENTS.md / OPENCODE.md / .opencode/opencode.json (merged)"
+	ok "Safety plugin: .opencode/plugins/opk-safety-guard.js"
 fi
-
-# --- Copy templates ---
-info "Copy templates..."
-
-cp "$KIT_DIR/templates/AGENTS.md" "$TARGET_DIR/AGENTS.md"
-ok "AGENTS.md"
-
-cp "$KIT_DIR/templates/OPENCODE.md" "$TARGET_DIR/OPENCODE.md"
-ok "OPENCODE.md"
-
-mkdir -p "$TARGET_DIR/.opencode"
-cp "$KIT_DIR/templates/opencode.json" "$TARGET_DIR/.opencode/opencode.json"
-ok ".opencode/opencode.json"
 
 # --- Merge gitignore-extra ---
 if [ -f "$TARGET_DIR/.gitignore" ]; then
@@ -201,7 +197,7 @@ fi
 # --- Lefthook install ---
 if [ -f "$TARGET_DIR/package.json" ] && [ -f "$TARGET_DIR/lefthook.yml" ]; then
 	info "Cài đặt lefthook..."
-	npx lefthook install 2>/dev/null || warn "lefthook install thất bại, bỏ qua."
+	npx lefthook install || warn "lefthook install thất bại, bỏ qua."
 fi
 
 # --- Generate report ---
@@ -218,9 +214,10 @@ cat >"$REPORT_FILE" <<EOF
 
 | File | Trạng thái |
 |------|-----------|
-| AGENTS.md | ✅ |
-| OPENCODE.md | ✅ |
-| .opencode/opencode.json | ✅ |
+| AGENTS.md | ✅ (merged, giữ nội dung user) |
+| OPENCODE.md | ✅ (merged, giữ nội dung user) |
+| .opencode/opencode.json | ✅ (merged, giữ model/provider/MCP/plugin) |
+| .opencode/plugins/opk-safety-guard.js | ✅ (runtime safety plugin) |
 | .gitignore (merged) | ✅ |
 | knip.json | $([ -f "$TARGET_DIR/knip.json" ] && echo "✅" || echo "⏭️ Đã có") |
 | lefthook.yml | $([ -f "$TARGET_DIR/lefthook.yml" ] && echo "✅" || echo "⏭️ Đã có") |

@@ -40,7 +40,7 @@ PROFILES_DIR = KIT_ROOT / "profiles"
 TEMPLATES_DIR = KIT_ROOT / "templates"
 
 # ─── version compliance constants ───────────────────────────────────
-EXPECTED_VERSION = "2.0.0"
+EXPECTED_VERSION = "2.1.0"
 
 AUTO_ROUTER_NEEDLES: tuple[tuple[str, str], ...] = (
     ("templates/AGENTS.md", "Natural Language Auto Router"),
@@ -371,7 +371,6 @@ def validate_version() -> list[str]:
         "api-strong", "architect-strong", "build-strong",
         "db-strong", "debug-strong", "devops-strong",
         "qa-strong", "release-strong", "security-strong", "ui-ux-strong",
-        "gsd-executor", "gsd-code-fixer",
     ]
     for name in agents_with_scope_gate:
         agent_file = GLOBAL_DIR / "agents" / f"{name}.md"
@@ -524,7 +523,7 @@ def validate_version() -> list[str]:
         ("CHANGELOG.md", "opk mode"),
         ("templates/opencode.safe.json", '"permission"'),
         ("templates/opencode.power.json", '"permission"'),
-        ("templates/plugins/opk-safety-guard.js", "guardCheck"),
+        ("templates/plugins/opk-safety-guard.js", "tool.execute.before"),
     ]
     for rel, needle in v164_checks:
         p = KIT_ROOT / rel
@@ -587,7 +586,7 @@ def validate_version() -> list[str]:
         ("docs/UPSTREAM_RISKS.md", "Risk Matrix"),
         ("templates/opencode.json", "rm -rf"),
         ("templates/opencode.json", "git reset --hard"),
-        ("templates/opencode.json", "git clean -fd"),
+        ("templates/opencode.json", "git clean -f"),
         ("templates/opencode.json", "git push --force"),
         ("templates/opencode.json", "DROP TABLE"),
         ("templates/opencode.json", "TRUNCATE TABLE"),
@@ -801,6 +800,61 @@ def validate_version() -> list[str]:
                 errors.append(f"docs/UPSTREAM_AUDIT.md missing section: {section}")
     else:
         errors.append("docs/UPSTREAM_AUDIT.md missing")
+
+    # v2.1.0: GSD agents only in extras/gsd-agent-reference (not in active agents)
+    print("[v2.1.0 GSD agents in extras/ reference]")
+    gsd_ref_dir = KIT_ROOT / "extras" / "gsd-agent-reference"
+    if gsd_ref_dir.is_dir():
+        gsd_files = sorted(gsd_ref_dir.glob("*.md"))
+        if gsd_files:
+            ok(f"GSD reference agents in extras/gsd-agent-reference/ ({len(gsd_files)} files)")
+        else:
+            errors.append("extras/gsd-agent-reference/ exists but no .md files")
+    else:
+        errors.append("extras/gsd-agent-reference/ directory missing")
+    # Verify NO GSD agents in active agents directory
+    active_agents_dir = GLOBAL_DIR / "agents"
+    gsd_active = list(active_agents_dir.glob("gsd-*.md"))
+    if gsd_active:
+        errors.append(f"GSD agents still in active agents/ ({', '.join(f.name for f in gsd_active)})")
+    else:
+        ok("No GSD agents in active agents/ directory")
+
+    # v2.1.0: Actual count verification
+    print("[v2.1.0 Actual counts]")
+    active_agents = sorted(active_agents_dir.glob("*.md"))
+    active_commands = sorted((GLOBAL_DIR / "commands").glob("*.md"))
+    active_skills = sorted([d for d in (GLOBAL_DIR / "skills").iterdir() if d.is_dir()])
+    expected_agents = 16
+    expected_commands = 71
+    expected_skills = 23
+    if len(active_agents) == expected_agents:
+        ok(f"Active agents: {len(active_agents)} (expected {expected_agents})")
+    else:
+        errors.append(f"Active agents count: {len(active_agents)}, expected {expected_agents}")
+    if len(active_commands) == expected_commands:
+        ok(f"Commands: {len(active_commands)} (expected {expected_commands})")
+    else:
+        errors.append(f"Commands count: {len(active_commands)}, expected {expected_commands}")
+    if len(active_skills) == expected_skills:
+        ok(f"Skills: {len(active_skills)} (expected {expected_skills})")
+    else:
+        errors.append(f"Skills count: {len(active_skills)}, expected {expected_skills}")
+    # GSD reference count (excluding README.md)
+    gsd_ref_files = [f for f in gsd_ref_dir.glob("*.md") if f.name != "README.md"]
+    expected_gsd = 33
+    if len(gsd_ref_files) == expected_gsd:
+        ok(f"GSD reference agents: {len(gsd_ref_files)} (expected {expected_gsd}, excl README.md)")
+    else:
+        errors.append(f"GSD reference agents count: {len(gsd_ref_files)}, expected {expected_gsd} (excl README.md)")
+
+    # v2.1.0: Model-agnostic contract — no model override template
+    print("[v2.1.0 Model-agnostic contract]")
+    models_example = KIT_ROOT / "templates" / "opencode.models.example.jsonc"
+    if models_example.is_file():
+        errors.append("templates/opencode.models.example.jsonc must not exist (model-agnostic policy)")
+    else:
+        ok("templates/opencode.models.example.jsonc correctly absent")
 
     # v2.0.0: audit-upstreams.py must have proper argparse flags
     print("[v2.0.0 audit-upstreams.py argparse]")

@@ -54,7 +54,7 @@ works via Bash and produces equivalent output.
 </documentation_lookup>
 
 <required_reading>
-Read `/home/nha/opencode-power-kit/opencode-global/gsd-core/references/ai-frameworks.md` for framework profiles and known pitfalls before fetching docs.
+Read `${OPK_GSD_CORE_DIR}/gsd-core/references/ai-frameworks.md` for framework profiles and known pitfalls before fetching docs.
 </required_reading>
 
 <input>

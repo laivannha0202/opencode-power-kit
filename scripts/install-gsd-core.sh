@@ -8,7 +8,7 @@
 # This script does NOT vendor or copy GSD Core source. It only
 # invokes the official installer:
 #
-#     npx @opengsd/gsd-core@latest
+#     npx @opengsd/gsd-core@1.6.1   # version pinned, override via GSD_CORE_VERSION
 #
 # GSD Core is a separate, third-party project (see THIRD_PARTY.md).
 # opencode-power-kit only DETECTS existing installs and FORWARDS
@@ -26,8 +26,13 @@
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+KIT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 GSD_PACKAGE="@opengsd/gsd-core"
-GSD_INVOKE=(npx "${GSD_PACKAGE}@latest")
+# Pin exact version (KHÔNG dùng @latest). Override bằng env var.
+# Stable hiện hành (npm dist-tag latest): 1.6.1
+GSD_CORE_VERSION="${GSD_CORE_VERSION:-1.6.1}"
+GSD_INVOKE=(npx "${GSD_PACKAGE}@${GSD_CORE_VERSION}")
 
 MODE="interactive"
 TARGET_DIR=""
@@ -38,7 +43,7 @@ usage() {
 Usage: ${SCRIPT_NAME} [--dry-run] [--yes] [--target DIR]
 
 Optional helper that invokes the official GSD Core installer:
-    npx ${GSD_PACKAGE}@latest
+    npx ${GSD_PACKAGE}@${GSD_CORE_VERSION}
 
 FLAGS:
   --dry-run        Print the command that would run. Do not execute.
@@ -61,9 +66,42 @@ EXAMPLES:
 EOF
 }
 
+# ─── Status check ─────────────────────────────────────────────────
+# Detect whether GSD Core is actually installed. The snapshot in
+# extras/gsd-agent-reference/ is NOT an install and must NOT be reported
+# as ready.
+gsd_status() {
+	local installed=0
+	if command -v gsd-core >/dev/null 2>&1; then
+		installed=1
+	elif npm ls -g "${GSD_PACKAGE}" >/dev/null 2>&1; then
+		installed=1
+	elif [ -d "node_modules/${GSD_PACKAGE}" ] || [ -d "${KIT_DIR}/node_modules/${GSD_PACKAGE}" ]; then
+		installed=1
+	fi
+	echo "=== GSD Core status ==="
+	echo "Pinned version: ${GSD_CORE_VERSION} (override: export GSD_CORE_VERSION=x.y.z)"
+	if [ "$installed" -eq 1 ]; then
+		echo "Status: INSTALLED"
+	else
+		echo "Status: NOT INSTALLED"
+		echo ""
+		echo "Lưu ý: extras/gsd-agent-reference/ chỉ là snapshot tham khảo,"
+		echo "       KHÔNG phải GSD Core đã cài. Để cài chạy:"
+		echo ""
+		echo "  opk gsd --yes"
+		echo "  # hoặc:"
+		echo "  npx ${GSD_PACKAGE}@${GSD_CORE_VERSION}"
+	fi
+}
+
 # ─── Argument parsing ─────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
 	case "$1" in
+	status)
+		gsd_status
+		exit 0
+		;;
 	--dry-run)
 		MODE="dry-run"
 		shift
@@ -118,7 +156,7 @@ fi
 
 echo "=== install-gsd-core ==="
 echo "Mode:     ${MODE}"
-echo "Package:  ${GSD_PACKAGE}@latest"
+echo "Package:  ${GSD_PACKAGE}@${GSD_CORE_VERSION}"
 echo "Command:  ${PLAN[*]}"
 if [[ -n "${TARGET_DIR}" ]]; then
 	echo "Target:   ${TARGET_DIR}"

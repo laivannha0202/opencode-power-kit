@@ -64,7 +64,7 @@ User → opk ecc {audit|lite|status|off}
 | `opencode-global/commands/quality-gate.md` | Command | Quality gate before merge/release |
 | `opencode-global/commands/research-first.md` | Command | Research-first approach |
 | `opencode-global/commands/verify-loop.md` | Command | Verification loop (test-before-done) |
-| `opencode-global/commands/model-route-review.md` | Command | AI model routing review |
+| `opencode-global/commands/backend-route-review.md` | Command | Backend HTTP/API route review |
 | `opencode-global/commands/harness-audit.md` | Command | Constraints/edge-cases/invariants audit |
 
 ### ECC-lite Principles (embedded in ecc-lite-strong agent)
@@ -125,7 +125,7 @@ opk e lite
 | `/quality-gate` | Quality gate: verify code meets ECC standards before merge |
 | `/research-first` | Research-first approach: explore before implementing |
 | `/verify-loop` | Verification loop: test-before-done, iterate until passing |
-| `/model-route-review` | Model-routing review: verify AI model choice for task |
+| `/backend-route-review` | Backend HTTP/API route review: routing, auth, middleware, error handling |
 | `/harness-audit` | Harness audit: verify constraints, edge cases, invariants |
 
 ## Why not full ECC?
@@ -154,7 +154,7 @@ no hidden side effects**.
 | `opencode-global/commands/quality-gate.md` | Quality gate command |
 | `opencode-global/commands/research-first.md` | Research-first command |
 | `opencode-global/commands/verify-loop.md` | Verification loop command |
-| `opencode-global/commands/model-route-review.md` | Model routing review command |
+| `opencode-global/commands/backend-route-review.md` | Backend HTTP/API route review command |
 | `opencode-global/commands/harness-audit.md` | Harness audit command |
 | `bin/opk` / `bin/opk.ps1` | CLI subcommands: `ecc`, `ec`, `e`, `update-ecc` |
 

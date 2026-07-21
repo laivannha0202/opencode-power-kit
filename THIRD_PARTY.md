@@ -141,7 +141,7 @@ The kit's `install.sh` and `update-bmad.sh` are thin wrappers that:
 | Integration | **Opt-in wrapper** — never vendored, calls official installer only on user request |
 | Source | https://github.com/open-gsd/gsd-core |
 | npm | `@opengsd/gsd-core` |
-| Installer | `npx @opengsd/gsd-core@latest` |
+| Installer | `npx @opengsd/gsd-core@1.6.1` |
 | Kit ships | `scripts/install-gsd-core.sh` + `scripts/install-gsd-core.ps1` — thin wrappers |
 | Update path | `opk gsd` / `opk update-gsd` / `opk update-all --with-gsd` |
 | License | See npm package page |
@@ -149,7 +149,7 @@ The kit's `install.sh` and `update-bmad.sh` are thin wrappers that:
 The kit does **not** bundle GSD Core. The wrapper scripts:
 
 1. Verify `node`, `npm`, and `npx` are on PATH.
-2. Print the planned `npx @opengsd/gsd-core@latest` command.
+2. Print the planned `npx @opengsd/gsd-core@1.6.1` command.
 3. Ask for confirmation (or accept `--yes` / `-Y`).
 4. Forward to the official installer.
 
@@ -331,7 +331,7 @@ Agents never install packages directly. All installs go through `opk` wrappers.
 | License | MIT (per upstream) |
 | Kit ships | `scripts/audit-ecc.sh`, `scripts/install-ecc-lite.sh`, `scripts/check-ecc-lite.sh` — OPK-native scripts |
 | | `opencode-global/agents/ecc-lite-strong.md` — ECC-lite agent (6 core principles) |
-| | `opencode-global/commands/ecc-audit.md`, `quality-gate.md`, `research-first.md`, `verify-loop.md`, `model-route-review.md`, `harness-audit.md` — 6 commands |
+| | `opencode-global/commands/ecc-audit.md`, `quality-gate.md`, `research-first.md`, `verify-loop.md`, `backend-route-review.md`, `harness-audit.md` — 6 commands |
 | | `bin/opk` / `bin/opk.ps1` — CLI subcommands: `ec`, `e`, `ecc`, `update-ecc` |
 | Update path | `opk update-ecc` (re-sources from OPK repo, not from ECC upstream) |
 
@@ -725,7 +725,7 @@ scaffolding, agents, and commands are designed for.
 
 ### Opt-in tools (GSD Core, MarkItDown, Supermemory, ECC-lite, Hermes-lite)
 
-- `opk gsd` / `opk update-gsd` — calls `npx @opengsd/gsd-core@latest`.
+- `opk gsd` / `opk update-gsd` — calls `npx @opengsd/gsd-core@1.6.1`.
 - `opk update-all --with-gsd` — pulls kit + updates GSD.
 - `opk markitdown install` — re-runs `pipx install "markitdown[all]"`.
 - `opk supermemory install` — re-runs `npm install -g supermemory`.

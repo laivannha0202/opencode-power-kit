@@ -231,7 +231,7 @@
 
 - `CHANGELOG.md:65` → `npx runtime`
 - `CHANGELOG.md:77` → `npm install -g`
-- `CHANGELOG.md:874` → `npx @opengsd/gsd-core@latest`
+- `CHANGELOG.md:874` → `npx @opengsd/gsd-core@1.6.1` (historical; now pinned)
 - `CHANGELOG.md:1132` → `npx kh`
 - `CHANGELOG.md:1169` → `npx ...`
 - `CHANGELOG.md:1208` → `npx bmad-method`
@@ -245,8 +245,8 @@
 - `THIRD_PARTY.md:117` → `npx bmad-method@VERSION`
 - `THIRD_PARTY.md:122` → `npx bmad-method@...`
 - `THIRD_PARTY.md:131` → `npx bmad-method@`
-- `THIRD_PARTY.md:144` → `npx @opengsd/gsd-core@latest`
-- `THIRD_PARTY.md:152` → `npx @opengsd/gsd-core@latest`
+- `THIRD_PARTY.md:144` → `npx @opengsd/gsd-core@1.6.1`
+- `THIRD_PARTY.md:152` → `npx @opengsd/gsd-core@1.6.1`
 - `THIRD_PARTY.md:216` → `npm install -g`
 - `THIRD_PARTY.md:225` → `npm install -g`
 - `THIRD_PARTY.md:260` → `npx taste-skill`
@@ -256,9 +256,9 @@
 - `THIRD_PARTY.md:682` → `npx playwright`
 - `THIRD_PARTY.md:685` → `npx playwright`
 - `THIRD_PARTY.md:714` → `npx bmad-method@`
-- `THIRD_PARTY.md:728` → `npx @opengsd/gsd-core@latest`
+- `THIRD_PARTY.md:728` → `npx @opengsd/gsd-core@1.6.1`
 - `THIRD_PARTY.md:731` → `npm install -g`
-- `bin/opk:545` → `npx @opengsd/gsd-core@latest`
+- `bin/opk:545` → `npx @opengsd/gsd-core@1.6.1`
 - `bin/opk:789` → `npm install -g`
 - `bin/opk:886` → `npm i -g repomix`
 - `bin/opk:890` → `npm i -g knip`
@@ -344,9 +344,9 @@
 - `scripts/install-api-tools.sh:93` → `npm i -g @openapitools/openapi-generator-cli`
 - `scripts/install-api-tools.sh:119` → `npm i -g @stoplight/spectral-cli`
 - `scripts/install-api-tools.sh:135` → `npm i -g @openapitools/openapi-generator-cli`
-- `scripts/install-gsd-core.ps1:9` → `npx @opengsd/gsd-core@latest`
+- `scripts/install-gsd-core.ps1:9` → `npx @opengsd/gsd-core@1.6.1`
 - `scripts/install-gsd-core.ps1:78` → `npx @cmdParts`
-- `scripts/install-gsd-core.sh:11` → `npx @opengsd/gsd-core@latest`
+- `scripts/install-gsd-core.sh:11` → `npx @opengsd/gsd-core@1.6.1`
 - `scripts/install-gsd-core.sh:47` → `npx ...`
 - `scripts/install-gsd-core.sh:105` → `npx first.`
 - `scripts/install-gsd-core.sh:153` → `npx owns`

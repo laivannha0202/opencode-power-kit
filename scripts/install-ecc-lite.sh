@@ -8,7 +8,7 @@
 # This script installs only the OPK-native ECC-lite components:
 #   - ecc-lite-strong.md agent
 #   - 6 slash commands (/ecc-audit, /quality-gate, /research-first,
-#     /verify-loop, /model-route-review, /harness-audit)
+#     /verify-loop, /backend-route-review, /harness-audit)
 #   - 3 supporting scripts (audit-ecc.sh, install-ecc-lite.sh,
 #     check-ecc-lite.sh)
 #
@@ -51,7 +51,7 @@ DETAILS:
   Installs these OPK-native components:
     • Agent:       ecc-lite-strong.md → opencode-global/agents/
     • Commands:    /ecc-audit, /quality-gate, /research-first,
-                   /verify-loop, /model-route-review, /harness-audit
+                   /verify-loop, /backend-route-review, /harness-audit
     • Scripts:     audit-ecc.sh, install-ecc-lite.sh, check-ecc-lite.sh
 
   Does NOT install full ECC:
@@ -105,7 +105,7 @@ declare -a ECC_COMMANDS=(
 	"opencode-global/commands/quality-gate.md"
 	"opencode-global/commands/research-first.md"
 	"opencode-global/commands/verify-loop.md"
-	"opencode-global/commands/model-route-review.md"
+	"opencode-global/commands/backend-route-review.md"
 	"opencode-global/commands/harness-audit.md"
 )
 
