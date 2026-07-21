@@ -251,5 +251,51 @@
       "https://github.com/rohitg00/agentmemory"
     ],
     "expected": "all_present"
+  },
+  {
+    "id": "contract-022",
+    "name": "Default timeout path returns 124",
+    "description": "GNU/system timeout must return exit code 124 without OPK_TIMEOUT_FORCE_FALLBACK",
+    "check_type": "script_exec",
+    "command": "bash scripts/timeout.sh 1 sleep 10",
+    "expected_exit": 124
+  },
+  {
+    "id": "contract-023",
+    "name": "Timeout kills grandchild processes",
+    "description": "Timeout must kill all child/grandchild processes on timeout, not just the direct child",
+    "check_type": "script_exec",
+    "command": "bash -c 'MARKER=$(mktemp); setsid sh -c \"sleep 19876 & echo \\$! > $MARKER; wait\" & SPID=$!; sleep 0.5; GRANDPID=$(cat $MARKER 2>/dev/null); rm -f $MARKER; kill -9 -- -$SPID 2>/dev/null; sleep 0.3; if kill -0 $GRANDPID 2>/dev/null; then kill -9 $GRANDPID 2>/dev/null; exit 1; else exit 0; fi'",
+    "expected_exit": 0
+  },
+  {
+    "id": "contract-024",
+    "name": "Default timeout path preserves exit code",
+    "description": "GNU/system timeout must preserve command exit code when command completes before timeout",
+    "check_type": "script_exec",
+    "command": "bash scripts/timeout.sh 5 sh -c 'exit 42'",
+    "expected_exit": 42
+  },
+  {
+    "id": "contract-025",
+    "name": "install-gsd-core.sh status runs without unbound variable error",
+    "description": "install-gsd-core.sh status must not fail with unbound variable under set -u",
+    "check_type": "script_exec",
+    "command": "bash scripts/install-gsd-core.sh status",
+    "expected_exit": 0
+  },
+  {
+    "id": "contract-026",
+    "name": "THIRD_PARTY.md has correct upstream references",
+    "description": "THIRD_PARTY.md must reference correct version pins and upstream repos",
+    "check_type": "grep_present",
+    "target": "THIRD_PARTY.md",
+    "patterns": [
+      "6.9.0",
+      "@1.6.1",
+      "rohitg00/agentmemory",
+      "obra/superpowers"
+    ],
+    "expected": "all_present"
   }
 ]

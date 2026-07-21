@@ -12,7 +12,7 @@ score model output, or compare providers.
 evals/
 ├── README.md          # This file
 ├── tasks/
-│   └── contracts.json # 12 behavioral workflow contracts
+│   └── contracts.json # 27 behavioral workflow contracts
 ├── results/           # Test output (auto-generated)
 └── run.sh             # Test runner
 ```
@@ -74,6 +74,21 @@ Optional dependency → SKIP.
 | contract-010 | grep_absent | No model override in agent files |
 | contract-011 | grep_present | Writer/read-only reviewer policy |
 | contract-012 | grep_present | build-strong pipeline stages |
+| contract-013 | script_exec | Timeout helper exists and runs |
+| contract-014 | script_exec | Timeout forced fallback returns 124 |
+| contract-015 | script_exec | Timeout forced fallback preserves exit code |
+| contract-016a | file_present | backend-route-review exists |
+| contract-016b | file_absent | model-route-review deleted |
+| contract-017 | grep_absent | No model routing commands in backend-route-review |
+| contract-018 | grep_present | README agent count accurate |
+| contract-019 | grep_present | README command count accurate |
+| contract-020 | grep_absent | No Quality Scorecard in README |
+| contract-021 | grep_present | UPSTREAM_CAPABILITY_MAP correct URLs and pins |
+| contract-022 | script_exec | Default timeout path returns 124 |
+| contract-023 | script_exec | Timeout kills grandchild processes |
+| contract-024 | script_exec | Default timeout path preserves exit code |
+| contract-025 | script_exec | install-gsd-core.sh status runs without error |
+| contract-026 | grep_present | THIRD_PARTY.md has correct upstream pins |
 
 ## Notes
 

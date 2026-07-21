@@ -15,7 +15,7 @@ OPK (opencode-power-kit) extends OpenCode with additional capabilities.
 | Safety plugin | ❌ | ✅ OPK Safety Guard (CommonJS) |
 | Permission rules | ❌ | ✅ Template with wildcard/deny |
 | PowerShell verify | ❌ | ✅ Cross-platform verification |
-| Evals (regression) | ❌ | ✅ 12 workflow contracts |
+| Evals (regression) | ❌ | ✅ 27 workflow contracts |
 
 ## OPK Does NOT Manage
 

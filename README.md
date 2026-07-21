@@ -581,7 +581,7 @@ Phù hợp nhất cho project dùng: NestJS backend, React/Vite frontend, MySQL 
 | Workflow consistency | 7-phase build-strong pipeline, reviewer read-only, verification-before-done | Improves consistency, does not increase model intelligence | `opk doctor` |
 | Agent routing | 16 specialized agents with explicit delegation | Routing is manual/explicit, not auto-dispatched | `grep -c "agent:" opencode-global/agents/*.md` |
 | Safety | CommonJS safety plugin, opk-command-guard, cleanup-safe | Instruction-based, not sandbox; depends on model compliance | `node scripts/test-safety-plugin.mjs` |
-| Build verification | 12 behavioral contracts, eval regression suite | Contracts verify workflow, not model output quality | `bash evals/run.sh` |
+| Build verification | 27 behavioral contracts, eval regression suite | Contracts verify workflow, not model output quality | `bash evals/run.sh` |
 | Cross-platform | Bash + PowerShell scripts, portable timeout fallback | PowerShell not runtime-verified if pwsh unavailable | `bash verify.sh && pwsh verify.ps1` |
 | Third-party integration | Superpowers v6.1.1, BMAD 6.9.0, GSD 1.6.1, ECC, Hermes, RAG, Headroom, AgentMemory | Opt-in only; no auto-enable; user installs per dependency | `python3 scripts/audit-upstreams.py --check` |
 | Model-agnostic | No model discovery/routing/benchmark/scoring | User selects model in OpenCode UI; OPK does not manage models | `grep -r "model:" opencode-global/agents/*.md \| grep -v "^#"` |

@@ -26,6 +26,8 @@
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+KIT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 GSD_PACKAGE="@opengsd/gsd-core"
 # Pin exact version (KHÔNG dùng @latest). Override bằng env var.
 # Stable hiện hành (npm dist-tag latest): 1.6.1

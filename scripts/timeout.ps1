@@ -32,40 +32,54 @@ if ($Seconds -le 0) {
     exit 125
 }
 
+# Helper: quote an argument that contains spaces or special characters
+function Protect-Argument {
+    param([string]$Arg)
+    if ($Arg -match '[\s"''`]') {
+        # Contains whitespace or quotes — escape internal double-quotes and wrap
+        $escaped = $Arg -replace '"', '""'
+        return "`"$escaped`""
+    }
+    return $Arg
+}
+
 $process = $null
 try {
-    # Build start info for process tree kill
-    $psi = New-Object System.Diagnostics.ProcessStartInfo
-    $psi.FileName = $Command
-    if ($Args.Count -gt 0) {
-        $psi.Arguments = ($Args -join ' ')
+    # Build argument list with proper quoting
+    $quotedArgs = @()
+    foreach ($a in $Args) {
+        $quotedArgs += Protect-Argument $a
     }
-    $psi.UseShellExecute = $false
-    $psi.CreateNoWindow = $false
 
-    $process = [System.Diagnostics.Process]::Start($psi)
+    # Start the process using Start-Process -PassThru (no -Wait)
+    # -ArgumentList handles the argument array properly
+    if ($quotedArgs.Count -gt 0) {
+        $process = Start-Process -FilePath $Command -ArgumentList $quotedArgs -PassThru -NoNewWindow
+    } else {
+        $process = Start-Process -FilePath $Command -PassThru -NoNewWindow
+    }
 
-    # Wait with timeout (milliseconds)
+    # Wait with timeout using WaitForExit(milliseconds)
     $timeoutMs = $Seconds * 1000
     $exited = $process.WaitForExit($timeoutMs)
 
     if (-not $exited) {
-        # Timeout — kill process tree
+        # Timeout — kill the entire process tree
         try {
-            $process.Kill($true)
+            $process.Kill($true)  # Kill entire process tree (child processes included)
         } catch {
             # Fallback: try taskkill /T /F
             try {
                 taskkill /PID $process.Id /T /F 2>$null
             } catch {
-                # Last resort
-                $process.Kill()
+                # Last resort: kill the process without tree
+                try { $process.Kill() } catch {}
             }
         }
         exit 124
     }
 
-    # Command completed — return its exit code
+    # Command completed — return its actual exit code
     exit $process.ExitCode
 } catch {
     Write-Error "Error running command: $_"

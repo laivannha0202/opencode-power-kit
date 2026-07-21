@@ -46,36 +46,55 @@ _has_cmd() {
 # ── Portable bash fallback ──
 _fallback() {
   local cmd_pid="" watchdog_pid="" exit_code=0
+  local _timeout_flag
+  _timeout_flag="$(mktemp "${TMPDIR:-/tmp}/.opk-timeout-XXXXXX" 2>/dev/null)" || {
+    echo "Error: cannot create temp file for timeout flag" >&2
+    exit 125
+  }
+  # Remove the file — mktemp only creates a unique name.
+  # The watchdog will re-create it if a timeout actually occurs.
+  rm -f "$_timeout_flag"
 
-  # Cleanup on exit: kill child + watchdog, wait to reap zombies
+  # Cleanup on exit: kill child + watchdog, remove flag, reap zombies
   cleanup() {
-    # Kill command and its process group (covers grandchild processes)
-    if [ -n "$cmd_pid" ] && kill -0 "$cmd_pid" 2>/dev/null; then
-      kill -TERM -- -"$cmd_pid" 2>/dev/null || kill -TERM "$cmd_pid" 2>/dev/null || true
-      sleep 0.2
-      kill -9 -- -"$cmd_pid" 2>/dev/null || kill -9 "$cmd_pid" 2>/dev/null || true
-    fi
-    # Kill watchdog
+    rm -f "$_timeout_flag" 2>/dev/null
+    # Kill watchdog first (prevent it from firing after cleanup)
     if [ -n "$watchdog_pid" ] && kill -0 "$watchdog_pid" 2>/dev/null; then
       kill -9 "$watchdog_pid" 2>/dev/null || true
     fi
-    # Reap zombies
-    wait "$cmd_pid" 2>/dev/null || true
     wait "$watchdog_pid" 2>/dev/null || true
+    # Kill command and its process group if still running
+    if [ -n "$cmd_pid" ] && kill -0 "$cmd_pid" 2>/dev/null; then
+      # Kill entire process group (covers grandchildren)
+      kill -9 -- -"$cmd_pid" 2>/dev/null || true
+      # Fallback: kill the process itself
+      kill -9 "$cmd_pid" 2>/dev/null || true
+    fi
+    wait "$cmd_pid" 2>/dev/null || true
   }
   trap cleanup EXIT
 
   # Run the command in background (suppress bash job control messages)
   set +m
-  "$@" </dev/null &
+  # Use setsid to create a new session/process group when available.
+  # This ensures kill -9 -- -cmd_pid reliably kills all descendants.
+  if _has_cmd setsid; then
+    setsid "$@" </dev/null &
+  else
+    "$@" </dev/null &
+  fi
   cmd_pid=$!
 
-  # Start watchdog timer
+  # Start watchdog timer — writes flag file and kills process tree on timeout
   (
     sleep "$TIMEOUT_SEC"
-    # If cmd still running after timeout, kill the process group
+    # If cmd still running after timeout, signal and kill the process tree
     if kill -0 "$cmd_pid" 2>/dev/null; then
-      kill -9 -- -"$cmd_pid" 2>/dev/null || kill -9 "$cmd_pid" 2>/dev/null || true
+      touch "$_timeout_flag"
+      # Kill entire process group (grandchildren included)
+      kill -9 -- -"$cmd_pid" 2>/dev/null || true
+      # Fallback: kill the process itself in case group kill didn't work
+      kill -9 "$cmd_pid" 2>/dev/null || true
     fi
   ) &
   watchdog_pid=$!
@@ -90,13 +109,15 @@ _fallback() {
   wait "$watchdog_pid" 2>/dev/null || true
   watchdog_pid=""
 
-  # If killed by signal, treat as timeout
-  # 137 = 128+9 (SIGKILL), 143 = 128+15 (SIGTERM), 9 = SIGKILL, 15 = SIGTERM
-  if [ "$exit_code" -eq 137 ] || [ "$exit_code" -eq 9 ] || \
-     [ "$exit_code" -eq 143 ] || [ "$exit_code" -eq 15 ]; then
+  # If the watchdog flagged a timeout, return 124
+  # This avoids blindly mapping signal exit codes (137/143/9/15) to 124,
+  # which would incorrectly mask commands that receive real signals.
+  if [ -f "$_timeout_flag" ]; then
+    rm -f "$_timeout_flag"
     exit 124
   fi
 
+  # Command completed (or was killed by something else) — return its real exit code
   exit "$exit_code"
 }
 

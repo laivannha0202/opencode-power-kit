@@ -49,9 +49,9 @@ if ($missing.Count -gt 0) {
 }
 
 # ─── Build command ────────────────────────────────────────────────
-$cmdParts = @('npx', "${GsdPackage}@${GsdVersion}")
-if ($Target) { $cmdParts += $Target }
-$cmdString = $cmdParts -join ' '
+$pkgArgs = @("${GsdPackage}@${GsdVersion}")
+if ($Target) { $pkgArgs += $Target }
+$cmdString = ("npx " + ($pkgArgs -join ' '))
 
 Write-Plan $cmdString
 
@@ -76,5 +76,5 @@ if (-not $Yes) {
 
 # ─── Invoke ───────────────────────────────────────────────────────
 Write-Host "==> $cmdString"
-& npx @cmdParts
+& npx @pkgArgs
 exit $LASTEXITCODE

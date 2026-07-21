@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`docs/MODEL_ROUTING.md`** — model-agnostic policy documentation.
 - **`docs/SKILL_ROUTING.md`** — skill routing by task context, not model.
 - **`docs/UPSTREAM_CAPABILITY_MAP.md`** — OPK vs OpenCode native capability map.
-- **`evals/`** — eval harness with 12 workflow contracts and runner for testing
+- **`evals/`** — eval harness with 27 workflow contracts and runner for testing
   behavioral regression (no model routing, no API keys, no overrides).
 - **`scripts/test-permission-rules.py`** — behavioral test verifying permission
   deny-list ordering (wildcard first, deny last) in all templates.
@@ -56,7 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`evals/run.sh`** — unknown check_type now FAIL (not SKIP). Added
   `script_exec` check_type for running actual commands. Required missing
   dependency → FAIL; optional → SKIP.
-- **`evals/tasks/contracts.json`** — 12 workflow contracts: safety plugin
+- **`evals/tasks/contracts.json`** — 27 workflow contracts: safety plugin
   test, permission rules test, model status CLI, agent model override scan,
   build-strong pipeline stages, writer/read-only reviewer.
 - **GSD agents moved** — 34 GSD companion agents relocated from

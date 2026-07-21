@@ -327,22 +327,37 @@ CMD_TIMEOUT=120
 echo ""
 echo "--- Git Checks ---"
 # Check for whitespace errors in all changes from base branch
-# Resolve merge-base: try OPK_BASE_REF → origin/main → main → FAIL
+# Resolve merge-base with strict fallback chain (no silent degradation):
+#   1. OPK_BASE_REF (explicit, fail if invalid)
+#   2. origin/main (fail if exists but merge-base fails)
+#   3. local main (only when origin/main truly absent)
+#   4. FAIL — no fallback to HEAD~1, HEAD, or HEAD HEAD
 MERGE_BASE=""
 if [ -n "${OPK_BASE_REF:-}" ]; then
-  MERGE_BASE=$(git -C "$KIT_DIR" merge-base "$OPK_BASE_REF" HEAD 2>/dev/null) || true
-  if [ -z "$MERGE_BASE" ]; then
-    fail "Cannot compute merge-base with OPK_BASE_REF=$OPK_BASE_REF"
+  if ! git -C "$KIT_DIR" rev-parse --verify "$OPK_BASE_REF" >/dev/null 2>&1; then
+    fail "OPK_BASE_REF=$OPK_BASE_REF is not a valid ref"
+    MERGE_BASE="SKIP"
+  else
+    MERGE_BASE=$(git -C "$KIT_DIR" merge-base "$OPK_BASE_REF" HEAD 2>/dev/null) || true
+    if [ -z "$MERGE_BASE" ]; then
+      fail "Cannot compute merge-base with OPK_BASE_REF=$OPK_BASE_REF (ref valid but no common ancestor with HEAD)"
+      MERGE_BASE="SKIP"
+    fi
   fi
-fi
-if [ -z "$MERGE_BASE" ] && git -C "$KIT_DIR" rev-parse --verify origin/main >/dev/null 2>&1; then
+elif git -C "$KIT_DIR" rev-parse --verify origin/main >/dev/null 2>&1; then
   MERGE_BASE=$(git -C "$KIT_DIR" merge-base origin/main HEAD 2>/dev/null) || true
-fi
-if [ -z "$MERGE_BASE" ] && git -C "$KIT_DIR" rev-parse --verify main >/dev/null 2>&1; then
+  if [ -z "$MERGE_BASE" ]; then
+    fail "origin/main exists but cannot compute merge-base with HEAD (try: git fetch origin)"
+    MERGE_BASE="SKIP"
+  fi
+elif git -C "$KIT_DIR" rev-parse --verify main >/dev/null 2>&1; then
   MERGE_BASE=$(git -C "$KIT_DIR" merge-base main HEAD 2>/dev/null) || true
-fi
-if [ -z "$MERGE_BASE" ]; then
-  fail "Cannot determine merge-base (tried OPK_BASE_REF, origin/main, main). Skipping git diff --check."
+  if [ -z "$MERGE_BASE" ]; then
+    fail "local main exists but cannot compute merge-base with HEAD"
+    MERGE_BASE="SKIP"
+  fi
+else
+  fail "No main branch found (neither origin/main nor local main). Skipping git diff --check."
   MERGE_BASE="SKIP"
 fi
 if [ "$MERGE_BASE" != "SKIP" ]; then
