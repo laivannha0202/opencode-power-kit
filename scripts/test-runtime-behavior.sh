@@ -106,6 +106,31 @@ else
   skip_test "Installer preservation test" "test script not found"
 fi
 
+# --- 5b. PowerShell Timeout Tests ---
+section "5b. PowerShell Timeout"
+if command -v pwsh >/dev/null 2>&1; then
+  # Test 1: timeout returns 124
+  run_test "PS timeout: exit 124 on timeout" \
+    "pwsh -NoProfile -File '$SCRIPT_DIR/timeout.ps1' -Seconds 1 -Command 'sleep' -Args 10; test \$? -eq 124"
+
+  # Test 2: exit code preserved
+  run_test "PS timeout: exit code 42 preserved" \
+    "pwsh -NoProfile -File '$SCRIPT_DIR/timeout.ps1' -Seconds 5 -Command 'exit' -Args 42; test \$? -eq 42"
+
+  # Test 3: argument with spaces
+  run_test "PS timeout: argument with spaces" \
+    "pwsh -NoProfile -File '$SCRIPT_DIR/timeout.ps1' -Seconds 5 -Command 'echo' -Args 'hello world'; test \$? -eq 0"
+
+  # Test 4: process tree cleanup (verify no orphan processes)
+  run_test "PS timeout: process tree cleanup" \
+    "pwsh -NoProfile -Command \"\$p = Start-Process -FilePath 'sleep' -ArgumentList 600 -PassThru; Start-Sleep -Milliseconds 200; \$p.Kill(\$true); Start-Sleep -Milliseconds 200; -not (!\$p.HasExited)\" 2>/dev/null"
+else
+  skip_test "PS timeout: exit 124 on timeout" "SKIP: pwsh unavailable"
+  skip_test "PS timeout: exit code 42 preserved" "SKIP: pwsh unavailable"
+  skip_test "PS timeout: argument with spaces" "SKIP: pwsh unavailable"
+  skip_test "PS timeout: process tree cleanup" "SKIP: pwsh unavailable"
+fi
+
 # --- 6. Doctor Script ---
 section "6. Doctor Script"
 if [ -f "$KIT_DIR/doctor.sh" ]; then

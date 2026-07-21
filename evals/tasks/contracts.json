@@ -263,9 +263,9 @@
   {
     "id": "contract-023",
     "name": "Timeout kills grandchild processes",
-    "description": "Timeout must kill all child/grandchild processes on timeout, not just the direct child",
+    "description": "Timeout must kill all child/grandchild processes on timeout — delegates to test-timeout.sh",
     "check_type": "script_exec",
-    "command": "bash -c 'MARKER=$(mktemp); setsid sh -c \"sleep 19876 & echo \\$! > $MARKER; wait\" & SPID=$!; sleep 0.5; GRANDPID=$(cat $MARKER 2>/dev/null); rm -f $MARKER; kill -9 -- -$SPID 2>/dev/null; sleep 0.3; if kill -0 $GRANDPID 2>/dev/null; then kill -9 $GRANDPID 2>/dev/null; exit 1; else exit 0; fi'",
+    "command": "bash scripts/test-timeout.sh --grandchild",
     "expected_exit": 0
   },
   {

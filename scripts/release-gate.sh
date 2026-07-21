@@ -172,7 +172,7 @@ fi
 
 # --- 9. Tests exist ---
 section "9. Test Coverage"
-for s in test-permission-rules.py test-safety-plugin.mjs test-opk-mode.sh test-installer-preservation.sh test-runtime-behavior.sh; do
+for s in test-permission-rules.py test-safety-plugin.mjs test-opk-mode.sh test-installer-preservation.sh test-timeout.sh test-runtime-behavior.sh; do
   if [ -f "$KIT_DIR/scripts/$s" ]; then
     pass "scripts/$s exists"
   else
@@ -293,6 +293,9 @@ run_cmd "test-opk-mode" \
 
 run_cmd "test-installer-preservation" \
   "bash $KIT_DIR/scripts/test-installer-preservation.sh"
+
+run_cmd "test-timeout" \
+  "bash $KIT_DIR/scripts/test-timeout.sh"
 
 run_cmd "test-runtime-behavior" \
   "bash $KIT_DIR/scripts/test-runtime-behavior.sh"

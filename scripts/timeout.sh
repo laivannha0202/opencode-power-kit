@@ -20,7 +20,8 @@
 #   126   — invalid arguments
 #
 # Environment:
-#   OPK_TIMEOUT_FORCE_FALLBACK=1  — force bash fallback even if timeout/gtimeout available
+#   OPK_TIMEOUT_FORCE_FALLBACK=1   — force bash/Python fallback even if timeout available
+#   OPK_TIMEOUT_DISABLE_SETSID=1   — disable setsid (use Python fallback for process groups)
 # ─────────────────────────────────────────────────────────────────
 
 # Do NOT use set -e here — we need to capture exit codes safely.
@@ -43,8 +44,65 @@ _has_cmd() {
   command -v "$1" >/dev/null 2>&1
 }
 
-# ── Portable bash fallback ──
-_fallback() {
+# ── Portable Python fallback ──
+# Uses Python subprocess with start_new_session=True to create a new session,
+# and os.killpg to kill the entire process tree. Works on macOS without setsid.
+_fallback_python() {
+  if ! _has_cmd python3; then
+    echo "Error: python3 not available for fallback timeout" >&2
+    exit 125
+  fi
+
+  python3 -c "
+import subprocess, os, sys, signal, time
+
+timeout_sec = int(sys.argv[1])
+cmd = sys.argv[2:]
+
+if not cmd:
+    print('Error: no command specified', file=sys.stderr)
+    sys.exit(126)
+
+try:
+    # Create new session so we can kill the entire process group
+    proc = subprocess.Popen(
+        cmd,
+        start_new_session=True,
+        stdin=subprocess.DEVNULL
+    )
+except FileNotFoundError as e:
+    print(f'Error: command not found: {e}', file=sys.stderr)
+    sys.exit(125)
+
+timed_out = False
+try:
+    proc.wait(timeout=timeout_sec)
+except subprocess.TimeoutExpired:
+    timed_out = True
+    # Kill the entire process group (children and grandchildren)
+    try:
+        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        # Process already dead or not permitted
+        try:
+            proc.kill()
+        except (ProcessLookupError, PermissionError):
+            pass
+    # Reap the zombie
+    try:
+        proc.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        pass
+
+if timed_out:
+    sys.exit(124)
+else:
+    sys.exit(proc.returncode)
+" "$TIMEOUT_SEC" "$@"
+}
+
+# ── Portable bash fallback (when setsid available) ──
+_fallback_bash() {
   local cmd_pid="" watchdog_pid="" exit_code=0
   local _timeout_flag
   _timeout_flag="$(mktemp "${TMPDIR:-/tmp}/.opk-timeout-XXXXXX" 2>/dev/null)" || {
@@ -78,7 +136,7 @@ _fallback() {
   set +m
   # Use setsid to create a new session/process group when available.
   # This ensures kill -9 -- -cmd_pid reliably kills all descendants.
-  if _has_cmd setsid; then
+  if _has_cmd setsid && [ "${OPK_TIMEOUT_DISABLE_SETSID:-0}" != "1" ]; then
     setsid "$@" </dev/null &
   else
     "$@" </dev/null &
@@ -125,18 +183,27 @@ _fallback() {
 
 # If OPK_TIMEOUT_FORCE_FALLBACK=1, skip system timeout
 if [ "${OPK_TIMEOUT_FORCE_FALLBACK:-0}" != "1" ]; then
-  # Try GNU timeout first (Linux)
+  # Try GNU/BSD timeout first
+  # Use --kill-after=1s to ensure process tree cleanup on timeout.
+  # Do NOT use --signal=KILL — it may cause exit code 137 instead of 124
+  # on some systems (GNU coreutils). Default signal is SIGTERM which is correct.
   if _has_cmd timeout; then
-    timeout --signal=KILL "$TIMEOUT_SEC" "$@"
+    timeout --kill-after=1s "$TIMEOUT_SEC" "$@"
     exit $?
   fi
 
-  # Try BSD timeout (macOS via coreutils)
+  # Try BSD timeout (macOS via coreutils — gtimeout)
   if _has_cmd gtimeout; then
-    gtimeout --signal=KILL "$TIMEOUT_SEC" "$@"
+    gtimeout --kill-after=1s "$TIMEOUT_SEC" "$@"
     exit $?
   fi
 fi
 
-# Fallback: bash-native process + watchdog
-_fallback "$@"
+# Fallback: Python or bash-native process + watchdog
+# Python fallback is preferred when setsid is unavailable (macOS)
+# because it properly manages process groups via start_new_session.
+if [ "${OPK_TIMEOUT_DISABLE_SETSID:-0}" = "1" ] || ! _has_cmd setsid; then
+  _fallback_python "$@"
+else
+  _fallback_bash "$@"
+fi
