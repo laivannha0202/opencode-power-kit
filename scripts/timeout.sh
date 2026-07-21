@@ -34,8 +34,8 @@ fi
 TIMEOUT_SEC="$1"
 shift
 
-if ! [[ "$TIMEOUT_SEC" =~ ^[0-9]+$ ]]; then
-  echo "Error: timeout must be a positive integer" >&2
+if ! [[ "$TIMEOUT_SEC" =~ ^[0-9]+$ ]] || [ "$TIMEOUT_SEC" -lt 1 ]; then
+  echo "Error: timeout must be a positive integer (>= 1)" >&2
   exit 126
 fi
 
@@ -97,7 +97,12 @@ except subprocess.TimeoutExpired:
 if timed_out:
     sys.exit(124)
 else:
-    sys.exit(proc.returncode)
+    # When killed by signal, proc.returncode is negative (e.g., -10 for SIGUSR1).
+    # Convert to 128 + abs(returncode) to match shell convention.
+    rc = proc.returncode
+    if rc < 0:
+        sys.exit(128 + (-rc))
+    sys.exit(rc)
 " "$TIMEOUT_SEC" "$@"
 }
 
@@ -183,19 +188,29 @@ _fallback_bash() {
 
 # If OPK_TIMEOUT_FORCE_FALLBACK=1, skip system timeout
 if [ "${OPK_TIMEOUT_FORCE_FALLBACK:-0}" != "1" ]; then
-  # Try GNU/BSD timeout first
+  # Try GNU/BSD/uutils timeout first
   # Use --kill-after=1s to ensure process tree cleanup on timeout.
   # Do NOT use --signal=KILL — it may cause exit code 137 instead of 124
   # on some systems (GNU coreutils). Default signal is SIGTERM which is correct.
   if _has_cmd timeout; then
     timeout --kill-after=1s "$TIMEOUT_SEC" "$@"
-    exit $?
+    _rc=$?
+    # uutils coreutils returns raw signal number (e.g., 10 for SIGUSR1)
+    # instead of 128+signal (e.g., 138). Convert to shell convention.
+    if [ "$_rc" -ge 1 ] && [ "$_rc" -le 31 ]; then
+      exit $((128 + _rc))
+    fi
+    exit "$_rc"
   fi
 
   # Try BSD timeout (macOS via coreutils — gtimeout)
   if _has_cmd gtimeout; then
     gtimeout --kill-after=1s "$TIMEOUT_SEC" "$@"
-    exit $?
+    _rc=$?
+    if [ "$_rc" -ge 1 ] && [ "$_rc" -le 31 ]; then
+      exit $((128 + _rc))
+    fi
+    exit "$_rc"
   fi
 fi
 
