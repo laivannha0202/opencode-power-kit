@@ -172,7 +172,7 @@ fi
 
 # --- 9. Tests exist ---
 section "9. Test Coverage"
-for s in test-permission-rules.py test-safety-plugin.mjs test-opk-mode.sh test-installer-preservation.sh test-timeout.sh test-runtime-behavior.sh; do
+for s in test-permission-rules.py test-safety-plugin.mjs test-opk-mode.sh test-installer-preservation.sh test-timeout.sh test-timeout.ps1 test-runtime-behavior.sh; do
   if [ -f "$KIT_DIR/scripts/$s" ]; then
     pass "scripts/$s exists"
   else
@@ -296,6 +296,14 @@ run_cmd "test-installer-preservation" \
 
 run_cmd "test-timeout" \
   "bash $KIT_DIR/scripts/test-timeout.sh"
+
+if command -v pwsh >/dev/null 2>&1; then
+  run_cmd "test-timeout.ps1" \
+    "pwsh -NoProfile -File '$KIT_DIR/scripts/test-timeout.ps1'"
+else
+  echo "  ⏭️  test-timeout.ps1 — SKIP (pwsh not found)"
+  RESULTS+=("SKIP|test-timeout.ps1|skip|pwsh not found")
+fi
 
 run_cmd "test-runtime-behavior" \
   "bash $KIT_DIR/scripts/test-runtime-behavior.sh"

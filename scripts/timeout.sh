@@ -44,6 +44,24 @@ _has_cmd() {
   command -v "$1" >/dev/null 2>&1
 }
 
+# ── Detect GNU Coreutils timeout ──
+# Only GNU coreutils `timeout` has correct exit-code semantics:
+#   124 on timeout, command exit code on normal exit, 128+signal on signal death.
+# uutils / BusyBox return raw signal numbers (e.g. 10 for SIGUSR1) instead of 128+signal,
+# so we MUST NOT use them — fall back to Python which handles this correctly.
+_gnu_timeout_cmd() {
+  local _cand
+  for _cand in timeout gtimeout; do
+    if _has_cmd "$_cand"; then
+      if "$_cand" --version 2>&1 | grep -qi 'GNU coreutils'; then
+        echo "$_cand"
+        return 0
+      fi
+    fi
+  done
+  return 1
+}
+
 # ── Portable Python fallback ──
 # Uses Python subprocess with start_new_session=True to create a new session,
 # and os.killpg to kill the entire process tree. Works on macOS without setsid.
@@ -186,31 +204,15 @@ _fallback_bash() {
 
 # ── Main logic ──
 
-# If OPK_TIMEOUT_FORCE_FALLBACK=1, skip system timeout
+# If OPK_TIMEOUT_FORCE_FALLBACK=1, skip system timeout entirely
 if [ "${OPK_TIMEOUT_FORCE_FALLBACK:-0}" != "1" ]; then
-  # Try GNU/BSD/uutils timeout first
-  # Use --kill-after=1s to ensure process tree cleanup on timeout.
-  # Do NOT use --signal=KILL — it may cause exit code 137 instead of 124
-  # on some systems (GNU coreutils). Default signal is SIGTERM which is correct.
-  if _has_cmd timeout; then
-    timeout --kill-after=1s "$TIMEOUT_SEC" "$@"
-    _rc=$?
-    # uutils coreutils returns raw signal number (e.g., 10 for SIGUSR1)
-    # instead of 128+signal (e.g., 138). Convert to shell convention.
-    if [ "$_rc" -ge 1 ] && [ "$_rc" -le 31 ]; then
-      exit $((128 + _rc))
-    fi
-    exit "$_rc"
-  fi
-
-  # Try BSD timeout (macOS via coreutils — gtimeout)
-  if _has_cmd gtimeout; then
-    gtimeout --kill-after=1s "$TIMEOUT_SEC" "$@"
-    _rc=$?
-    if [ "$_rc" -ge 1 ] && [ "$_rc" -le 31 ]; then
-      exit $((128 + _rc))
-    fi
-    exit "$_rc"
+  # Only use GNU Coreutils timeout — it has correct exit-code semantics.
+  # uutils / BusyBox return raw signal numbers instead of 128+signal,
+  # so we must NOT use them.
+  _gnu_cmd=""
+  if _gnu_cmd=$(_gnu_timeout_cmd); then
+    "$_gnu_cmd" --kill-after=1s "$TIMEOUT_SEC" "$@"
+    exit $?
   fi
 fi
 

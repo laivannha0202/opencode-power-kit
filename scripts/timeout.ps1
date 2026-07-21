@@ -14,7 +14,7 @@
 # Exit codes:
 #   0-N   — exit code from the command
 #   124   — timeout occurred
-#   125   — invalid arguments
+#   126   — invalid arguments
 # ─────────────────────────────────────────────────────────────────
 
 param(
@@ -29,7 +29,7 @@ param(
 
 if ($Seconds -le 0) {
     Write-Error "Error: timeout must be a positive integer"
-    exit 125
+    exit 126
 }
 
 # Helper: quote an argument that contains spaces or special characters
@@ -83,7 +83,7 @@ try {
     exit $process.ExitCode
 } catch {
     Write-Error "Error running command: $_"
-    exit 125
+    exit 126
 } finally {
     if ($process -ne $null) {
         $process.Dispose()

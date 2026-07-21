@@ -20,6 +20,7 @@
 #   F. no-setsid-grandchild — fallback without setsid kills grandchild
 #   G. signal-preservation  — command signal status preserved
 #   H. timeout-zero         — timeout 0 returns 126
+#   I. low-exit-codes       — exit codes 1,2,10,31,32,42,125,126,127 preserved
 # ─────────────────────────────────────────────────────────────────
 
 set -uo pipefail
@@ -404,6 +405,64 @@ case_timeout_zero() {
 }
 
 # ─────────────────────────────────────────────────────────────────
+# CASE I: Low exit codes — preserve 1,2,10,31,32,42,125,126,127
+# ─────────────────────────────────────────────────────────────────
+case_low_exit_codes() {
+  case_start
+  echo ""
+  echo "=== Case I: Low exit codes preserved ==="
+
+  local _low_codes=(1 2 10 31 32 42 125 126 127)
+  local _code _direct _system _bash_fb _python_fb
+
+  for _code in "${_low_codes[@]}"; do
+    # Ground truth
+    sh -c "exit $_code" 2>/dev/null; _direct=$?
+
+    # A. System / default path
+    "$TIMEOUT_TOOL" 5 sh -c "exit $_code" 2>/dev/null; _system=$?
+
+    # B. Forced Bash fallback (if setsid available)
+    _bash_fb="skip"
+    if command -v setsid &>/dev/null; then
+      env OPK_TIMEOUT_FORCE_FALLBACK=1 "$TIMEOUT_TOOL" 5 sh -c "exit $_code" 2>/dev/null; _bash_fb=$?
+    fi
+
+    # C. Forced Python fallback
+    _python_fb="skip"
+    if command -v python3 &>/dev/null; then
+      env OPK_TIMEOUT_FORCE_FALLBACK=1 OPK_TIMEOUT_DISABLE_SETSID=1 \
+        "$TIMEOUT_TOOL" 5 sh -c "exit $_code" 2>/dev/null; _python_fb=$?
+    fi
+
+    # Check system path matches direct
+    if [ "$_system" -eq "$_direct" ]; then
+      pass "exit $_code: system=$_system == direct=$_direct"
+    else
+      fail "exit $_code: system=$_system != direct=$_direct"
+    fi
+
+    # Check Bash fallback matches direct
+    if [ "$_bash_fb" != "skip" ]; then
+      if [ "$_bash_fb" -eq "$_direct" ]; then
+        pass "exit $_code: bash_fb=$_bash_fb == direct=$_direct"
+      else
+        fail "exit $_code: bash_fb=$_bash_fb != direct=$_direct"
+      fi
+    fi
+
+    # Check Python fallback matches direct
+    if [ "$_python_fb" != "skip" ]; then
+      if [ "$_python_fb" -eq "$_direct" ]; then
+        pass "exit $_code: python_fb=$_python_fb == direct=$_direct"
+      else
+        fail "exit $_code: python_fb=$_python_fb != direct=$_direct"
+      fi
+    fi
+  done
+}
+
+# ─────────────────────────────────────────────────────────────────
 # Main: parse arguments and run cases
 # ─────────────────────────────────────────────────────────────────
 main() {
@@ -432,9 +491,10 @@ main() {
         no-setsid-grandchild) case_no_setsid_grandchild ;;
         signal-preservation)  case_signal_preservation ;;
         timeout-zero)         case_timeout_zero ;;
+        low-exit-codes)       case_low_exit_codes ;;
         *)
           echo "Unknown case: $case_name" >&2
-          echo "Available: default-timeout, forced-timeout, exit-code, forced-exit-code, grandchild, no-setsid-grandchild, signal-preservation, timeout-zero" >&2
+          echo "Available: default-timeout, forced-timeout, exit-code, forced-exit-code, grandchild, no-setsid-grandchild, signal-preservation, timeout-zero, low-exit-codes" >&2
           exit 1
           ;;
       esac
@@ -448,6 +508,7 @@ main() {
       case_no_setsid_grandchild
       case_signal_preservation
       case_timeout_zero
+      case_low_exit_codes
       ;;
   esac
 
