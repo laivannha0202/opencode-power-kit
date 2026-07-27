@@ -20,8 +20,9 @@
 #   126   — invalid arguments
 #
 # Environment:
-#   OPK_TIMEOUT_FORCE_FALLBACK=1   — force bash/Python fallback even if timeout available
-#   OPK_TIMEOUT_DISABLE_SETSID=1   — disable setsid (use Python fallback for process groups)
+#   OPK_TIMEOUT_BACKEND=auto|gnu|python|bash — select timeout backend (default: auto)
+#   OPK_TIMEOUT_FORCE_FALLBACK=1   — in auto mode, skip GNU and use a fallback
+#   OPK_TIMEOUT_DISABLE_SETSID=1   — disable Bash fallback (Python remains available)
 # ─────────────────────────────────────────────────────────────────
 
 # Do NOT use set -e here — we need to capture exit codes safely.
@@ -207,26 +208,54 @@ _fallback_bash() {
 
 # ── Main logic ──
 
-# If OPK_TIMEOUT_FORCE_FALLBACK=1, skip system timeout entirely
-if [ "${OPK_TIMEOUT_FORCE_FALLBACK:-0}" != "1" ]; then
-  # Only use GNU Coreutils timeout — it has correct exit-code semantics.
-  # uutils / BusyBox return raw signal numbers instead of 128+signal,
-  # so we must NOT use them.
-  _gnu_cmd=""
-  if _gnu_cmd=$(_gnu_timeout_cmd); then
-    "$_gnu_cmd" --kill-after=1s "$TIMEOUT_SEC" "$@"
-    exit $?
-  fi
-fi
+_timeout_backend="${OPK_TIMEOUT_BACKEND:-auto}"
+case "$_timeout_backend" in
+  auto|gnu|python|bash) ;;
+  *)
+    echo "Error: invalid OPK_TIMEOUT_BACKEND '$_timeout_backend' (expected auto, gnu, python, or bash)" >&2
+    exit 126
+    ;;
+esac
 
-# Fallback: prefer Python process groups when available. It handles nested
-# timeout wrappers reliably via start_new_session + killpg. Keep the Bash
-# watchdog as the final fallback for minimal environments without Python.
-if _has_cmd python3; then
-  _fallback_python "$@"
-elif _has_cmd setsid && [ "${OPK_TIMEOUT_DISABLE_SETSID:-0}" != "1" ]; then
-  _fallback_bash "$@"
-else
-  echo "Error: python3 or setsid is required for fallback timeout" >&2
-  exit 125
-fi
+case "$_timeout_backend" in
+  gnu)
+    _gnu_cmd=""
+    if _gnu_cmd=$(_gnu_timeout_cmd); then
+      "$_gnu_cmd" --kill-after=1s "$TIMEOUT_SEC" "$@"
+      exit $?
+    fi
+    echo "Error: GNU Coreutils timeout backend is not available" >&2
+    exit 125
+    ;;
+  python)
+    _fallback_python "$@"
+    ;;
+  bash)
+    if _has_cmd setsid && [ "${OPK_TIMEOUT_DISABLE_SETSID:-0}" != "1" ]; then
+      _fallback_bash "$@"
+    fi
+    echo "Error: Bash timeout backend requires setsid" >&2
+    exit 125
+    ;;
+  auto)
+    # OPK_TIMEOUT_FORCE_FALLBACK remains backward compatible by skipping only
+    # the GNU backend. Explicit OPK_TIMEOUT_BACKEND values always select the
+    # requested backend.
+    if [ "${OPK_TIMEOUT_FORCE_FALLBACK:-0}" != "1" ]; then
+      _gnu_cmd=""
+      if _gnu_cmd=$(_gnu_timeout_cmd); then
+        "$_gnu_cmd" --kill-after=1s "$TIMEOUT_SEC" "$@"
+        exit $?
+      fi
+    fi
+
+    if _has_cmd python3; then
+      _fallback_python "$@"
+    elif _has_cmd setsid && [ "${OPK_TIMEOUT_DISABLE_SETSID:-0}" != "1" ]; then
+      _fallback_bash "$@"
+    else
+      echo "Error: no timeout backend available (need GNU timeout, python3, or setsid)" >&2
+      exit 125
+    fi
+    ;;
+esac

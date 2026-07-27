@@ -162,7 +162,10 @@ $argTests = @(
     @("hello ""world""", "hello ""world"""),
     @("path with spaces/file.txt", "path with spaces/file.txt"),
     @("", ""),
-    @("xin chào Việt Nam", "xin chào Việt Nam")
+    @("xin chào Việt Nam", "xin chào Việt Nam"),
+    @("  leading whitespace", "  leading whitespace"),
+    @("trailing whitespace  ", "trailing whitespace  "),
+    @("   ", "   ")
 )
 
 # Child script that writes its argument to a file
@@ -171,7 +174,7 @@ param(
     [string]$Value,
     [string]$OutputFile
 )
-Set-Content -LiteralPath $OutputFile -NoNewline -Value $Value
+[System.IO.File]::WriteAllText($OutputFile, $Value)
 '@
 
 $tmpFile = [System.IO.Path]::GetTempFileName()
@@ -193,15 +196,15 @@ try {
         if ($rc -ne 0) {
             Fail "Argument test: child exited $rc for '$expected'"
         } else {
-            $content = Get-Content -Path $tmpFile -Raw
-            if ($content.Trim() -eq $expected) {
+            $content = [System.IO.File]::ReadAllText($tmpFile)
+            if ($content -ceq $expected) {
                 Pass "Argument test: '$expected'"
             } else {
-                Fail "Argument test: got '$($content.Trim())', expected '$expected'"
+                Fail "Argument test: got '$content', expected '$expected'"
             }
         }
-        # Reset tmp file
-        Set-Content -Path $tmpFile -NoNewline -Value ""
+        # Reset tmp file without adding or normalizing line endings.
+        [System.IO.File]::WriteAllText($tmpFile, "")
     }
 } finally {
     Remove-Item -Path $childFile -Force -ErrorAction SilentlyContinue

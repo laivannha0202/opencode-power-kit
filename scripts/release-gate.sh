@@ -2,7 +2,7 @@
 # ============================================================================
 # release-gate.sh — Release readiness gate
 # Kiểm tra tất cả điều kiện trước khi release.
-# Exit 0 = PASS (ready to release), exit 1 = FAIL (fix first).
+# Strict by default. Use --allow-platform-skips only for conditional local checks.
 # ============================================================================
 set -uo pipefail
 # NOTE: khong dung -e vi script tinh exit code rieng cho tung command
@@ -15,6 +15,21 @@ KIT_DIR="$(cd "$(dirname "$SELF")/.." && pwd)"
 VERSION="$(cat "$KIT_DIR/VERSION" 2>/dev/null || echo "?")"
 errors=0
 warnings=0
+required_skips=0
+allow_platform_skips=0
+
+case "${1:-}" in
+  "") ;;
+  --allow-platform-skips) allow_platform_skips=1 ;;
+  *)
+    echo "Usage: $(basename "$0") [--allow-platform-skips]" >&2
+    exit 126
+    ;;
+esac
+if [ "$#" -gt 1 ]; then
+  echo "Usage: $(basename "$0") [--allow-platform-skips]" >&2
+  exit 126
+fi
 
 pass()  { echo "  ✅ $*"; }
 warn()  { echo "  ⚠️  $*"; warnings=$((warnings + 1)); }
@@ -211,15 +226,17 @@ run_cmd() {
   case "$interp" in
     python3)
       if ! command -v python3 &>/dev/null; then
-        echo "  ⏭️  $label — SKIP (python3 not found)"
-        RESULTS+=("SKIP|$label|skip|python3 not found")
+        echo "  ❌ $label — FAIL (required dependency python3 not found)"
+        RESULTS+=("FAIL|$label|missing|python3 not found")
+        errors=$((errors + 1))
         return
       fi
       ;;
     node)
       if ! command -v node &>/dev/null; then
-        echo "  ⏭️  $label — SKIP (node not found)"
-        RESULTS+=("SKIP|$label|skip|node not found")
+        echo "  ❌ $label — FAIL (required dependency node not found)"
+        RESULTS+=("FAIL|$label|missing|node not found")
+        errors=$((errors + 1))
         return
       fi
       ;;
@@ -304,8 +321,9 @@ if command -v pwsh >/dev/null 2>&1; then
   run_cmd "test-timeout.ps1" \
     "pwsh -NoProfile -File '$KIT_DIR/scripts/test-timeout.ps1'"
 else
-  echo "  ⏭️  test-timeout.ps1 — SKIP (pwsh not found)"
-  RESULTS+=("SKIP|test-timeout.ps1|skip|pwsh not found")
+  echo "  ⏭️  test-timeout.ps1 — REQUIRED SKIP (pwsh not found)"
+  RESULTS+=("SKIP|test-timeout.ps1|required-skip|pwsh not found")
+  required_skips=$((required_skips + 1))
 fi
 
 run_cmd "test-runtime-behavior" \
@@ -321,8 +339,9 @@ if command -v pwsh >/dev/null 2>&1; then
   run_cmd "verify.ps1" \
     "pwsh -NoProfile -File '$KIT_DIR/verify.ps1'"
 else
-  echo "  ⏭️  verify.ps1 — SKIP (pwsh not found)"
-  RESULTS+=("SKIP|verify.ps1|skip|pwsh not found")
+  echo "  ⏭️  verify.ps1 — REQUIRED SKIP (pwsh not found)"
+  RESULTS+=("SKIP|verify.ps1|required-skip|pwsh not found")
+  required_skips=$((required_skips + 1))
 fi
 
 run_cmd "doctor.sh" \
@@ -422,8 +441,16 @@ echo ""
 echo "============================="
 if [ "$errors" -gt 0 ]; then
   echo "❌ RELEASE GATE FAILED — $errors error(s), $warnings warning(s)"
-  echo "   Fix errors before releasing."
+  echo "   NOT RELEASE READY — fix required failures."
   exit 1
+elif [ "$required_skips" -gt 0 ] && [ "$allow_platform_skips" -ne 1 ]; then
+  echo "❌ RELEASE GATE BLOCKED — $required_skips required platform check(s) skipped"
+  echo "   NOT RELEASE READY — run every required platform test successfully."
+  exit 1
+elif [ "$required_skips" -gt 0 ]; then
+  echo "⚠️  CONDITIONAL PASS — NOT READY FOR CROSS-PLATFORM RELEASE"
+  echo "   $required_skips required platform check(s) skipped; local available tests passed."
+  exit 0
 else
   echo "✅ RELEASE GATE PASSED — $warnings warning(s)"
   echo "   Ready to release v$VERSION"

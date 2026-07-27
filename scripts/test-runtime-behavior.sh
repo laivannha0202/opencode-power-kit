@@ -135,8 +135,17 @@ section "7. Release Gate"
 if [ "${RELEASE_GATE_RUNNING:-0}" -eq 1 ]; then
   skip_test "Release gate" "already running inside release-gate.sh (skip to avoid loop)"
 elif [ -f "$SCRIPT_DIR/release-gate.sh" ]; then
-  run_test "Release gate: passes" \
-    "bash $SCRIPT_DIR/release-gate.sh 2>/dev/null"
+  if command -v pwsh >/dev/null 2>&1; then
+    run_test "Release gate: strict all-platform semantics" \
+      "output=\$(bash '$SCRIPT_DIR/release-gate.sh' 2>&1); rc=\$?; [ \$rc -eq 0 ] && printf '%s\\n' \"\$output\" | grep -Fq 'Ready to release'"
+    run_test "Release gate: allow mode remains fully ready" \
+      "output=\$(bash '$SCRIPT_DIR/release-gate.sh' --allow-platform-skips 2>&1); rc=\$?; [ \$rc -eq 0 ] && printf '%s\\n' \"\$output\" | grep -Fq 'Ready to release'"
+  else
+    run_test "Release gate: strict blocks platform SKIP" \
+      "output=\$(bash '$SCRIPT_DIR/release-gate.sh' 2>&1); rc=\$?; [ \$rc -ne 0 ] && printf '%s\\n' \"\$output\" | grep -Fq 'NOT RELEASE READY'"
+    run_test "Release gate: conditional local semantics" \
+      "output=\$(bash '$SCRIPT_DIR/release-gate.sh' --allow-platform-skips 2>&1); rc=\$?; [ \$rc -eq 0 ] && printf '%s\\n' \"\$output\" | grep -Fq 'CONDITIONAL PASS — NOT READY FOR CROSS-PLATFORM RELEASE'"
+  fi
 else
   skip_test "Release gate" "release-gate.sh not found"
 fi
