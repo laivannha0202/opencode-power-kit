@@ -255,8 +255,11 @@ run_cmd() {
 
 # Run eval harness (workflow regression tests, no model calls)
 if [ -f "$KIT_DIR/evals/run.sh" ]; then
+  PREV_CMD_TIMEOUT=$CMD_TIMEOUT
+  CMD_TIMEOUT=300  # evals can be slow due to script_exec checks
   run_cmd "evals/run.sh" \
     "bash $KIT_DIR/evals/run.sh"
+  CMD_TIMEOUT=$PREV_CMD_TIMEOUT
 fi
 
 # ============================================================================

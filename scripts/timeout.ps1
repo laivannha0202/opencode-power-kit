@@ -5,11 +5,11 @@
 # Runs a command with a timeout. Returns exit code 124 if timeout occurs.
 #
 # Usage:
-#   pwsh timeout.ps1 -Seconds <N> -Command <string> [-Args <string[]>]
+#   pwsh -NoProfile -File timeout.ps1 -Seconds <N> -Command <string> [-Args <string[]>]
 #
 # Examples:
-#   pwsh timeout.ps1 -Seconds 5 -Command "sleep" -Args 10
-#   pwsh timeout.ps1 -Seconds 5 -Command "sleep" -Args 2
+#   pwsh -NoProfile -File timeout.ps1 -Seconds 5 -Command "sleep" -Args 10
+#   pwsh -NoProfile -File timeout.ps1 -Seconds 5 -Command "sleep" -Args 2
 #
 # Exit codes:
 #   0-N   — exit code from the command
@@ -32,32 +32,21 @@ if ($Seconds -le 0) {
     exit 126
 }
 
-# Helper: quote an argument that contains spaces or special characters
-function Protect-Argument {
-    param([string]$Arg)
-    if ($Arg -match '[\s"''`]') {
-        # Contains whitespace or quotes — escape internal double-quotes and wrap
-        $escaped = $Arg -replace '"', '""'
-        return "`"$escaped`""
-    }
-    return $Arg
-}
-
 $process = $null
 try {
-    # Build argument list with proper quoting
-    $quotedArgs = @()
-    foreach ($a in $Args) {
-        $quotedArgs += Protect-Argument $a
+    # Build ProcessStartInfo with ArgumentList — no shell quoting
+    $psi = [System.Diagnostics.ProcessStartInfo]::new()
+    $psi.FileName = $Command
+    $psi.UseShellExecute = $false
+    if ($null -eq $psi.ArgumentList) {
+        throw "ProcessStartInfo.ArgumentList is unavailable; PowerShell timeout requires a runtime with argv support"
     }
 
-    # Start the process using Start-Process -PassThru (no -Wait)
-    # -ArgumentList handles the argument array properly
-    if ($quotedArgs.Count -gt 0) {
-        $process = Start-Process -FilePath $Command -ArgumentList $quotedArgs -PassThru -NoNewWindow
-    } else {
-        $process = Start-Process -FilePath $Command -PassThru -NoNewWindow
+    foreach ($arg in $Args) {
+        [void]$psi.ArgumentList.Add($arg)
     }
+
+    $process = [System.Diagnostics.Process]::Start($psi)
 
     # Wait with timeout using WaitForExit(milliseconds)
     $timeoutMs = $Seconds * 1000
@@ -66,16 +55,13 @@ try {
     if (-not $exited) {
         # Timeout — kill the entire process tree
         try {
-            $process.Kill($true)  # Kill entire process tree (child processes included)
+            $process.Kill($true)
         } catch {
-            # Fallback: try taskkill /T /F
-            try {
-                taskkill /PID $process.Id /T /F 2>$null
-            } catch {
-                # Last resort: kill the process without tree
-                try { $process.Kill() } catch {}
-            }
+            # Fallback: try killing without tree
+            try { $process.Kill() } catch {}
         }
+        # Reap the process
+        try { $process.WaitForExit() } catch {}
         exit 124
     }
 

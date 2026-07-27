@@ -184,6 +184,9 @@ _fallback_bash() {
   # No set -e / set +e toggling needed: script does not use set -e globally
   wait "$cmd_pid" 2>/dev/null
   exit_code=$?
+  # The main wait has already reaped the command. Clear the PID so EXIT
+  # cleanup does not try to wait on the same process a second time.
+  cmd_pid=""
 
   # Stop the watchdog (it may have already exited)
   kill "$watchdog_pid" 2>/dev/null || true
@@ -216,11 +219,14 @@ if [ "${OPK_TIMEOUT_FORCE_FALLBACK:-0}" != "1" ]; then
   fi
 fi
 
-# Fallback: Python or bash-native process + watchdog
-# Python fallback is preferred when setsid is unavailable (macOS)
-# because it properly manages process groups via start_new_session.
-if [ "${OPK_TIMEOUT_DISABLE_SETSID:-0}" = "1" ] || ! _has_cmd setsid; then
+# Fallback: prefer Python process groups when available. It handles nested
+# timeout wrappers reliably via start_new_session + killpg. Keep the Bash
+# watchdog as the final fallback for minimal environments without Python.
+if _has_cmd python3; then
   _fallback_python "$@"
-else
+elif _has_cmd setsid && [ "${OPK_TIMEOUT_DISABLE_SETSID:-0}" != "1" ]; then
   _fallback_bash "$@"
+else
+  echo "Error: python3 or setsid is required for fallback timeout" >&2
+  exit 125
 fi
