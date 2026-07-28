@@ -582,7 +582,7 @@ Phù hợp nhất cho project dùng: NestJS backend, React/Vite frontend, MySQL 
 | Agent routing | 16 specialized agents with explicit delegation | Routing is manual/explicit, not auto-dispatched | `grep -c "agent:" opencode-global/agents/*.md` |
 | Safety | CommonJS safety plugin, opk-command-guard, cleanup-safe | Instruction-based, not sandbox; depends on model compliance | `node scripts/test-safety-plugin.mjs` |
 | Build verification | 27 behavioral contracts, eval regression suite | Contracts verify workflow, not model output quality | `bash evals/run.sh` |
-| Cross-platform | Bash + PowerShell scripts, portable timeout fallback | PowerShell not runtime-verified if pwsh unavailable | `bash verify.sh && pwsh verify.ps1` |
+| Cross-platform | Bash + PowerShell scripts, portable timeout fallback | PowerShell chỉ được coi là verified sau khi manual workflow Windows thực sự xanh | `bash verify.sh && pwsh -NoProfile -File scripts/test-timeout.ps1 && pwsh -NoProfile -File verify.ps1 -NoPython` |
 | Third-party integration | Superpowers v6.1.1, BMAD 6.9.0, GSD 1.6.1, ECC, Hermes, RAG, Headroom, AgentMemory | Opt-in only; no auto-enable; user installs per dependency | `python3 scripts/audit-upstreams.py --check` |
 | Model-agnostic | No model discovery/routing/benchmark/scoring | User selects model in OpenCode UI; OPK does not manage models | `grep -r "model:" opencode-global/agents/*.md \| grep -v "^#"` |
 
@@ -1184,7 +1184,7 @@ OPK không chọn, route, benchmark, hay override model. User tự chọn model 
 
 - **OPK model-agnostic** — Không discover, route, benchmark, cache model.
 - **Không per-agent override** — Mọi agent dùng chung model user đã chọn.
-- **Không API key** — OPK không đọc `auth.json`, không in credential.
+- **Core không yêu cầu provider API key** — Không cần `ANTHROPIC_API_KEY` hoặc `OPENAI_API_KEY`; OPK không đọc `auth.json` và không in credential.
 - **Không tự bật model trả phí** — OPK không biết user dùng model nào.
 
 ### `opk model status`
@@ -1197,6 +1197,8 @@ opk: Model-agnostic mode — OPK không quản lý model.
 
 ### Safety
 
+- Workflow cải thiện consistency và verification discipline; không làm tăng intelligence của model.
+- Model vẫn do user chọn thủ công trong OpenCode; mọi agent/skill inherit lựa chọn đó.
 - Không đọc `~/.local/share/opencode/auth.json`
 - Không in credential
 - Không ghi API key vào report/log
@@ -1259,7 +1261,7 @@ tránh lỗi phổ biến (edit quá nhiều file, chạy lệnh destructive, pr
 ## Xử lý sự cố
 
 - **GitHub Actions không chạy?** Actions là **optional** — chạy thủ công qua tab "Actions" trên GitHub (`workflow_dispatch`). Local validation (`verify.sh` / `verify.ps1`) là kiểm tra chính.
-- **Verify local pass nhưng Actions fail?** Actions chạy trong môi trường GitHub runner; nếu fail thường là do môi trường khác biệt, không phải lỗi code. Chạy `bash verify.sh` local để kiểm tra thực tế.
+- **Verify local pass nhưng Actions fail?** Đọc log và điều tra khác biệt giữa local với runner; không mặc định coi đó là lỗi môi trường. Chạy full pipeline trong [`docs/LOCAL_VALIDATION.md`](./docs/LOCAL_VALIDATION.md), gồm PowerShell runtime tests và `doctor.sh --deep`; không release khi required check fail.
 - **Format validation fail?** Chạy `python3 scripts/validate-formatting.py` để biết chi tiết, sửa các lỗi line count/YAML/markdown.
 - **Cần giúp đỡ?** Chạy `opk doctor` để chẩn đoán, hoặc xem [docs/](./docs/) để biết thêm chi tiết.
 

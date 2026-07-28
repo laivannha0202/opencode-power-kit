@@ -1,368 +1,360 @@
 # ─────────────────────────────────────────────────────────────────
-# test-timeout.ps1 — Comprehensive timeout.ps1 tests
+# test-timeout.ps1 — Executable cross-platform timeout.ps1 tests
 # opencode-power-kit v2.1.0
 #
-# Tests timeout.ps1 behaviors: timeout, exit code, argument handling,
-# grandchild cleanup.
-#
-# Usage:
-#   pwsh -NoProfile -File scripts/test-timeout.ps1
-#
-# Cases:
-#   A. timeout-returns-124   — timeout.ps1 returns 124 on timeout
-#   B. exit-code-preserved   — exit code from child preserved
-#   C. argument-with-spaces  — real argv passing with spaces
-#   D. grandchild-cleanup    — timeout kills grandchild processes
-#   E. timeout-zero          — timeout 0 returns 126
+# Runs on PowerShell 7 for Linux and Windows. Every child process has an
+# outer timeout so a regression fails instead of hanging the workflow.
 # ─────────────────────────────────────────────────────────────────
 
-$ErrorActionPreference = "Continue"
+$ErrorActionPreference = "Stop"
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $TimeoutPs1 = Join-Path $ScriptDir "timeout.ps1"
+$PwshPath = (Get-Process -Id $PID).Path
+$SuiteDeadline = [DateTime]::UtcNow.AddMinutes(3)
+$OuterTimeoutMs = 15000
 
 $passCount = 0
 $failCount = 0
 $skipCount = 0
 $caseCount = 0
+$tempPaths = [System.Collections.Generic.List[string]]::new()
+$cleanupProcesses = [System.Collections.Generic.List[object]]::new()
 
-function Pass($msg) {
-    Write-Host "  PASS: $msg"
+function Pass([string]$Message) {
+    Write-Host "  PASS: $Message"
     $script:passCount++
 }
 
-function Fail($msg) {
-    Write-Host "  FAIL: $msg"
+function Fail([string]$Message) {
+    Write-Host "  FAIL: $Message"
     $script:failCount++
 }
 
-function Skip($msg) {
-    Write-Host "  SKIP: $msg"
-    $script:skipCount++
+function Start-Case([string]$Name) {
+    $script:caseCount++
+    Write-Host ""
+    Write-Host "=== $Name ==="
 }
 
-function Info($msg) {
-    Write-Host "  INFO: $msg"
+function Assert-Equal([string]$Label, $Expected, $Actual) {
+    if ($Expected -ceq $Actual) {
+        Pass "$Label ($Actual)"
+    } else {
+        Fail "$Label expected '$Expected', got '$Actual'"
+    }
 }
 
-# ── Helper: run timeout.ps1 via a temporary driver.ps1 ──────────
-# The driver.ps1 receives:
-#   -TimeoutPs1 <path> -Seconds <N> -Command <string> -ArgsJson <json>
-# It calls timeout.ps1 with proper PowerShell argument binding.
-function Run-TimeoutDirect {
+function New-TempPath([string]$Extension = "") {
+    $path = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName() + $Extension)
+    $script:tempPaths.Add($path)
+    return $path
+}
+
+function Get-ProcessIdentity([int]$ProcessId) {
+    try {
+        $process = Get-Process -Id $ProcessId -ErrorAction Stop
+        return [string]$process.StartTime.ToUniversalTime().Ticks
+    } catch {
+        return $null
+    }
+}
+
+function Register-TestProcess([int]$ProcessId, [string]$Identity) {
+    $script:cleanupProcesses.Add([pscustomobject]@{ ProcessId = $ProcessId; Identity = $Identity })
+}
+
+function Stop-TestProcessSafely([int]$ProcessId, [string]$ExpectedIdentity) {
+    $currentIdentity = Get-ProcessIdentity -ProcessId $ProcessId
+    if ($null -eq $currentIdentity) {
+        return
+    }
+    if ($currentIdentity -cne $ExpectedIdentity) {
+        Fail "cleanup refused reused PID $ProcessId (identity changed)"
+        return
+    }
+    Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+}
+
+function Wait-ProcessGone([int]$ProcessId, [string]$ExpectedIdentity, [int]$Milliseconds = 5000) {
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    while ($stopwatch.ElapsedMilliseconds -lt $Milliseconds) {
+        $currentIdentity = Get-ProcessIdentity -ProcessId $ProcessId
+        if ($null -eq $currentIdentity -or $currentIdentity -cne $ExpectedIdentity) {
+            return $true
+        }
+        Start-Sleep -Milliseconds 100
+    }
+    return $false
+}
+
+function Invoke-Timeout {
     param(
-        [int]$Seconds,
+        [string]$Seconds,
         [string]$Command,
-        [string[]]$CommandArgs
+        [string[]]$CommandArgs = @(),
+        [hashtable]$Environment = @{},
+        [int]$OuterMilliseconds = $OuterTimeoutMs
     )
 
-    # Create driver.ps1 content
+    if ([DateTime]::UtcNow -ge $SuiteDeadline) {
+        throw "PowerShell timeout suite exceeded its 3-minute outer deadline"
+    }
+
+    $driverFile = New-TempPath ".ps1"
     $driverContent = @'
 param(
     [string]$TimeoutPs1,
-    [int]$Seconds,
+    [string]$Seconds,
     [string]$Command,
     [string]$ArgsJson
 )
-$childArgs = @(ConvertFrom-Json $ArgsJson)
+$childArgs = @((ConvertFrom-Json -InputObject $ArgsJson))
 & $TimeoutPs1 -Seconds $Seconds -Command $Command -Args $childArgs
+exit $LASTEXITCODE
 '@
+    [System.IO.File]::WriteAllText($driverFile, $driverContent, [System.Text.UTF8Encoding]::new($false))
 
-    $driverFile = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName() + ".ps1")
-    Set-Content -Path $driverFile -Value $driverContent -Encoding UTF8
+    $argsJson = ConvertTo-Json -InputObject @($CommandArgs) -Compress
+    $psi = [System.Diagnostics.ProcessStartInfo]::new()
+    $psi.FileName = $PwshPath
+    $psi.UseShellExecute = $false
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    foreach ($argument in @(
+        "-NoProfile", "-File", $driverFile,
+        "-TimeoutPs1", $TimeoutPs1,
+        "-Seconds", [string]$Seconds,
+        "-Command", $Command,
+        "-ArgsJson", $argsJson
+    )) {
+        [void]$psi.ArgumentList.Add($argument)
+    }
+    foreach ($entry in $Environment.GetEnumerator()) {
+        $psi.Environment[[string]$entry.Key] = [string]$entry.Value
+    }
 
-    try {
-        $argsJson = ConvertTo-Json -InputObject $CommandArgs -Compress
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $process = [System.Diagnostics.Process]::Start($psi)
+    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+    $stderrTask = $process.StandardError.ReadToEndAsync()
+    $completed = $process.WaitForExit($OuterMilliseconds)
+    if (-not $completed) {
+        try { $process.Kill($true) } catch { try { $process.Kill() } catch {} }
+        try { [void]$process.WaitForExit(5000) } catch {}
+    }
 
-        $psi = [System.Diagnostics.ProcessStartInfo]::new()
-        $psi.FileName = "pwsh"
-        $psi.UseShellExecute = $false
-        $psi.RedirectStandardOutput = $true
-        $psi.RedirectStandardError = $true
-        $psi.ArgumentList.Add("-NoProfile")
-        $psi.ArgumentList.Add("-File")
-        $psi.ArgumentList.Add($driverFile)
-        $psi.ArgumentList.Add("-TimeoutPs1")
-        $psi.ArgumentList.Add($TimeoutPs1)
-        $psi.ArgumentList.Add("-Seconds")
-        $psi.ArgumentList.Add([string]$Seconds)
-        $psi.ArgumentList.Add("-Command")
-        $psi.ArgumentList.Add($Command)
-        $psi.ArgumentList.Add("-ArgsJson")
-        $psi.ArgumentList.Add($argsJson)
+    try { [void]$stdoutTask.Wait(5000) } catch {}
+    try { [void]$stderrTask.Wait(5000) } catch {}
+    $stdout = if ($stdoutTask.IsCompletedSuccessfully) { $stdoutTask.Result } else { "<stdout read timed out>" }
+    $stderr = if ($stderrTask.IsCompletedSuccessfully) { $stderrTask.Result } else { "<stderr read timed out>" }
+    $stopwatch.Stop()
+    $exitCode = if ($completed) { $process.ExitCode } else { -1 }
+    $process.Dispose()
 
-        $proc = [System.Diagnostics.Process]::Start($psi)
-        $proc.WaitForExit()
-        $exitCode = $proc.ExitCode
-        $proc.Dispose()
-        return $exitCode
-    } finally {
-        Remove-Item -Path $driverFile -Force -ErrorAction SilentlyContinue
+    return [pscustomobject]@{
+        ExitCode = $exitCode
+        Stdout = $stdout
+        Stderr = $stderr
+        ElapsedMilliseconds = $stopwatch.ElapsedMilliseconds
+        OuterTimedOut = -not $completed
     }
 }
 
-# ─────────────────────────────────────────────────────────────────
-# Check pwsh availability
-# ─────────────────────────────────────────────────────────────────
-$pwshPath = Get-Command pwsh -ErrorAction SilentlyContinue
-if (-not $pwshPath) {
-    Write-Host ""
-    Write-Host "SKIP: pwsh unavailable — all PowerShell tests skipped"
-    Write-Host "====================="
-    Write-Host "Cases: 0 | Assertions: 0 | PASS: 0 | FAIL: 0 | SKIP: 5"
-    exit 0
+function Assert-NoStackTrace([string]$Label, [string]$Text) {
+    if ($Text -match '(?im)\b(CategoryInfo|FullyQualifiedErrorId|ScriptStackTrace)\b|\bat .*\.ps1:\s*line\s+\d+') {
+        Fail "$Label emitted a PowerShell stack trace: $Text"
+    } else {
+        Pass "$Label emitted no PowerShell stack trace"
+    }
 }
-
-Write-Host ""
-Write-Host "timeout.ps1 test suite"
-Write-Host "====================="
-Write-Host ""
-Info "Timeout tool: $TimeoutPs1"
-Info "pwsh: $($pwshPath.Source)"
-
-# ─────────────────────────────────────────────────────────────────
-# CASE A: Timeout returns 124
-# ─────────────────────────────────────────────────────────────────
-$caseCount++
-Write-Host ""
-Write-Host "=== Case A: Timeout returns 124 ==="
-$rc = Run-TimeoutDirect -Seconds 1 -Command "pwsh" -CommandArgs @("-NoProfile", "-Command", "Start-Sleep -Seconds 10")
-if ($rc -eq 124) {
-    Pass "Timeout: exit 124"
-} else {
-    Fail "Timeout: expected 124, got $rc"
-}
-
-# ─────────────────────────────────────────────────────────────────
-# CASE B: Exit code preserved
-# ─────────────────────────────────────────────────────────────────
-$caseCount++
-Write-Host ""
-Write-Host "=== Case B: Exit code preserved ==="
-$rc = Run-TimeoutDirect -Seconds 5 -Command "pwsh" -CommandArgs @("-NoProfile", "-Command", "exit 42")
-if ($rc -eq 42) {
-    Pass "Exit code: exit 42 preserved"
-} else {
-    Fail "Exit code: expected 42, got $rc"
-}
-
-# ─────────────────────────────────────────────────────────────────
-# CASE C: Argument with spaces (real argv, not -Command string)
-# Tests that argument boundaries are preserved through:
-#   test-timeout.ps1 → timeout.ps1 → pwsh → child.ps1
-# ─────────────────────────────────────────────────────────────────
-$caseCount++
-Write-Host ""
-Write-Host "=== Case C: Argument with spaces ==="
-
-# Test cases: array of [expected, real argv value]
-# Each value crosses test-timeout.ps1 → timeout.ps1 → pwsh → child.ps1.
-$argTests = @(
-    @("hello world", "hello world"),
-    @("hello ""world""", "hello ""world"""),
-    @("path with spaces/file.txt", "path with spaces/file.txt"),
-    @("", ""),
-    @("xin chào Việt Nam", "xin chào Việt Nam"),
-    @("  leading whitespace", "  leading whitespace"),
-    @("trailing whitespace  ", "trailing whitespace  "),
-    @("   ", "   ")
-)
-
-# Child script that writes its argument to a file
-$childScriptTemplate = @'
-param(
-    [string]$Value,
-    [string]$OutputFile
-)
-[System.IO.File]::WriteAllText($OutputFile, $Value)
-'@
-
-$tmpFile = [System.IO.Path]::GetTempFileName()
-$childFile = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName() + ".ps1")
-Set-Content -Path $childFile -Value $childScriptTemplate -Encoding UTF8
 
 try {
-    foreach ($test in $argTests) {
-        $expected = $test[0]
-        $testValue = $test[1]
+    Write-Host ""
+    Write-Host "timeout.ps1 test suite"
+    Write-Host "====================="
+    Write-Host "  INFO: timeout tool: $TimeoutPs1"
+    Write-Host "  INFO: pwsh: $PwshPath"
 
-        # Pass the value as a real argv element to child.ps1; never embed it in -Command.
-        $rc = Run-TimeoutDirect -Seconds 5 -Command "pwsh" -CommandArgs @(
-            "-NoProfile", "-File", $childFile,
-            "-Value", $testValue,
-            "-OutputFile", $tmpFile
-        )
-
-        if ($rc -ne 0) {
-            Fail "Argument test: child exited $rc for '$expected'"
-        } else {
-            $content = [System.IO.File]::ReadAllText($tmpFile)
-            if ($content -ceq $expected) {
-                Pass "Argument test: '$expected'"
-            } else {
-                Fail "Argument test: got '$content', expected '$expected'"
-            }
-        }
-        # Reset tmp file without adding or normalizing line endings.
-        [System.IO.File]::WriteAllText($tmpFile, "")
+    Start-Case "Normal and child exit codes"
+    foreach ($code in @(0, 1, 2, 10, 31, 32, 42, 125, 126, 127)) {
+        $result = Invoke-Timeout -Seconds 5 -Command $PwshPath -CommandArgs @("-NoProfile", "-Command", "exit $code")
+        Assert-Equal "child exit $code preserved" $code $result.ExitCode
+        Assert-Equal "child exit $code outer timeout" $false $result.OuterTimedOut
     }
-} finally {
-    Remove-Item -Path $childFile -Force -ErrorAction SilentlyContinue
-    Remove-Item -Path $tmpFile -Force -ErrorAction SilentlyContinue
-}
 
-# ─────────────────────────────────────────────────────────────────
-# CASE D: Grandchild cleanup via timeout.ps1
-# Uses separate script files (no nested here-strings)
-# ─────────────────────────────────────────────────────────────────
-$caseCount++
-Write-Host ""
-Write-Host "=== Case D: Grandchild cleanup ==="
-$childMarker = [System.IO.Path]::GetTempFileName()
-$grandchildMarker = [System.IO.Path]::GetTempFileName()
+    Start-Case "Timeout and invalid arguments"
+    $result = Invoke-Timeout -Seconds 1 -Command $PwshPath -CommandArgs @("-NoProfile", "-Command", "Start-Sleep -Seconds 30")
+    Assert-Equal "real timeout returns 124" 124 $result.ExitCode
+    Assert-Equal "timeout invocation outer timeout" $false $result.OuterTimedOut
 
-# Create grandchild.ps1 as separate file
-$grandchildFile = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName() + ".ps1")
-$grandchildContent = @'
-param([string]$GrandchildMarker)
+    foreach ($seconds in @("0", "-1", "abc", "2147483648")) {
+        $result = Invoke-Timeout -Seconds $seconds -Command $PwshPath -CommandArgs @("-NoProfile", "-Command", "exit 0")
+        Assert-Equal "Seconds $seconds returns 126" 126 $result.ExitCode
+        Assert-NoStackTrace "Seconds $seconds" ($result.Stdout + $result.Stderr)
+    }
+    $result = Invoke-Timeout -Seconds "5" -Command ""
+    Assert-Equal "empty command returns 126" 126 $result.ExitCode
+    Assert-NoStackTrace "empty command" ($result.Stdout + $result.Stderr)
 
-Set-Content -LiteralPath $GrandchildMarker -NoNewline -Value $PID
+    $result = Invoke-Timeout -Seconds "5" -Command $PwshPath -Environment @{ OPK_TIMEOUT_TEST_FORCE_INTERNAL_FAILURE = "1" }
+    Assert-Equal "internal wrapper failure returns 125" 125 $result.ExitCode
+    Assert-NoStackTrace "internal wrapper failure" ($result.Stdout + $result.Stderr)
+
+    Start-Case "Command resolution failures"
+    $missing = "opk-command-that-does-not-exist-$PID"
+    $result = Invoke-Timeout -Seconds 5 -Command $missing
+    Assert-Equal "missing command returns 127" 127 $result.ExitCode
+    Assert-NoStackTrace "missing command" ($result.Stdout + $result.Stderr)
+
+    $wildcardTarget = Join-Path ([System.IO.Path]::GetTempPath()) $(if ($IsWindows) { "opk-wildcard-$PID-target.cmd" } else { "opk-wildcard-$PID-target" })
+    $tempPaths.Add($wildcardTarget)
+    $wildcardContent = if ($IsWindows) { "@exit /b 0" } else { "#!/bin/sh`nexit 0`n" }
+    [System.IO.File]::WriteAllText($wildcardTarget, $wildcardContent, [System.Text.UTF8Encoding]::new($false))
+    if (-not $IsWindows) {
+        & chmod 700 $wildcardTarget
+        if ($LASTEXITCODE -ne 0) { throw "chmod failed for wildcard fixture" }
+    }
+    $wildcardPath = [System.IO.Path]::GetTempPath() + [System.IO.Path]::PathSeparator + $env:PATH
+    $result = Invoke-Timeout -Seconds "5" -Command "opk-wildcard-$PID-*" -Environment @{ PATH = $wildcardPath }
+    Assert-Equal "wildcard command name is literal and returns 127" 127 $result.ExitCode
+    Assert-NoStackTrace "wildcard command" ($result.Stdout + $result.Stderr)
+
+    $badExecutable = if ($IsWindows) { New-TempPath ".exe" } else { New-TempPath }
+    [System.IO.File]::WriteAllText($badExecutable, "this is not an executable image", [System.Text.UTF8Encoding]::new($false))
+    if (-not $IsWindows) {
+        & chmod 700 $badExecutable
+        if ($LASTEXITCODE -ne 0) { throw "chmod failed for bad executable fixture" }
+    }
+    $result = Invoke-Timeout -Seconds 5 -Command $badExecutable
+    Assert-Equal "found but bad executable returns 126" 126 $result.ExitCode
+    Assert-NoStackTrace "bad executable" ($result.Stdout + $result.Stderr)
+
+    Start-Case "Argument boundaries"
+    $argumentChild = New-TempPath ".ps1"
+    $argumentOutput = New-TempPath ".txt"
+    $argumentChildContent = @'
+param(
+    [Parameter(Mandatory=$true)]
+    [AllowEmptyString()]
+    [string]$Value,
+    [Parameter(Mandatory=$true)]
+    [string]$OutputFile
+)
+[System.IO.File]::WriteAllText($OutputFile, $Value, [System.Text.UTF8Encoding]::new($false))
+'@
+    [System.IO.File]::WriteAllText($argumentChild, $argumentChildContent, [System.Text.UTF8Encoding]::new($false))
+    foreach ($value in @(
+        "hello world",
+        'hello "quoted" world',
+        "xin chào Việt Nam — 東京",
+        "",
+        "  leading whitespace",
+        "trailing whitespace  ",
+        "   "
+    )) {
+        $result = Invoke-Timeout -Seconds 5 -Command $PwshPath -CommandArgs @(
+            "-NoProfile", "-File", $argumentChild,
+            "-Value", $value,
+            "-OutputFile", $argumentOutput
+        )
+        Assert-Equal "argument child exits 0" 0 $result.ExitCode
+        $actual = [System.IO.File]::ReadAllText($argumentOutput)
+        Assert-Equal "argument preserved: <$value>" $value $actual
+    }
+
+    Start-Case "Early completion"
+    $result = Invoke-Timeout -Seconds 30 -Command $PwshPath -CommandArgs @("-NoProfile", "-Command", "exit 0")
+    Assert-Equal "early completion exits 0" 0 $result.ExitCode
+    if ($result.ElapsedMilliseconds -lt 5000) {
+        Pass "early completion does not wait for timeout ($($result.ElapsedMilliseconds) ms)"
+    } else {
+        Fail "early completion took $($result.ElapsedMilliseconds) ms"
+    }
+
+    Start-Case "Child and grandchild cleanup"
+    $childMarker = New-TempPath ".json"
+    $grandchildMarker = New-TempPath ".json"
+    $grandchildFile = New-TempPath ".ps1"
+    $childFile = New-TempPath ".ps1"
+
+    $grandchildContent = @'
+param([string]$Marker)
+$identity = [string](Get-Process -Id $PID).StartTime.ToUniversalTime().Ticks
+@{ pid = $PID; identity = $identity } | ConvertTo-Json -Compress | Set-Content -LiteralPath $Marker -NoNewline
 Start-Sleep -Seconds 600
 '@
-Set-Content -Path $grandchildFile -Value $grandchildContent -Encoding UTF8
-
-# Create child.ps1 as separate file
-$childFile = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName() + ".ps1")
-$childContent = @'
+    $childContent = @'
 param(
     [string]$PwshPath,
     [string]$ChildMarker,
     [string]$GrandchildScript,
     [string]$GrandchildMarker
 )
-
-Set-Content -LiteralPath $ChildMarker -NoNewline -Value $PID
-
-# Launch grandchild via ProcessStartInfo.ArgumentList.
+$identity = [string](Get-Process -Id $PID).StartTime.ToUniversalTime().Ticks
+@{ pid = $PID; identity = $identity } | ConvertTo-Json -Compress | Set-Content -LiteralPath $ChildMarker -NoNewline
 $psi = [System.Diagnostics.ProcessStartInfo]::new()
 $psi.FileName = $PwshPath
 $psi.UseShellExecute = $false
-if ($null -eq $psi.ArgumentList) {
-    throw "ProcessStartInfo.ArgumentList is unavailable"
+foreach ($argument in @("-NoProfile", "-File", $GrandchildScript, "-Marker", $GrandchildMarker)) {
+    [void]$psi.ArgumentList.Add($argument)
 }
-[void]$psi.ArgumentList.Add("-NoProfile")
-[void]$psi.ArgumentList.Add("-File")
-[void]$psi.ArgumentList.Add($GrandchildScript)
-[void]$psi.ArgumentList.Add("-GrandchildMarker")
-[void]$psi.ArgumentList.Add($GrandchildMarker)
 $grandchild = [System.Diagnostics.Process]::Start($psi)
 $grandchild.Dispose()
-
-Start-Sleep -Milliseconds 500
+$deadline = [DateTime]::UtcNow.AddSeconds(5)
+while (-not (Test-Path -LiteralPath $GrandchildMarker) -and [DateTime]::UtcNow -lt $deadline) {
+    Start-Sleep -Milliseconds 50
+}
 Start-Sleep -Seconds 600
 '@
-Set-Content -Path $childFile -Value $childContent -Encoding UTF8
+    [System.IO.File]::WriteAllText($grandchildFile, $grandchildContent, [System.Text.UTF8Encoding]::new($false))
+    [System.IO.File]::WriteAllText($childFile, $childContent, [System.Text.UTF8Encoding]::new($false))
 
-try {
-    $rc = Run-TimeoutDirect -Seconds 2 -Command "pwsh" -CommandArgs @(
+    $result = Invoke-Timeout -Seconds 8 -Command $PwshPath -CommandArgs @(
         "-NoProfile", "-File", $childFile,
-        "-PwshPath", "pwsh",
+        "-PwshPath", $PwshPath,
         "-ChildMarker", $childMarker,
         "-GrandchildScript", $grandchildFile,
         "-GrandchildMarker", $grandchildMarker
     )
+    Assert-Equal "process tree timeout returns 124" 124 $result.ExitCode
 
-    if ($rc -ne 124) {
-        Fail "Grandchild: expected timeout exit 124, got $rc"
-    } else {
-        Pass "Grandchild: exit 124"
+    foreach ($entry in @(
+        [pscustomobject]@{ Label = "child"; Marker = $childMarker },
+        [pscustomobject]@{ Label = "grandchild"; Marker = $grandchildMarker }
+    )) {
+        if (-not (Test-Path -LiteralPath $entry.Marker)) {
+            Fail "$($entry.Label) marker missing"
+            continue
+        }
+        $record = Get-Content -LiteralPath $entry.Marker -Raw | ConvertFrom-Json
+        $processId = [int]$record.pid
+        $identity = [string]$record.identity
+        Register-TestProcess -ProcessId $processId -Identity $identity
+        if (Wait-ProcessGone -ProcessId $processId -ExpectedIdentity $identity) {
+            Pass "$($entry.Label) process terminated (PID $processId)"
+        } else {
+            Fail "$($entry.Label) process still alive with original identity (PID $processId)"
+        }
     }
-
-    # Read child PID
-    $childPid = ""
-    if (Test-Path $childMarker) {
-        $childPid = (Get-Content -Path $childMarker -Raw).Trim()
-    }
-    if ([string]::IsNullOrWhiteSpace($childPid) -or ($childPid -notmatch '^\d+$')) {
-        Fail "Grandchild: child PID invalid or missing ('$childPid')"
-    } else {
-        Pass "Grandchild: child PID valid ($childPid)"
-    }
-
-    # Read grandchild PID
-    $grandPid = ""
-    if (Test-Path $grandchildMarker) {
-        $grandPid = (Get-Content -Path $grandchildMarker -Raw).Trim()
-    }
-    if ([string]::IsNullOrWhiteSpace($grandPid) -or ($grandPid -notmatch '^\d+$')) {
-        Fail "Grandchild: grandchild PID invalid or missing ('$grandPid')"
-    } else {
-        Pass "Grandchild: grandchild PID valid ($grandPid)"
-    }
-
-    # PIDs must be different
-    if ($childPid -eq $grandPid) {
-        Fail "Grandchild: child PID ($childPid) == grandchild PID ($grandPid)"
-    } else {
-        Pass "Grandchild: PIDs are different"
-    }
-
-    # Both should be terminated after timeout
-    Start-Sleep -Milliseconds 500
-    $childAlive = $false
-    $grandAlive = $false
-    try { Get-Process -Id ([int]$childPid) -ErrorAction Stop | Out-Null; $childAlive = $true } catch {}
-    try { Get-Process -Id ([int]$grandPid) -ErrorAction Stop | Out-Null; $grandAlive = $true } catch {}
-
-    if (-not $childAlive -and -not $grandAlive) {
-        Pass "Grandchild: both child and grandchild terminated"
-    } else {
-        if ($childAlive) { Fail "Grandchild: child $childPid still alive" }
-        if ($grandAlive) { Fail "Grandchild: grandchild $grandPid still alive" }
-    }
+} catch {
+    Fail "test suite internal failure: $($_.Exception.Message)"
 } finally {
-    # Cleanup: kill leftover processes (only after recording FAIL above)
-    try {
-        if (Test-Path $childMarker) {
-            $cpid = (Get-Content -Path $childMarker -Raw).Trim()
-            if ($cpid -match '^\d+$') { Stop-Process -Id ([int]$cpid) -Force -ErrorAction SilentlyContinue }
-        }
-        if (Test-Path $grandchildMarker) {
-            $gpid = (Get-Content -Path $grandchildMarker -Raw).Trim()
-            if ($gpid -match '^\d+$') { Stop-Process -Id ([int]$gpid) -Force -ErrorAction SilentlyContinue }
-        }
-    } catch {}
-    Remove-Item -Path $childFile -Force -ErrorAction SilentlyContinue
-    Remove-Item -Path $grandchildFile -Force -ErrorAction SilentlyContinue
-    Remove-Item -Path $childMarker -Force -ErrorAction SilentlyContinue
-    Remove-Item -Path $grandchildMarker -Force -ErrorAction SilentlyContinue
+    foreach ($record in $cleanupProcesses) {
+        Stop-TestProcessSafely -ProcessId $record.ProcessId -ExpectedIdentity $record.Identity
+    }
+    foreach ($path in $tempPaths) {
+        Remove-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
+    }
 }
 
-# ─────────────────────────────────────────────────────────────────
-# CASE E: Timeout 0 returns 126
-# ─────────────────────────────────────────────────────────────────
-$caseCount++
-Write-Host ""
-Write-Host "=== Case E: Timeout 0 returns 126 ==="
-$rc = Run-TimeoutDirect -Seconds 0 -Command "pwsh" -CommandArgs @("-NoProfile", "-Command", "exit 0")
-if ($rc -eq 126) {
-    Pass "Timeout 0: returns 126"
-} else {
-    Fail "Timeout 0: expected 126, got $rc"
-}
-
-# ─────────────────────────────────────────────────────────────────
-# Summary
-# ─────────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "====================="
 $totalAssertions = $passCount + $failCount + $skipCount
 Write-Host ("Cases: {0} | Assertions: {1} | PASS: {2} | FAIL: {3} | SKIP: {4}" -f $caseCount, $totalAssertions, $passCount, $failCount, $skipCount)
-
 if ($failCount -gt 0) {
     Write-Host "POWERSHELL TIMEOUT TESTS FAILED"
     exit 1
-} else {
-    Write-Host "ALL POWERSHELL TIMEOUT TESTS PASSED"
-    exit 0
 }
+Write-Host "ALL POWERSHELL TIMEOUT TESTS PASSED"
+exit 0

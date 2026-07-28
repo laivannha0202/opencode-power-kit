@@ -211,8 +211,7 @@ $agentsWithScopeGate = @(
     'opencode-global/agents/release-strong.md'
     'opencode-global/agents/security-strong.md'
     'opencode-global/agents/ui-ux-strong.md'
-    'opencode-global/agents/gsd-executor.md'
-    'opencode-global/agents/gsd-code-fixer.md'
+    # v2.1.0: GSD agents moved to extras/gsd-agent-reference/
 )
 foreach ($agentFile in $agentsWithScopeGate) {
     if (Test-Path -LiteralPath $agentFile -PathType Leaf) {
@@ -268,20 +267,17 @@ Require-Contains 'THIRD_PARTY.md' 'GSD Core'
 
 # ─── v1.6.5: One Command Update & Cleanup ──────────────────────
 Write-Host '[v1.6.5 One Command Update & Cleanup]'
-Require-Contains 'VERSION' '1.6.5'
-Require-Contains 'README.md' 'version-1.6.5'
 Require-Contains 'CHANGELOG.md' '1.6.5'
 Require-Contains 'CHANGELOG.md' '1.6.6'
 Require-Contains 'CHANGELOG.md' '1.6.7'
 Require-Contains 'CHANGELOG.md' 'One Command Update & Cleanup'
 Require-Contains 'CHANGELOG.md' 'opk up'
 Require-Contains 'CHANGELOG.md' 'opk clean'
-Require-Contains 'bin/opk' "'up')"
-Require-Contains 'bin/opk' "'clean')"
+Require-Contains 'bin/opk' 'up|update|upgrade)'
+Require-Contains 'bin/opk' 'clean)'
 Require-Contains 'bin/opk.ps1' "'up'"
 Require-Contains 'bin/opk.ps1' "'clean'"
-Require-Contains 'bin/opk' "up|update|upgrade"
-Require-Contains 'bin/opk' "Trash dir"
+Require-Contains 'scripts/cleanup-agent-artifacts.sh' 'Trash dir'
 Require-Contains 'scripts/cleanup-agent-artifacts.sh' 'GLOBAL_INSTALL_REPORT'
 Require-Contains 'scripts/cleanup-agent-artifacts.sh' 'OPK_VERIFY_REPORT'
 Require-Contains 'scripts/cleanup-agent-artifacts.sh' 'OPK_DOCTOR_REPORT'
@@ -446,7 +442,7 @@ Require-Contains 'CHANGELOG.md' 'evidence-report'
 Require-Contains 'CHANGELOG.md' 'init-deep-lite'
 Require-Contains 'CHANGELOG.md' 'no MCP'
 Require-Contains 'CHANGELOG.md' 'no telemetry'
-Require-Contains 'VERSION' '2.0.0'
+Require-Contains 'VERSION' '2.1.0'
 Require-File 'opencode-global/commands/intent-router.md'
 Require-File 'opencode-global/commands/init-deep-lite.md'
 Require-File 'opencode-global/commands/power-work-lite.md'
@@ -521,7 +517,7 @@ Write-Host '[v2.0.0 Taste auto-install removed from global scripts]'
 $ps1Content = Get-Content 'install-global.ps1' -Raw -ErrorAction SilentlyContinue
 if ($ps1Content -and $ps1Content -match 'install-taste-skill\.ps1.*-Yes') {
     Write-Host '  FAIL: install-global.ps1 still calls install-taste-skill.ps1 -Yes' -ForegroundColor Red
-    $script:Failed++
+    $script:Fail++
 } else {
     Write-Host '  ok: install-global.ps1: no Taste auto-install call' -ForegroundColor Green
 }
@@ -532,7 +528,7 @@ Require-Contains 'install-global.ps1' 'opk taste install'
 $auditContent = Get-Content 'docs/UPSTREAM_AUDIT.md' -Raw -ErrorAction SilentlyContinue
 if ($auditContent -and $auditContent -match 'auto-enabled-dependency') {
     Write-Host '  FAIL: docs/UPSTREAM_AUDIT.md still contains auto-enabled-dependency' -ForegroundColor Red
-    $script:Failed++
+    $script:Fail++
 } else {
     Write-Host '  ok: docs/UPSTREAM_AUDIT.md: no auto-enabled-dependency' -ForegroundColor Green
 }
@@ -541,9 +537,9 @@ foreach ($f in @('README.md', 'THIRD_PARTY.md')) {
     $c = Get-Content $f -Raw -ErrorAction SilentlyContinue
     if ($c -and $c -match 'Taste Skill is automatically enabled') {
         Write-Host "  FAIL: $f contains 'Taste Skill is automatically enabled'" -ForegroundColor Red
-        $script:Failed++
+        $script:Fail++
     } else {
-        Write-Host "  ok: $f: no current-state auto-enabled wording" -ForegroundColor Green
+        Write-Host "  ok: ${f}: no current-state auto-enabled wording" -ForegroundColor Green
     }
 }
 Write-Host ''
@@ -577,17 +573,20 @@ if (Test-Path -LiteralPath $auditPath -PathType Leaf) {
     Fail 'docs/UPSTREAM_AUDIT.md missing'
 }
 
-# audit-upstreams.py must have --root, --check, --write
+# audit-upstreams.py must declare --root, --check, --write. Inspect the
+# source so -NoPython remains a real no-runtime-dependency mode on Windows.
 $auditScript = Join-Path $KitDir 'scripts/audit-upstreams.py'
 if (Test-Path -LiteralPath $auditScript) {
-    $auditHelp = & python3 $auditScript --help 2>&1
+    $auditSource = Get-Content -LiteralPath $auditScript -Raw -ErrorAction SilentlyContinue
     foreach ($flag in @('--root', '--check', '--write')) {
-        if ($auditHelp -match [regex]::Escape($flag)) {
+        if ($null -ne $auditSource -and $auditSource.Contains($flag)) {
             Ok "audit-upstreams.py has $flag flag"
         } else {
             Fail "audit-upstreams.py missing $flag flag"
         }
     }
+} else {
+    Fail 'scripts/audit-upstreams.py missing'
 }
 
 Write-Host ''
@@ -616,13 +615,12 @@ Write-Host ''
 
 # ─── v1.6.4: Safety & Compatibility Polish ──────────────────────
 Write-Host '[v1.6.4 Safety & Compatibility Polish]'
-Require-Contains 'THIRD_PARTY.md' 'v1.6.4'
 Require-Contains 'CHANGELOG.md' 'Power Mode vs Safe Mode'
 Require-Contains 'CHANGELOG.md' 'Safety plugin guard'
 Require-Contains 'CHANGELOG.md' 'opk mode'
 Require-Contains 'templates/opencode.safe.json' '"permission":'
 Require-Contains 'templates/opencode.power.json' '"permission"'
-Require-Contains 'templates/plugins/opk-safety-guard.js' 'guardCheck'
+Require-Contains 'templates/plugins/opk-safety-guard.js' 'tool.execute.before'
 Require-Contains 'bin/opk' 'mode)'
 Require-Contains 'bin/opk' 'safety-plugin)'
 Require-Contains 'bin/opk.ps1' "'mode'"

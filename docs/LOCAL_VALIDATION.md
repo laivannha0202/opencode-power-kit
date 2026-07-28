@@ -9,8 +9,9 @@
   chạy thủ công qua `workflow_dispatch`. Không auto-trigger trên push/PR.
 - **Local validation là primary** — Mọi thay đổi phải pass local validation
   trước khi commit/push. Actions trên GitHub chỉ là lớp kiểm tra bổ sung.
-- **Không yêu cầu GitHub Actions** — Local validation chạy hoàn toàn trên máy
-  của bạn. GitHub Actions là optional/manual-only.
+- **Không auto-trigger GitHub Actions** — Local validation chạy hoàn toàn trên máy
+  của bạn. Hai workflow chỉ chạy thủ công, nhưng mọi failure khác môi trường phải
+  được điều tra và không được bỏ qua khi đánh giá cross-platform release.
 
 ## Các lệnh validation
 
@@ -46,7 +47,20 @@ Kiểm tra tổng thể toàn bộ kit:
 bash verify.sh
 ```
 
-### 4. Doctor (read-only diagnostic)
+### 4. PowerShell runtime validation
+
+Chạy timeout contract và PowerShell verifier bằng PowerShell 7:
+
+```powershell
+pwsh -NoProfile -File scripts/test-timeout.ps1
+pwsh -NoProfile -File verify.ps1 -NoPython
+```
+
+Hai lệnh phải chạy trên Ubuntu có `pwsh` và trên Windows. Nếu local không có
+`pwsh`, strict release gate phải ghi `REQUIRED SKIP` và exit `1`; skip không
+được tính là PASS.
+
+### 5. Doctor (read-only diagnostic)
 
 Chẩn đoán global + project config, structure, không MCP, không secrets:
 
@@ -57,7 +71,7 @@ bash doctor.sh
 bash doctor.sh --deep
 ```
 
-### 5. Bash syntax check
+### 6. Bash syntax check
 
 Kiểm tra cú pháp shell script trước khi commit:
 
@@ -70,7 +84,7 @@ bash -n update-bmad.sh
 for f in scripts/*.sh; do bash -n "$f"; done
 ```
 
-### 6. Full validation pipeline
+### 7. Full validation pipeline
 
 Chạy tất cả validation trong một lần:
 
@@ -80,8 +94,14 @@ echo "=== 0) formatting guard ===" && python3 scripts/validate-formatting.py
 echo "=== 1) upstream audit ===" && python3 scripts/audit-upstreams.py --check
 echo "=== 2) pack validation ===" && python3 scripts/validate-opencode-pack.py
 echo "=== 3) verify.sh ===" && bash verify.sh
-echo "=== 4) doctor.sh ===" && bash doctor.sh
+echo "=== 4) doctor.sh --deep ===" && bash doctor.sh --deep
 echo "=== 5) bash -n ===" && bash -n bin/opk && for f in scripts/*.sh; do bash -n "$f"; done
+if ! command -v pwsh >/dev/null 2>&1; then
+  echo "REQUIRED SKIP: pwsh unavailable" >&2
+  exit 1
+fi
+echo "=== 6) PowerShell timeout ===" && pwsh -NoProfile -File scripts/test-timeout.ps1
+echo "=== 7) PowerShell verify ===" && pwsh -NoProfile -File verify.ps1 -NoPython
 echo "=== ALL PASS ==="
 ```
 
@@ -91,21 +111,20 @@ echo "=== ALL PASS ==="
 - [ ] `python3 scripts/audit-upstreams.py --check` — upstream audit PASS
 - [ ] `python3 scripts/validate-opencode-pack.py` — pack validation PASS
 - [ ] `bash verify.sh` — verify PASS (505 tests, 0 failed)
-- [ ] `bash doctor.sh` — diagnostic không có lỗi
+- [ ] `bash doctor.sh --deep` — diagnostic không có lỗi
+- [ ] `pwsh -NoProfile -File scripts/test-timeout.ps1` — required PowerShell timeout PASS; thiếu `pwsh` là `REQUIRED SKIP`, không phải PASS
+- [ ] `pwsh -NoProfile -File verify.ps1 -NoPython` — required PowerShell verify PASS; thiếu `pwsh` là `REQUIRED SKIP`, không phải PASS
 - [ ] `bash -n` trên tất cả `.sh` files — syntax OK
 - [ ] `git status` — chỉ có file mong muốn thay đổi
 - [ ] `git diff --stat` — kiểm tra diff gọn gàng, không có file lạ
 
 ## Khi Actions fail trên GitHub
 
-1. Actions là optional — chạy thủ công qua tab "Actions" > workflow > "Run workflow".
-2. Nếu Actions fail nhưng local validation PASS:
-   - Thường do môi trường GitHub runner khác máy local.
-   - Chạy `bash verify.sh` local để xác nhận thực tế.
-   - Không phải lỗi code — có thể ignore nếu local PASS.
-3. Nếu local validation fail:
-   - Sửa lỗi trước, chạy lại local validation cho đến khi PASS.
-   - Sau đó mới commit/push.
+1. Actions chạy thủ công qua tab "Actions" > workflow > "Run workflow".
+2. Nếu Actions fail nhưng local validation PASS, phải đọc log và điều tra khác biệt
+   giữa local với runner Ubuntu/Windows; không được coi failure là có thể ignore.
+3. Nếu local validation fail, sửa lỗi và chạy lại cho đến khi PASS trước khi push.
+4. Không tạo release khi bất kỳ required check nào chưa chạy hoặc đang fail.
 
 ## Model yếu / flash
 
