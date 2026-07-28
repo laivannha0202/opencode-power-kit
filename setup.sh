@@ -37,6 +37,8 @@ header() { echo -e "${CYAN}============================================${NC}"; }
 # --- Resolve kit dir ---
 KIT_DIR="$(cd "$(dirname "$0")" && pwd)"
 GLOBAL_DIR="$KIT_DIR/opencode-global"
+source "$KIT_DIR/scripts/require-linux.sh"
+opk_require_linux
 
 # --- Safety: no root, no sudo ---
 if [ "$(id -u)" -eq 0 ]; then

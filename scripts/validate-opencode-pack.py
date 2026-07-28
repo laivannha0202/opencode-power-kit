@@ -40,7 +40,7 @@ PROFILES_DIR = KIT_ROOT / "profiles"
 TEMPLATES_DIR = KIT_ROOT / "templates"
 
 # ─── version compliance constants ───────────────────────────────────
-EXPECTED_VERSION = "2.0.0"
+EXPECTED_VERSION = "2.1.0"
 
 AUTO_ROUTER_NEEDLES: tuple[tuple[str, str], ...] = (
     ("templates/AGENTS.md", "Natural Language Auto Router"),
@@ -90,8 +90,6 @@ THIRD_PARTY_NEEDLES: tuple[tuple[str, str], ...] = (
 V134_HINT_FILES: tuple[str, ...] = (
     "THIRD_PARTY.md",
     "scripts/install-gsd-core.sh",
-    "scripts/install-gsd-core.ps1",
-    ".github/workflows/verify.yml",
 )
 
 
@@ -371,7 +369,6 @@ def validate_version() -> list[str]:
         "api-strong", "architect-strong", "build-strong",
         "db-strong", "debug-strong", "devops-strong",
         "qa-strong", "release-strong", "security-strong", "ui-ux-strong",
-        "gsd-executor", "gsd-code-fixer",
     ]
     for name in agents_with_scope_gate:
         agent_file = GLOBAL_DIR / "agents" / f"{name}.md"
@@ -407,16 +404,11 @@ def validate_version() -> list[str]:
         ("CHANGELOG.md", "MarkItDown"),
         ("scripts/install-markitdown.sh", "pipx"),
         ("scripts/install-markitdown.sh", "markitdown"),
-        ("scripts/install-markitdown.ps1", "pipx"),
-        ("scripts/install-markitdown.ps1", "markitdown"),
         ("opencode-global/commands/doc-to-md.md", "md-convert"),
         ("opencode-global/commands/doc-to-md.md", "markitdown"),
         ("bin/opk", "markitdown)"),
         ("bin/opk", "install-markitdown.sh"),
         ("bin/opk", "md-convert|doc-to-md)"),
-        ("bin/opk.ps1", "'markitdown'"),
-        ("bin/opk.ps1", "install-markitdown.ps1"),
-        ("bin/opk.ps1", "md-convert"),
         ("THIRD_PARTY.md", "MarkItDown"),
     ]
     for rel, needle in v166_checks:
@@ -431,15 +423,11 @@ def validate_version() -> list[str]:
     v167_checks = [
         ("CHANGELOG.md", "Supermemory"),
         ("scripts/install-supermemory.sh", "supermemory"),
-        ("scripts/install-supermemory.ps1", "supermemory"),
         ("opencode-global/commands/supermemory-init.md", "supermemory"),
         ("opencode-global/commands/supermemory-init.md", "opk supermemory"),
         ("bin/opk", "supermemory)"),
         ("bin/opk", "install-supermemory.sh"),
         ("bin/opk", "supermemory init"),
-        ("bin/opk.ps1", "'supermemory'"),
-        ("bin/opk.ps1", "install-supermemory.ps1"),
-        ("bin/opk.ps1", "supermemory init"),
         ("THIRD_PARTY.md", "Supermemory"),
     ]
     for rel, needle in v167_checks:
@@ -454,17 +442,12 @@ def validate_version() -> list[str]:
     v170_checks = [
         ("CHANGELOG.md", "Taste Skill"),
         ("scripts/install-taste-skill.sh", "taste-skill"),
-        ("scripts/install-taste-skill.ps1", "taste-skill"),
         ("scripts/check-taste-skill.sh", "taste-skill"),
-        ("scripts/check-taste-skill.ps1", "taste-skill"),
         ("opencode-global/agents/build-strong.md", "taste-ui-strong"),
         ("opencode-global/commands/agent-router.md", "taste-ui-strong"),
         ("bin/opk", "taste|taste-status|taste-off|update-taste)"),
         ("bin/opk", "taste install"),
         ("bin/opk", "taste status"),
-        ("bin/opk.ps1", "'taste'"),
-        ("bin/opk.ps1", "taste install"),
-        ("bin/opk.ps1", "taste status"),
         ("THIRD_PARTY.md", "Taste Skill"),
     ]
     for rel, needle in v170_checks:
@@ -504,18 +487,6 @@ def validate_version() -> list[str]:
     else:
         errors.append("bin/opk missing")
 
-    # bin/opk.ps1 up + clean subcommands
-    opk_ps1_path = KIT_ROOT / "bin" / "opk.ps1"
-    if opk_ps1_path.is_file():
-        opk_ps1_text = opk_ps1_path.read_text(encoding="utf-8")
-        for needle in ("'up'", "'clean'"):
-            if needle in opk_ps1_text:
-                ok(f"bin/opk.ps1 contains: {needle}")
-            else:
-                errors.append(f"bin/opk.ps1 missing needle: {needle}")
-    else:
-        errors.append("bin/opk.ps1 missing")
-
     # v1.6.4: Safety & Compatibility Polish
     print("[v1.6.4 Safety & Compatibility Polish]")
     v164_checks = [
@@ -524,7 +495,7 @@ def validate_version() -> list[str]:
         ("CHANGELOG.md", "opk mode"),
         ("templates/opencode.safe.json", '"permission"'),
         ("templates/opencode.power.json", '"permission"'),
-        ("templates/plugins/opk-safety-guard.js", "guardCheck"),
+        ("templates/plugins/opk-safety-guard.js", "tool.execute.before"),
     ]
     for rel, needle in v164_checks:
         p = KIT_ROOT / rel
@@ -544,18 +515,6 @@ def validate_version() -> list[str]:
                 errors.append(f"bin/opk missing needle: {needle}")
     else:
         errors.append("bin/opk missing")
-
-    # bin/opk.ps1 mode + safety-plugin subcommands
-    opk_ps1_path = KIT_ROOT / "bin" / "opk.ps1"
-    if opk_ps1_path.is_file():
-        opk_ps1_text = opk_ps1_path.read_text(encoding="utf-8")
-        for needle in ("'mode'", "'safety-plugin'"):
-            if needle in opk_ps1_text:
-                ok(f"bin/opk.ps1 contains: {needle}")
-            else:
-                errors.append(f"bin/opk.ps1 missing needle: {needle}")
-    else:
-        errors.append("bin/opk.ps1 missing")
 
     # v1.9.3: AgentMemory-lite (Serverless Memory reference)
     print("[v1.9.3 AgentMemory-lite]")
@@ -587,7 +546,7 @@ def validate_version() -> list[str]:
         ("docs/UPSTREAM_RISKS.md", "Risk Matrix"),
         ("templates/opencode.json", "rm -rf"),
         ("templates/opencode.json", "git reset --hard"),
-        ("templates/opencode.json", "git clean -fd"),
+        ("templates/opencode.json", "git clean -f"),
         ("templates/opencode.json", "git push --force"),
         ("templates/opencode.json", "DROP TABLE"),
         ("templates/opencode.json", "TRUNCATE TABLE"),
@@ -607,7 +566,6 @@ def validate_version() -> list[str]:
     print("[Deprecated package check]")
     deprecated_patterns = [
         ("scripts/install-supermemory.sh", "@supermemory/ai"),
-        ("scripts/install-supermemory.ps1", "@supermemory/ai"),
     ]
     for rel, needle in deprecated_patterns:
         p = KIT_ROOT / rel
@@ -650,30 +608,6 @@ def validate_version() -> list[str]:
         else:
             errors.append(f"{rel} missing needle: {needle}")
 
-    # v2.0.0: CLI Expansion — bin/opk.ps1 parity
-    print("[v2.0.0 CLI Expansion — bin/opk.ps1]")
-    v200_ps1_checks = [
-        ("bin/opk.ps1", "'upstream'"),
-        ("bin/opk.ps1", "upstream audit"),
-        ("bin/opk.ps1", "upstream doctor"),
-        ("bin/opk.ps1", "'superpowers'"),
-        ("bin/opk.ps1", "superpowers status"),
-        ("bin/opk.ps1", "superpowers reset-cache"),
-        ("bin/opk.ps1", "superpowers doctor"),
-        ("bin/opk.ps1", "'bmad'"),
-        ("bin/opk.ps1", "bmad status"),
-        ("bin/opk.ps1", "bmad update"),
-        ("bin/opk.ps1", "'tooling'"),
-        ("bin/opk.ps1", "tooling doctor"),
-        ("bin/opk.ps1", "taste doctor"),
-    ]
-    for rel, needle in v200_ps1_checks:
-        p = KIT_ROOT / rel
-        if p.is_file() and needle in p.read_text(encoding="utf-8"):
-            ok(f"{rel} contains: {needle}")
-        else:
-            errors.append(f"{rel} missing needle: {needle}")
-
     # v2.0.0: Taste verify-gated checks
     print("[v2.0.0 Taste verify-gated]")
     v200_taste_checks = [
@@ -696,7 +630,6 @@ def validate_version() -> list[str]:
     print("[v2.0.0 Taste safe removal]")
     taste_rm_checks = [
         ("bin/opk", "taste-off)"),
-        ("bin/opk.ps1", "taste-off"),
     ]
     for rel, needle in taste_rm_checks:
         p = KIT_ROOT / rel
@@ -716,7 +649,6 @@ def validate_version() -> list[str]:
     print("[v2.0.0 Taste auto-install removed from global scripts]")
     auto_install_forbidden = [
         ("install-global.sh", "install-taste-skill.sh", "--yes"),
-        ("install-global.ps1", "install-taste-skill.ps1", "-Yes"),
     ]
     for rel, installer, flag in auto_install_forbidden:
         p = KIT_ROOT / rel
@@ -731,7 +663,6 @@ def validate_version() -> list[str]:
     print("[v2.0.0 Taste suggestion hint in install-global]")
     hint_checks = [
         ("install-global.sh", "opk taste install"),
-        ("install-global.ps1", "opk taste install"),
     ]
     for rel, needle in hint_checks:
         p = KIT_ROOT / rel
@@ -801,6 +732,122 @@ def validate_version() -> list[str]:
                 errors.append(f"docs/UPSTREAM_AUDIT.md missing section: {section}")
     else:
         errors.append("docs/UPSTREAM_AUDIT.md missing")
+
+    # v2.1.0: GSD agents only in extras/gsd-agent-reference (not in active agents)
+    print("[v2.1.0 GSD agents in extras/ reference]")
+    gsd_ref_dir = KIT_ROOT / "extras" / "gsd-agent-reference"
+    if gsd_ref_dir.is_dir():
+        gsd_files = sorted(gsd_ref_dir.glob("*.md"))
+        if gsd_files:
+            ok(f"GSD reference agents in extras/gsd-agent-reference/ ({len(gsd_files)} files)")
+        else:
+            errors.append("extras/gsd-agent-reference/ exists but no .md files")
+    else:
+        errors.append("extras/gsd-agent-reference/ directory missing")
+    # Verify NO GSD agents in active agents directory
+    active_agents_dir = GLOBAL_DIR / "agents"
+    gsd_active = list(active_agents_dir.glob("gsd-*.md"))
+    if gsd_active:
+        errors.append(f"GSD agents still in active agents/ ({', '.join(f.name for f in gsd_active)})")
+    else:
+        ok("No GSD agents in active agents/ directory")
+
+    # v2.1.0: Actual count verification
+    print("[v2.1.0 Actual counts]")
+    active_agents = sorted(active_agents_dir.glob("*.md"))
+    active_commands = sorted((GLOBAL_DIR / "commands").glob("*.md"))
+    active_skills = sorted([d for d in (GLOBAL_DIR / "skills").iterdir() if d.is_dir()])
+    expected_agents = 16
+    expected_commands = 71
+    expected_skills = 23
+    if len(active_agents) == expected_agents:
+        ok(f"Active agents: {len(active_agents)} (expected {expected_agents})")
+    else:
+        errors.append(f"Active agents count: {len(active_agents)}, expected {expected_agents}")
+    if len(active_commands) == expected_commands:
+        ok(f"Commands: {len(active_commands)} (expected {expected_commands})")
+    else:
+        errors.append(f"Commands count: {len(active_commands)}, expected {expected_commands}")
+    if len(active_skills) == expected_skills:
+        ok(f"Skills: {len(active_skills)} (expected {expected_skills})")
+    else:
+        errors.append(f"Skills count: {len(active_skills)}, expected {expected_skills}")
+    # GSD reference count (excluding README.md)
+    gsd_ref_files = [f for f in gsd_ref_dir.glob("*.md") if f.name != "README.md"]
+    expected_gsd = 33
+    if len(gsd_ref_files) == expected_gsd:
+        ok(f"GSD reference agents: {len(gsd_ref_files)} (expected {expected_gsd}, excl README.md)")
+    else:
+        errors.append(f"GSD reference agents count: {len(gsd_ref_files)}, expected {expected_gsd} (excl README.md)")
+
+    # v2.1.0: Linux-only distribution contract
+    print("[v2.1.0 Linux-only distribution]")
+    linux_guard = KIT_ROOT / "scripts" / "require-linux.sh"
+    if linux_guard.is_file() and "uname -s" in linux_guard.read_text(encoding="utf-8"):
+        ok("scripts/require-linux.sh enforces the Linux platform")
+    else:
+        errors.append("scripts/require-linux.sh missing Linux platform enforcement")
+
+    windows_artifacts = sorted(
+        p.relative_to(KIT_ROOT).as_posix()
+        for suffix in ("*.ps1", "*.cmd", "*.bat")
+        for p in KIT_ROOT.rglob(suffix)
+        if ".git" not in p.parts and ".tmp" not in p.parts and ".test" not in p.parts
+    )
+    if windows_artifacts:
+        errors.append(f"Windows runtime artifacts must be removed: {', '.join(windows_artifacts)}")
+    else:
+        ok("no .ps1/.cmd/.bat runtime artifacts")
+
+    workflow_dir = KIT_ROOT / ".github" / "workflows"
+    action_workflows = []
+    if workflow_dir.is_dir():
+        action_workflows = sorted(
+            [*workflow_dir.glob("*.yml"), *workflow_dir.glob("*.yaml")]
+        )
+    if action_workflows:
+        errors.append("GitHub Actions workflows must be disabled for local-only validation")
+    else:
+        ok("GitHub Actions workflows disabled")
+
+    # v2.1.0: OPK no longer ships a model-policy or provider-key control surface.
+    print("[v2.1.0 Model policy surface removed]")
+    model_policy_doc = KIT_ROOT / "docs" / "MODEL_ROUTING.md"
+    if model_policy_doc.exists():
+        errors.append("docs/MODEL_ROUTING.md must remain removed")
+    else:
+        ok("docs/MODEL_ROUTING.md absent")
+
+    opk_cli = KIT_ROOT / "bin" / "opk"
+    opk_cli_text = opk_cli.read_text(encoding="utf-8") if opk_cli.is_file() else ""
+    forbidden_cli_needles = ("opk model status", "Model-Agnostic Runtime", "\n  model)")
+    found_cli_needles = [needle for needle in forbidden_cli_needles if needle in opk_cli_text]
+    if found_cli_needles:
+        errors.append(f"bin/opk still exposes model policy controls: {', '.join(found_cli_needles)}")
+    else:
+        ok("bin/opk has no model policy command")
+
+    provider_key_files = (
+        "bin/opk",
+        "bootstrap.sh",
+        "setup.sh",
+        "install.sh",
+        "install-global.sh",
+    )
+    provider_key_mentions = []
+    for rel in provider_key_files:
+        path = KIT_ROOT / rel
+        if path.is_file():
+            text = path.read_text(encoding="utf-8")
+            if "OPENAI_API_KEY" in text or "ANTHROPIC_API_KEY" in text:
+                provider_key_mentions.append(rel)
+    if provider_key_mentions:
+        errors.append(
+            "Primary runtime entrypoints must not require provider API keys: "
+            + ", ".join(provider_key_mentions)
+        )
+    else:
+        ok("primary runtime entrypoints do not require provider API keys")
 
     # v2.0.0: audit-upstreams.py must have proper argparse flags
     print("[v2.0.0 audit-upstreams.py argparse]")

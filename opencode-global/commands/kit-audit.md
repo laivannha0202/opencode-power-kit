@@ -39,7 +39,7 @@ docs-only → chỉ audit docs, không tạo Todo implementation.
 ### 6. Verify scripts
 - `verify.sh` có check đủ agents/commands mới?
 - `validate-opencode-pack.py` EXPECTED_VERSION đúng?
-- `verify.ps1` mirror verify.sh?
+- `verify.sh` có bao phủ toàn bộ Linux runtime?
 
 ### 7. CHANGELOG completeness
 - Version bump recorded?

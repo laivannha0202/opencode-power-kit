@@ -33,6 +33,8 @@ fi
 
 KIT_DIR="$(cd "$(dirname "$0")" && pwd)"
 GLOBAL_DIR="$KIT_DIR/opencode-global"
+source "$KIT_DIR/scripts/require-linux.sh"
+opk_require_linux
 REPORT_FILE="$KIT_DIR/GLOBAL_INSTALL_REPORT.md"
 PACK_REPORT_FILE="$KIT_DIR/GLOBAL_PACK_REPORT.md"
 BACKUP_DIR="$HOME/.opencode-power-kit-backup-$(date +%Y%m%d%H%M%S)"
@@ -74,7 +76,7 @@ if [ -f "$HOME/.bashrc" ]; then
 	BACKED_UP=true
 fi
 
-# macOS defaults to zsh since Catalina (10.15) — also backup ~/.zshrc nếu có
+# Backup ~/.zshrc when the Linux user runs zsh.
 if [ -f "$HOME/.zshrc" ]; then
 	mkdir -p "$BACKUP_DIR/home"
 	cp "$HOME/.zshrc" "$BACKUP_DIR/home/.zshrc"
@@ -105,9 +107,8 @@ else
 fi
 
 # --- Detect shell: bash vs zsh ---
-# macOS (10.15+) default = zsh. Nếu $SHELL trỏ tới zsh HOẶC ~/.zshrc đã tồn tại
-# → coi như môi trường zsh và cập nhật cả ~/.zshrc. Vẫn giữ ~/.bashrc cho
-# Linux/WSL/Git Bash. Không bao giờ xóa marker cũ.
+# Nếu $SHELL trỏ tới zsh HOẶC ~/.zshrc đã tồn tại thì cập nhật cả ~/.zshrc.
+# Vẫn giữ ~/.bashrc và không bao giờ xóa marker cũ.
 USE_ZSH=false
 if [ -n "${SHELL:-}" ] && [[ "$SHELL" == */zsh ]]; then
 	USE_ZSH=true
@@ -196,7 +197,7 @@ GLOBAL_BLOCK="export OPK_KIT_DIR=\"$KIT_REAL\"
 export OPENCODE_CONFIG_DIR=\"\$OPK_KIT_DIR/opencode-global\""
 PATH_BLOCK='export PATH="$HOME/.local/bin:$PATH"'
 
-# Luôn cập nhật ~/.bashrc (Linux/WSL/Git Bash)
+# Luôn cập nhật ~/.bashrc trên Linux.
 add_rc_marker "$HOME/.bashrc" "$MARKER" "$GLOBAL_BLOCK"
 add_rc_marker "$HOME/.bashrc" "$PATH_MARKER" "$PATH_BLOCK"
 
@@ -249,13 +250,13 @@ fi
 # --- Safety: no secrets ---
 SAFE=true
 if [ -f "$HOME/.bashrc" ]; then
-	if grep -qiE "(token|password|secret|api_key|OPENAI_API_KEY|ANTHROPIC_API_KEY)" "$HOME/.bashrc" 2>/dev/null; then
+	if grep -qiE "(token|password|secret|api_key)" "$HOME/.bashrc" 2>/dev/null; then
 		warn "~/.bashrc có chứa chuỗi giống secret. Kiểm tra thủ công."
 		SAFE=false
 	fi
 fi
 if [ -f "$HOME/.zshrc" ]; then
-	if grep -qiE "(token|password|secret|api_key|OPENAI_API_KEY|ANTHROPIC_API_KEY)" "$HOME/.zshrc" 2>/dev/null; then
+	if grep -qiE "(token|password|secret|api_key)" "$HOME/.zshrc" 2>/dev/null; then
 		warn "~/.zshrc có chứa chuỗi giống secret. Kiểm tra thủ công."
 		SAFE=false
 	fi

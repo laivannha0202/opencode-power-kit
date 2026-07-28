@@ -57,6 +57,8 @@ if [ ! -f "$KIT_DIR/install.sh" ] || [ ! -f "$KIT_DIR/install-global.sh" ]; then
   echo "      hoặc export OPK_KIT_DIR=/đường/dẫn/đến/opencode-power-kit" >&2
   exit 1
 fi
+source "$KIT_DIR/scripts/require-linux.sh"
+opk_require_linux
 
 VERSION="$(cat "$KIT_DIR/VERSION" 2>/dev/null || echo "?")"
 
@@ -156,7 +158,8 @@ opk — OpenCode Power Kit CLI (v$VERSION)
   opk safety-plugin status   Kiểm tra trạng thái safety plugin
 
   v1.3.4 — GSD Core opt-in:
-  opk gsd         Forward sang official GSD installer (opt-in, --dry-run / --yes)
+  opk gsd         Forward sang official GSD installer (opt-in, version-pinned, --dry-run / --yes)
+  opk gsd status  Kiểm tra GSD Core đã cài chưa (KHÔNG báo ready chỉ vì snapshot)
   opk update-gsd  Tương tự opk gsd, explicit refresh intent
   opk update-all  Pull kit (ff-only) + refresh bmad (+ optional GSD với --with-gsd)
 
@@ -211,12 +214,15 @@ opk — OpenCode Power Kit CLI (v$VERSION)
   opk superpowers status     Check superpowers plugin status
   opk superpowers reset-cache Clear superpowers cache (manual instructions)
   opk superpowers reset-cache --yes  Auto-clear (safe: move to .opk-trash/)
-  opk superpowers doctor     Full superpowers diagnosis + Windows fallback
+  opk superpowers doctor     Full superpowers diagnosis
   opk bmad status            Show BMAD version pin + runtime check
   opk bmad update --stable   Update BMAD (pinned: 6.9.0)
   opk bmad update --next     Update BMAD (experimental)
   opk bmad update --version X.Y.Z  Pin BMAD to specific version
   opk tooling doctor         Detect + suggest install for dev tools
+
+  v2.1.0 — Linux-only Runtime:
+  Supported platform: Linux
 
 Flags chung (forward cho sub-script):
   --yes   skip confirm
@@ -232,11 +238,8 @@ Ví dụ:
   opk version
   opk bootstrap --all --yes
 
-All-in-one one-command (Linux / macOS / Git Bash / WSL) — tự clone/pull kit rồi cài:
+All-in-one one-command (Linux-only) — tự clone/pull kit rồi cài:
   bash -c 'PROJECT="\$PWD"; KIT="\$HOME/opencode-power-kit"; if [ -d "\$KIT/.git" ]; then git -C "\$KIT" pull --ff-only; else git clone https://github.com/laivannha0202/opencode-power-kit.git "\$KIT"; fi; bash "\$KIT/bootstrap.sh" --all --project-dir "\$PROJECT"; cd "\$PROJECT"; bash "\$KIT/verify.sh"'
-
-All-in-one one-command (Windows PowerShell) — tự clone/pull kit rồi cài:
-  powershell -ExecutionPolicy Bypass -Command "\$Project=(Get-Location).Path; \$KIT=Join-Path \$HOME 'opencode-power-kit'; if (Test-Path (Join-Path \$KIT '.git')) { & git -C \$KIT pull --ff-only } else { & git clone https://github.com/laivannha0202/opencode-power-kit.git \$KIT }; & (Join-Path \$KIT 'bootstrap.ps1') -All -ProjectDir \$Project -Yes; & (Join-Path \$KIT 'verify.ps1')"
 
 Project one-command (sau khi đã cài global):
   cd /path/to/project && opk install
@@ -350,13 +353,31 @@ EOF
         echo "Template: $KIT_DIR/templates/opencode.json"
         echo "Project:  $(test -f .opencode/opencode.json && echo '.opencode/opencode.json' || echo '(none)')"
         echo ""
-        if grep -q '"permission": "allow"' "$proj_config" 2>/dev/null; then
-          echo "Current mode: POWER (permission: allow)"
-          echo "  Agent tự động chạy tool, sửa file, bash — không hỏi lại."
+        detect_py="$KIT_DIR/scripts/detect-mode.py"
+        if [ -f "$detect_py" ] && command -v python3 >/dev/null 2>&1; then
+          resolved="$(python3 "$detect_py" "$proj_config" 2>/dev/null || echo CUSTOM)"
         else
-          echo "Current mode: SAFE (permission object)"
-          echo "  Agent hỏi trước khi write/edit/bash/task."
+          # Fallback cổ điển: parse chuỗi đơn giản.
+          if grep -q '"permission": "allow"' "$proj_config" 2>/dev/null; then
+            resolved="POWER"
+          else
+            resolved="SAFE"
+          fi
         fi
+        case "$resolved" in
+          POWER)
+            echo "Current mode: POWER"
+            echo "  permission == allow: Agent tự động chạy tool, sửa file, bash — không hỏi lại."
+            ;;
+          SAFE)
+            echo "Current mode: SAFE"
+            echo "  permission object: Agent hỏi trước khi write/edit/bash/task."
+            ;;
+          *)
+            echo "Current mode: CUSTOM"
+            echo "  Cấu hình không khớp POWER hay SAFE — dùng thiết lập tùy chỉnh của bạn."
+            ;;
+        esac
         ;;
       power)
         require_file "$KIT_DIR/templates/opencode.power.json"
@@ -379,7 +400,7 @@ EOF
         target=".opencode/opencode.json"
         if [ ! -f "$target" ]; then
           target="$KIT_DIR/templates/opencode.json"
-          echo "opk: Không tìm thấy .opencode/opencode.json — cập nhật template mặc định."
+          echo "opk: Không tìm thấy .opencode/opencode.json — cập nhật template mạĐịnh."
         fi
         backup="${target}.bak.$(date +%Y%m%d-%H%M%S)"
         cp "$target" "$backup"
@@ -542,10 +563,23 @@ EOF
 
   # ─── v1.3.4 GSD Core opt-in integration ────────────────────────
   # Forwards to scripts/install-gsd-core.sh (calls official
-  # `npx @opengsd/gsd-core@latest`). Never vendors GSD source.
+  # `npx @opengsd/gsd-core@<pinned>`). Never vendors GSD source.
   gsd)
-    require_file "$KIT_DIR/scripts/install-gsd-core.sh"
-    exec bash "$KIT_DIR/scripts/install-gsd-core.sh" "$@"
+    gsd_cmd="${1:-install}"
+    case "$gsd_cmd" in
+      status)
+        require_file "$KIT_DIR/scripts/install-gsd-core.sh"
+        exec bash "$KIT_DIR/scripts/install-gsd-core.sh" status
+        ;;
+      install|"")
+        require_file "$KIT_DIR/scripts/install-gsd-core.sh"
+        exec bash "$KIT_DIR/scripts/install-gsd-core.sh" "$@"
+        ;;
+      *)
+        echo "opk: gsd: lệnh không hợp lệ '$gsd_cmd'. Dùng: status, install (default)" >&2
+        exit 1
+        ;;
+    esac
     ;;
 
   update-gsd)
@@ -781,14 +815,7 @@ EOF
         # Run status check
         "$0" superpowers status
         echo ""
-        # Windows fallback guidance
-        echo "opk: Windows fallback (if git+https fails):"
-        echo "  1. Use WSL or Git Bash"
-        echo "  2. Or set plugin path manually in opencode.json:"
-        printf '     "plugin": ["superpowers@C:\\path\\to\\superpowers"]\n'
-        echo "  3. Or install via npm: npm install -g superpowers"
-        echo ""
-        echo "opk: Common issues:"
+        echo "opk: Linux troubleshooting:"
         echo "  - git+https requires git on PATH"
         echo "  - Corporate proxy may block GitHub access"
         echo "  - Try: git ls-remote https://github.com/obra/superpowers.git"
@@ -1109,7 +1136,7 @@ EOF
           fi
         fi
         # Remove ECC commands
-        for cmd_file in ecc-audit.md quality-gate.md research-first.md verify-loop.md model-route-review.md harness-audit.md; do
+        for cmd_file in ecc-audit.md quality-gate.md research-first.md verify-loop.md backend-route-review.md harness-audit.md; do
           cmd_path="${ECC_CONFIG_BASE}/commands/$cmd_file"
           if [[ -f "$cmd_path" ]]; then
             rm -f "$cmd_path"

@@ -100,7 +100,7 @@
 | `/quality-gate` | `quality-gate.md` | Quality gate: verify code meets ECC standards before merge |
 | `/research-first` | `research-first.md` | Research-first approach: explore before implementing |
 | `/verify-loop` | `verify-loop.md` | Verification loop: test-before-done, iterate until passing |
-| `/model-route-review` | `model-route-review.md` | Model-routing review: verify AI model choice for task |
+| `/backend-route-review` | `backend-route-review.md` | Backend HTTP/API route review: routing, auth, middleware, error handling |
 | `/harness-audit` | `harness-audit.md` | Harness audit: verify constraints, edge cases, invariants |
 
 ## Hermes-lite (Meta-Cognitive Self-Improvement)

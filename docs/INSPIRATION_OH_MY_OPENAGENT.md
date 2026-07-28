@@ -72,12 +72,11 @@ Không bắt buộc cài, chỉ hướng dẫn.
 
 ## Ý tưởng OPK KHÔNG tham khảo
 
-1. **Multi-model routing** — OPK chỉ dùng model hiện tại
-2. **MCP integration** — OPK giữ no MCP by default
-3. **Gateway / server** — OPK là local-first
-4. **Team Mode** — OPK không có background agents
-5. **Telegram/Discord/Slack** — OPK không có external integrations
-6. **Telemetry** — OPK không track usage
+1. **MCP integration** — OPK giữ no MCP by default
+2. **Gateway / server** — OPK là local-first
+3. **Team Mode** — OPK không có background agents
+4. **Telegram/Discord/Slack** — OPK không có external integrations
+5. **Telemetry** — OPK không track usage
 
 ---
 

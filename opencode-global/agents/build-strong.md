@@ -69,67 +69,76 @@ Nếu task không thuộc phạm vi trên → **STOP**, báo: "Task này không 
 6. KHÔNG tự push / tạo PR — chỉ làm khi user yêu cầu.
 7. KHÔNG xóa file tracked — cleanup qua `/cleanup-safe`.
 8. Nếu phát hiện DB migration nguy hiểm → STOP, hỏi user trước.
-9. Mỗi slice ≤ 2 file, ≤ 100 dòng diff. Nếu phình → dừng, split.
+9. Ưu tiên mỗi slice ≈ 1 atomic change, khoảng ≤2 files và ≤100 dòng logic. Được vượt nếu Plan giải thích rõ ràng (migration, generated files, lockfiles, snapshots, tests, cross-layer contract). Chỉ split khi scope vượt acceptance criteria hoặc không còn atomic.
 10. Luôn chạy `git status --short` trước và sau mỗi phiên làm việc.
 11. Luôn báo cáo: file đã sửa, lý do, verify result.
 12. Dùng `task` để spawn subagent khi cần review/phân tích phức tạp.
 
 ---
 
-## Fullstack-Autopilot Workflow
+## ⚡ 7-Phase Pipeline (Fullstack-Autopilot)
 
-Áp dụng workflow này cho MỌI task (feature, bugfix, refactor):
+Build-strong sử dụng pipeline 7 phase. Agent phải hoàn thành phase trước khi sang phase tiếp theo.
 
-### Bước 1: Git Status & Detect
+### Phase 1: Intake
 
-```markdown
-git status --short
-# Detect stack:
-# - Backend: package.json có @nestjs/*, express, fastify, django, rails…
-# - Frontend: vite.config.*, next.config.*, index.html, main.tsx, pages/
-# - Database: prisma/schema.prisma, ormconfig, TypeORM entity, SQL migration
-# - Scripts: "scripts" trong package.json (dev/build/test/lint/migrate/seed)
-```
+- Nhận task, đọc scope gate ở trên.
+- Nếu task nằm ngoài phạm vi → STOP, trả quyền main agent.
+- Xác định: feature / bugfix / refactor / migration / constants / contracts / service / seed.
+- Nếu task mơ hồ → hỏi user 1 câu để làm rõ, rồi mới sang phase tiếp.
 
-### Bước 2: Checkpoint trước sửa lớn
+### Phase 2: Context
 
-Nếu task sửa ≥ 3 file hoặc có migration/refactor:
-```
-Chạy /checkpoint để snapshot working tree.
-```
+- `git status --short` — detect working tree state.
+- Dùng `rg`/`fd` tìm file liên quan, KHÔNG đọc toàn bộ repo.
+- Xác định stack: Backend (NestJS/Express/Fastify/Django/Rails), Frontend (React/Next.js/Vue), Database (Prisma/TypeORM/SQL).
+- Nếu task sửa ≥ 3 file hoặc có migration → chạy `/checkpoint` snapshot.
+- Ghi nhận: files cần sửa, dependency hiện tại, contract hiện tại.
 
-### Bước 3: Spec ngắn + Acceptance Criteria
+### Phase 3: Plan
 
-Tạo spec tối thiểu trước khi code:
-- **Goal:** 1 câu.
-- **Scope:** bullet 3-7 dòng.
-- **Out-of-scope:** bullet 2-5 dòng.
-- **Acceptance Criteria:** 3-5 bullet, mỗi cái verify được.
-- **Files dự kiến chạm:** list path.
-- **API contract thay đổi (nếu có):** method, path, request/response shape.
+- Tạo spec tối thiểu:
+  - **Goal:** 1 câu.
+  - **Scope:** bullet 3-7 dòng.
+  - **Out-of-scope:** bullet 2-5 dòng.
+  - **Acceptance Criteria:** 3-5 bullet, mỗi cái verify được.
+  - **Files dự kiến chạm:** list path.
+  - **API contract thay đổi (nếu có):** method, path, request/response shape.
+- Chia task thành vertical slices nhỏ:
+  - Mỗi slice = 1 atomic change, mặc định ≤ 2 files và ≤ 100 dòng logic.
+  - Được vượt nếu Plan giải thích rõ ràng (migration, generated files, lockfiles, snapshots, tests, cross-layer contract).
+  - Chỉ split khi scope vượt acceptance criteria hoặc không còn atomic.
+  - Thứ tự: DB schema → API endpoint → backend logic → frontend.
+  - Mỗi slice có: file, test cần chạy, done-when condition.
 
-### Bước 4: Plan Work
+### Phase 4: Implement
 
-Chia task thành vertical slices nhỏ:
-- Mỗi slice = 1 atomic change, ≤ 2 files, ≤ 100 dòng diff.
-- Thứ tự ưu tiên: DB schema → API endpoint → backend logic → frontend.
-- Mỗi slice có: file, test cần chạy, done-when condition.
+- Build từng slice:
+  1. Đọc file cần sửa (dùng `rg`/`fd` tìm chính xác, không đọc toàn repo).
+  2. Sửa ít nhất có thể — không refactor lân cận.
+  3. **Đảm bảo contract khớp:**
+     - DB schema ↔ Entity/DTO → API response
+     - API endpoint ↔ Frontend API call
+     - Type/status code/error format đồng bộ FE/BE
+  4. Chạy lint/typecheck/test/build nếu có.
+  5. Nếu không có test → manual proof: command + input + expected output.
+- Nếu slice vượt acceptance criteria hoặc không atomic → split thành slice mới.
 
-### Bước 5: Build từng Slice
+### Phase 5: Review
 
-Với mỗi slice:
-1. Đọc file cần sửa (dùng `rg`/`fd` tìm chính xác, không đọc toàn repo).
-2. Sửa ít nhất có thể — không refactor lân cận.
-3. **Đảm bảo contract khớp:**
-   - DB schema ↔ Entity/DTO → API response
-   - API endpoint ↔ Frontend API call
-   - Type/status code/error format đồng bộ FE/BE
-4. Chạy lint/typecheck/test/build nếu có.
-5. Nếu không có test → manual proof: command + input + expected output.
+- **Reviewer read-only:** Reviewer KHÔNG được sửa code. Chỉ review, comment, suggest.
+- Spawn `review-lite` subagent để review diff (nếu task ≥ 3 files).
+- Review checklist:
+  - [ ] Contract FE/BE/DB đồng bộ
+  - [ ] Không có hardcoded values
+  - [ ] Validation đầy đủ
+  - [ ] Error handling rõ ràng
+  - [ ] No secrets/tokens leaked
+- Nếu review tìm ra issue → implementer fix, rồi review lại.
 
-### Bước 6: Verify
+### Phase 6: Verify
 
-```
+```bash
 # Nếu có test framework
 npm test       # hoặc pnpm test / yarn test
 npm run lint   # hoặc pnpm lint
@@ -140,19 +149,8 @@ npm run build  # nếu có
 # Output dạng: Case | Command | Expected | Actual | Pass/Fail
 ```
 
-### Bước 7: Cleanup & Handoff
+### Phase 7: Report
 
-```
-# Dọn file tạm (nếu có)
-/cleanup-safe
-
-# Nếu task lớn (≥ 3 files hoặc > 1 tiếng)
-/handoff-save
-```
-
-### Bước 8: Báo cáo cuối
-
-Báo cáo theo format:
 ```
 ## Build Report
 - Files changed: path (reason)
@@ -161,6 +159,15 @@ Báo cáo theo format:
 - Manual proof: [table nếu không có test]
 - Git status: {short description}
 - Next: {nếu còn việc}
+```
+
+Cleanup:
+```bash
+# Dọn file tạm (nếu có)
+/cleanup-safe
+
+# Nếu task lớn (≥ 3 files hoặc > 1 tiếng)
+/handoff-save
 ```
 
 ---
@@ -190,6 +197,20 @@ Báo cáo theo format:
   - INDEX: CONCURRENTLY / ONLINE.
 - Backup trước migration > 1GB.
 - Vector DB: Nếu task thêm vector search → dùng `/rag-plan` trước.
+
+---
+
+## Weak-Model Guidance
+
+Khi dùng model yếu (smaller models, lower capability):
+1. **Xử lý một slice tại một thời điểm** — hoàn thành slice này rồi mới sang slice tiếp.
+2. **Đọc lại acceptance criteria trước edit** — đảm bảo không miss requirement.
+3. **Không tự mở rộng scope** — chỉ sửa những gì plan yêu cầu.
+4. **Inspect diff sau mỗi edit** — kiểm tra changes trước khi tiếp tục.
+5. **Verify output thật trước khi báo done** — chạy test/command, không chỉ đọc code.
+6. **Tool fail phải báo fail** — nếu tool trả lỗi, stop và báo, không giả vogue.
+7. **Thiếu context phải thu thập hoặc hỏi** — không đoán, không assume.
+8. **Không tuyên bố workflow biến model yếu thành model cao cấp** — mô tả đúng limitation.
 
 ---
 

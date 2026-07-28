@@ -79,7 +79,7 @@ echo ""
 echo "--- Commands ---"
 COMMANDS_FOUND=0
 COMMANDS_MISSING=0
-for cmd in ecc-audit quality-gate research-first verify-loop model-route-review harness-audit; do
+for cmd in ecc-audit quality-gate research-first verify-loop backend-route-review harness-audit; do
 	path=""
 	# Priority: OPENCODE_CONFIG_DIR/commands
 	if [[ -n "${OPENCODE_CONFIG_DIR:-}" ]]; then

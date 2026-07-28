@@ -148,18 +148,11 @@ echo ""
 # ─── Check CLI integration ───────────────────────────────────────
 echo "--- CLI Integration ---"
 CLI_OPK=false
-CLI_PS1=false
 if grep -q 'hermes' "${KIT_DIR}/bin/opk" 2>/dev/null; then
 	echo "  ✅ bin/opk — hermes subcommand found"
 	CLI_OPK=true
 else
 	echo "  ❌ bin/opk — hermes subcommand NOT found"
-fi
-if grep -q 'hermes' "${KIT_DIR}/bin/opk.ps1" 2>/dev/null; then
-	echo "  ✅ bin/opk.ps1 — hermes subcommand found"
-	CLI_PS1=true
-else
-	echo "  ❌ bin/opk.ps1 — hermes subcommand NOT found"
 fi
 echo ""
 
@@ -174,7 +167,7 @@ echo "  Agent:   ${AGENT_STATUS}"
 echo "  Commands: ${COMMANDS_FOUND}/8 present"
 echo "  Scripts:  ${SCRIPTS_OK}/3 present"
 echo "  Docs:     ${DOCS_OK}/4 present"
-echo "  CLI:      opk=${CLI_OPK}, ps1=${CLI_PS1}"
+echo "  CLI:      opk=${CLI_OPK}"
 echo ""
 
 ALL_OK=true

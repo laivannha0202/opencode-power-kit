@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # OpenCode Power Kit - bootstrap.sh
-# One-command installer for Linux / macOS / Git Bash / WSL.
+# One-command installer for Linux.
 # Không sudo, không curl|sh, không in secret. Idempotent.
 #
 # Usage:
@@ -36,6 +36,8 @@ header() { echo -e "${CYAN}============================================${NC}"; }
 # --- Resolve kit dir (nơi chứa bootstrap.sh) ---
 KIT_DIR="$(cd "$(dirname "$0")" && pwd)"
 GLOBAL_DIR="$KIT_DIR/opencode-global"
+source "$KIT_DIR/scripts/require-linux.sh"
+opk_require_linux
 
 if [ ! -f "$KIT_DIR/setup.sh" ] || [ ! -f "$KIT_DIR/install-global.sh" ]; then
 	err "Không tìm thấy setup.sh / install-global.sh tại $KIT_DIR. Repo kit có thể bị thiếu file."

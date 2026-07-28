@@ -46,11 +46,25 @@ for tool in bash git python3; do
 	fi
 done
 
+# --- Root check (bypass with OPK_TEST_MODE=1 in containers) ---
+if [ "$(id -u)" -eq 0 ]; then
+	if [ "${OPK_TEST_MODE:-0}" = "1" ]; then
+		warn "OPK_TEST_MODE=1: bypassing root check"
+	else
+		err "Root detected. Set OPK_TEST_MODE=1 to bypass."
+		exit 1
+	fi
+fi
+
 # --- Create scratch project inside kit's .tmp (NOT /tmp) ---
 SCRATCH_ROOT="$KIT_DIR/.tmp"
 mkdir -p "$SCRATCH_ROOT"
 TMP_DIR="$(mktemp -d -p "$SCRATCH_ROOT" -t opk-integration-XXXXXX)"
+SCRATCH_HOME="$TMP_DIR/home"
+mkdir -p "$SCRATCH_HOME"
+export HOME="$SCRATCH_HOME"
 info "Scratch project: $TMP_DIR"
+info "Scratch HOME: $HOME"
 
 # Stub npx: log every invocation to a file + create faux install artifacts
 # so downstream artifact checks pass. Never hits network.
@@ -99,13 +113,6 @@ fi
 exit 0
 STUB
 chmod +x "$NPX_STUB_DIR/npx"
-
-# Also stub npx.cmd in case Windows-y callers resolve it
-cat >"$NPX_STUB_DIR/npx.cmd" <<'STUB'
-@echo off
-echo NPX_INVOCATION %* >> %NPX_LOG%
-exit /b 0
-STUB
 
 cleanup() {
 	if [ -n "${TMP_DIR:-}" ] && [ -d "$TMP_DIR" ]; then
@@ -207,6 +214,27 @@ check_path "opencode-power-install-report.md" "file"
 
 # --- Test full-stack profile install ---
 if [ -x "$KIT_DIR/scripts/install-fullstack-profile.sh" ]; then
+	if [ "$(id -u)" -eq 0 ]; then
+		info "Asserting profile installer still blocks root outside test mode ..."
+		set +e
+		(
+			unset OPK_TEST_MODE
+			cd "$TMP_DIR" && bash "$KIT_DIR/scripts/install-fullstack-profile.sh"
+		) >"$TMP_DIR/profile-root-guard.log" 2>&1
+		profile_guard_rc=$?
+		set -e
+		if [ "$profile_guard_rc" -eq 0 ]; then
+			err "install-fullstack-profile.sh allowed root without OPK_TEST_MODE"
+		elif ! grep -qF "Không chạy với sudo/root." "$TMP_DIR/profile-root-guard.log"; then
+			err "profile root guard failed for an unexpected reason (rc=$profile_guard_rc)"
+		elif [ -f "$TMP_DIR/FULLSTACK_PROFILE_REPORT.md" ] || \
+			grep -qF "OPENCODE-POWER-KIT-MARKER: fullstack-profile-begin" "$TMP_DIR/AGENTS.md" "$TMP_DIR/OPENCODE.md"; then
+			err "profile root guard produced profile side effects"
+		else
+			ok "install-fullstack-profile.sh blocks production root before side effects (rc=$profile_guard_rc)"
+		fi
+	fi
+
 	info "Running scripts/install-fullstack-profile.sh in $TMP_DIR ..."
 	set +e
 	(cd "$TMP_DIR" && bash "$KIT_DIR/scripts/install-fullstack-profile.sh") >"$TMP_DIR/profile.log" 2>&1
@@ -219,6 +247,13 @@ if [ -x "$KIT_DIR/scripts/install-fullstack-profile.sh" ]; then
 		tail -30 "$TMP_DIR/profile.log" >&2
 	else
 		ok "install-fullstack-profile.sh completed (rc=0)"
+		if [ "$(id -u)" -eq 0 ]; then
+			if grep -qF "OPK_TEST_MODE=1: test-only root bypass; production root guard remains enabled" "$TMP_DIR/profile.log"; then
+				ok "profile installer emitted the required test-only root warning"
+			else
+				err "profile installer did not emit the required test-only root warning"
+			fi
+		fi
 	fi
 
 	# Verify profile artifacts
@@ -238,7 +273,7 @@ if [ -x "$KIT_DIR/scripts/install-fullstack-profile.sh" ]; then
 	fi
 
 	if [ -d "$TMP_DIR/.opencode/commands/fullstack" ]; then
-		cmd_n=$(find "$TMP_DIR/.opencode/commands/fullstack" -maxdepth 1 -name "*.md" | wc -l)
+		cmd_n=$(find "$TMP_DIR/.opencode/commands/fullstack" -maxdepth 1 -name "*.md" 2>/dev/null | wc -l) || cmd_n=0
 		if [ "$cmd_n" -gt 0 ]; then
 			ok ".opencode/commands/fullstack/ ($cmd_n files)"
 		else
@@ -249,7 +284,7 @@ if [ -x "$KIT_DIR/scripts/install-fullstack-profile.sh" ]; then
 	fi
 
 	if [ -d "$TMP_DIR/.agents/skills" ]; then
-		skill_n=$(find "$TMP_DIR/.agents/skills" -mindepth 1 -maxdepth 1 -type d | wc -l)
+		skill_n=$(find "$TMP_DIR/.agents/skills" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l) || skill_n=0
 		if [ "$skill_n" -gt 0 ]; then
 			ok ".agents/skills/ ($skill_n skills)"
 		else
@@ -269,7 +304,7 @@ info "Regression guard: no hardcoded '--user-name nha' in repo ..."
 # Run grep, then check output file. Don't use `if grep` (last grep -v in
 # pipe exits 1 when it filters everything, masking the real result).
 # `--` separator is REQUIRED so `--user-name...` isn't parsed as a flag.
-grep -rEn --include='*.sh' --include='*.ps1' --include='*.cmd' \
+grep -rEn --include='*.sh' \
 	-- '--user-name[[:space:]]+nha\b' "$KIT_DIR" 2>/dev/null |
 	grep -vE '/(\.tmp|\.test|node_modules|coverage|dist|build)/' |
 	grep -vE '\.bak$|\.orig$' >"$TMP_DIR/hardcode-user.txt" 2>/dev/null || true

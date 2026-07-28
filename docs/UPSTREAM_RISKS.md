@@ -37,7 +37,7 @@
 - Network dependency during install
 
 **Mitigation:**
-- Taste Skill auto-install completely removed from `install-global.sh` and `install-global.ps1` (v2.0.0)
+- Taste Skill auto-install completely removed from `install-global.sh` (v2.0.0)
 - User runs `opk taste install` explicitly (verify-gated)
 - Safe removal: `opk taste off` moves to `.opk-trash/` (never `rm -rf`)
 - All remaining auto-installs use official installers (npx/pipx)
@@ -84,23 +84,23 @@
 
 **Recommendation:** Regular license review for all upstream dependencies.
 
-### 5. Windows Path/Git Risk
+### 5. Linux Platform Boundary Risk
 
 **Risk Level:** LOW
 
-**Description:** Windows environments may have path issues with git+https URLs.
+**Description:** v2.1.0 intentionally supports Linux only.
 
 **Impact:**
-- `superpowers@git+https://github.com/obra/superpowers.git` may fail on Windows
-- Git executable not found when using git+https
-- Path separator differences
+- Users on unsupported platforms cannot use OPK entrypoints
+- Platform-specific behavior stays out of the release gate
+- Linux dependencies still need to be present on PATH
 
 **Mitigation:**
-- PowerShell scripts available for all operations
-- Fallback to npm local package path documented
-- Error messages include troubleshooting steps
+- Shared `scripts/require-linux.sh` guard
+- No PowerShell, CMD, or BAT runtime artifacts
+- Local Linux release gate is authoritative
 
-**Recommendation:** Test Windows installation regularly.
+**Recommendation:** Keep the platform statement explicit and reject unsupported kernels early.
 
 ### 6. Node/Python/uv Version Risk
 
@@ -168,7 +168,7 @@
 | Auto-Install | MEDIUM | Mitigated | ✅ Taste auto-install removed (v2.0.0) |
 | Stale Package | MEDIUM | In Progress | Update scripts |
 | License/Copy | LOW | Good | Regular review |
-| Windows Path | LOW | Good | Test regularly |
+| Linux Boundary | LOW | Good | Keep guard and docs aligned |
 | Version Risk | MEDIUM | Partial | Add detection |
 | Tooling Absent | LOW | Good | Add version display |
 | Network | MEDIUM | Good | Document offline |

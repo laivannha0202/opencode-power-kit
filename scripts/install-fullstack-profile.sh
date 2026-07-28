@@ -24,9 +24,13 @@ err() {
 	exit 1
 }
 
-# --- Safety: not root ---
+# --- Safety: not root (test-only bypass for isolated integration scratch) ---
 if [ "$(id -u)" -eq 0 ]; then
-	err "Không chạy với sudo/root."
+	if [ "${OPK_TEST_MODE:-0}" = "1" ]; then
+		warn "OPK_TEST_MODE=1: test-only root bypass; production root guard remains enabled"
+	else
+		err "Không chạy với sudo/root."
+	fi
 fi
 
 # --- Resolve kit dir (this script lives in $KIT_DIR/scripts/) ---

@@ -41,6 +41,8 @@ OPK_USER_NAME="${OPK_USER_NAME:-${USER:-User}}"
 
 # --- Safety: detect bad project-dir (sync với bootstrap.sh / setup.sh / opk) ---
 KIT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$KIT_DIR/scripts/require-linux.sh"
+opk_require_linux
 HOME_DIR="${HOME:-/root}"
 is_bad_project_dir() {
 	local p="${1:-$TARGET_DIR}"
