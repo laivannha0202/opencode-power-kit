@@ -1,11 +1,10 @@
 # OpenCode Power Kit
 
-[![CI (manual)](https://img.shields.io/badge/CI-manual-lightgrey)](https://github.com/laivannha0202/opencode-power-kit/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](./VERSION)
 [![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.9.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
-[![Cross-platform](https://img.shields.io/badge/cross--platform-Linux%20%7C%20macOS%20%7C%20Windows-blue.svg)](#cài-nhanh)
+[![Linux-only](https://img.shields.io/badge/platform-Linux--only-blue.svg)](#cài-nhanh)
 
 > Bộ công cụ OpenCode full-stack có thể tái sử dụng: agents, commands, skills, quy trình an toàn, full-stack profile, công cụ release.
 
@@ -13,7 +12,7 @@
 
 ## Cài nhanh
 
-### Linux / macOS / Git Bash / WSL
+### Linux-only
 
 ```bash
 bash -c 'PROJECT="$PWD"; KIT="$HOME/opencode-power-kit"; if [ -d "$KIT/.git" ]; then git -C "$KIT" pull --ff-only; else git clone https://github.com/laivannha0202/opencode-power-kit.git "$KIT"; fi; bash "$KIT/bootstrap.sh" --all --project-dir "$PROJECT"; cd "$PROJECT"; bash "$KIT/verify.sh"; echo "Done. Run: opencode"'
@@ -25,20 +24,6 @@ Sau đó tải lại profile và kiểm tra:
 source ~/.bashrc    # or source ~/.zshrc
 opk one             # chạy lại all-in-one bất cứ lúc nào
 opk doctor          # kiểm tra mọi thứ
-opencode
-```
-
-### Windows PowerShell
-
-```powershell
-powershell -ExecutionPolicy Bypass -Command "$Project=(Get-Location).Path; $KIT=Join-Path $HOME 'opencode-power-kit'; if (Test-Path (Join-Path $KIT '.git')) { & git -C $KIT pull --ff-only } else { & git clone https://github.com/laivannha0202/opencode-power-kit.git $KIT }; & (Join-Path $KIT 'bootstrap.ps1') -All -ProjectDir $Project -Yes; & (Join-Path $KIT 'verify.ps1'); Write-Host 'Done. Run: opencode'"
-```
-
-Mở cửa sổ **PowerShell mới**, sau đó:
-
-```powershell
-opk one
-opk.cmd path
 opencode
 ```
 
@@ -65,7 +50,7 @@ opencode
 Từ v1.6.5, OpenCode Power Kit hỗ trợ **One Command Update**:
 
 ```bash
-# Linux / macOS / Git Bash / WSL
+# Linux
 opk up
 
 # Hoặc alias
@@ -76,18 +61,12 @@ opk upgrade
 opk up --clean
 ```
 
-```powershell
-# Windows PowerShell
-opk up
-```
-
 ### `opk up` làm gì?
 
 1. **Kiểm tra working tree** — Nếu dirty, báo danh sách file dirty, yêu cầu commit
    hoặc dùng `opk clean`. Không tự stash/reset.
 2. **`git pull --ff-only`** trong thư mục kit (an toàn, không rebase/force).
-3. **`install-global.sh --yes`** (Linux/macOS) hoặc **`install-global.ps1 -Yes`**
-   (Windows) để cập nhật agents/commands/skills.
+3. **`install-global.sh --yes`** để cập nhật agents/commands/skills.
 4. **Project update** — Nếu pwd là project an toàn (không phải root/system):
    - `opk install --yes` (cập nhật project config)
    - `opk fullstack --yes` (cập nhật full-stack profile)
@@ -119,12 +98,12 @@ opk clean --apply  # apply: move vào .opk-trash/<timestamp>/
 | GSD reference agents | 34 | `extras/gsd-agent-reference/` (reference-only, not active) |
 | Slash commands | 71 | `opencode-global/commands/` |
 | Skills | 23 | `opencode-global/skills/` |
-| Helper scripts | 37 | `scripts/` |
-| Root-level scripts | 15 | `*.sh` + `*.ps1` (install, bootstrap, verify, doctor, ...) |
+| Helper scripts | 34 | `scripts/` |
+| Root-level scripts | 8 | `*.sh` (install, bootstrap, verify, doctor, ...) |
 | Full-stack profile | 1 | `profiles/node-nest-react-mysql/` |
 | Safety scripts | 4 | `verify.sh`, `doctor.sh`, `cleanup-agent-artifacts.sh`, `opk-command-guard.sh` |
-| Install/Bootstrap | 8 | `bootstrap.*`, `setup.*`, `install*.*` |
-| CLI wrappers | 3 | `bin/opk`, `bin/opk.cmd`, `bin/opk.ps1` |
+| Install/Bootstrap | 4 | `bootstrap.sh`, `setup.sh`, `install.sh`, `install-global.sh` |
+| CLI wrappers | 1 | `bin/opk` |
 
 ---
 
@@ -156,9 +135,9 @@ người dùng hiểu rõ ranh giới.
 | Superpowers | obra | Agent skill library — plugin load runtime | Plugin reference | JSON reference in `opencode.json` |
 | BMAD Method | bmad-code-org | Workflow modules, agents, slash commands | Install-time dependency | `install.sh` / `update-bmad.sh` gọi `npx bmad-method` |
 | GSD Core | open-gsd | Optional companion workflow engine | Opt-in wrapper | `scripts/install-gsd-core.sh` |
-| Supermemory | supermemory.ai | Memory/knowledge layer — store, retrieve, and search agent conversations, notes, and context | Opt-in wrapper | `scripts/install-supermemory.sh`, `scripts/install-supermemory.ps1` |
-| MarkItDown | Microsoft | Document-to-Markdown conversion (PDF/DOCX/PPTX/XLSX/HTML) | Opt-in wrapper | `scripts/install-markitdown.sh`, `scripts/install-markitdown.ps1` |
-| Taste Skill | Leonxlnx | AI-augmented UI/UX design — image-to-code, redesign, polish, brand kit | Verify-gated dependency | `scripts/install-taste-skill.sh`, `scripts/install-taste-skill.ps1` |
+| Supermemory | supermemory.ai | Memory/knowledge layer — store, retrieve, and search agent conversations, notes, and context | Opt-in wrapper | `scripts/install-supermemory.sh` |
+| MarkItDown | Microsoft | Document-to-Markdown conversion (PDF/DOCX/PPTX/XLSX/HTML) | Opt-in wrapper | `scripts/install-markitdown.sh` |
+| Taste Skill | Leonxlnx | AI-augmented UI/UX design — image-to-code, redesign, polish, brand kit | Verify-gated dependency | `scripts/install-taste-skill.sh` |
 | Hermes Agent | NousResearch | Meta-cognitive self-improvement framework — learning loop, skill improvement, memory policy review, context/budget pressure, lightweight kanban, tool surface audit, remote backend review | Inspiration (OPK-native) | `opencode-global/agents/hermes-lite-strong.md`, 8 commands, 3 scripts |
 | NirDiamant/RAG_Techniques | NirDiamant | Comprehensive RAG tutorial collection — conceptual reference for RAG patterns, techniques, and best practices | Reference / Learning resource (OPK-native) | `docs/RAG_LITE_INTEGRATION.md`, `opencode-global/skills/rag-lite/SKILL.md`, 3 commands |
 | chopratejas/headroom | chopratejas | Context/token compression Linux daemon — conceptual reference for context window economics, compression strategies, token budget optimization | Inspiration / Reference (OPK-native) | `docs/HEADROOM_LITE_INTEGRATION.md`, `opencode-global/skills/headroom-lite/SKILL.md`, 3 commands |
@@ -476,23 +455,13 @@ Xem chi tiết: `docs/OPK_ORCHESTRATION_LITE.md`
 
 ## Cài thủ công / Nâng cao
 
-### Linux / macOS / Git Bash / WSL
+### Linux
 
 ```bash
 git clone https://github.com/laivannha0202/opencode-power-kit.git ~/opencode-power-kit
 bash ~/opencode-power-kit/setup.sh --global
 source ~/.bashrc
 opk help
-opencode
-```
-
-### Windows PowerShell
-
-```powershell
-git clone https://github.com/laivannha0202/opencode-power-kit.git $HOME\opencode-power-kit
-powershell -ExecutionPolicy Bypass -File "$HOME\opencode-power-kit\setup.ps1" -Global -Yes
-# Mở PowerShell mới, sau đó:
-opk.cmd path
 opencode
 ```
 
@@ -510,15 +479,15 @@ opk verify
 ```
 ~/opencode-power-kit/
 ├── README.md
-├── setup.sh / setup.ps1          # interactive + flags
-├── bin/opk, opk.cmd, opk.ps1     # CLI wrappers
-├── install.sh / install.ps1       # per-project
-├── bootstrap.sh / bootstrap.ps1   # one-command installer
-├── install-global.sh / .ps1       # global install
-├── verify.sh / verify.ps1         # verification
-├── doctor.sh / doctor.ps1         # diagnostics
-├── uninstall.sh / uninstall.ps1   # removal
-├── update-bmad.sh / .ps1          # BMAD update
+├── setup.sh                        # interactive + flags
+├── bin/opk                         # Linux CLI wrapper
+├── install.sh                      # per-project
+├── bootstrap.sh                    # one-command installer
+├── install-global.sh               # global install
+├── verify.sh                       # verification
+├── doctor.sh                       # diagnostics
+├── uninstall.sh                    # removal
+├── update-bmad.sh                  # BMAD update
 ├── scripts/                       # install helpers
 ├── opencode-global/               # agents, commands, skills
 ├── templates/                     # AGENTS.md, OPENCODE.md, configs
@@ -581,10 +550,9 @@ Phù hợp nhất cho project dùng: NestJS backend, React/Vite frontend, MySQL 
 | Workflow consistency | 7-phase build-strong pipeline, reviewer read-only, verification-before-done | Improves consistency, does not increase model intelligence | `opk doctor` |
 | Agent routing | 16 specialized agents with explicit delegation | Routing is manual/explicit, not auto-dispatched | `grep -c "agent:" opencode-global/agents/*.md` |
 | Safety | CommonJS safety plugin, opk-command-guard, cleanup-safe | Instruction-based, not sandbox; depends on model compliance | `node scripts/test-safety-plugin.mjs` |
-| Build verification | 27 behavioral contracts, eval regression suite | Contracts verify workflow, not model output quality | `bash evals/run.sh` |
-| Cross-platform | Bash + PowerShell scripts, portable timeout fallback | PowerShell chỉ được coi là verified sau khi manual workflow Windows thực sự xanh | `bash verify.sh && pwsh -NoProfile -File scripts/test-timeout.ps1 && pwsh -NoProfile -File verify.ps1 -NoPython` |
+| Build verification | 22 behavioral contracts, eval regression suite | Contracts verify workflow, not model output quality | `bash evals/run.sh` |
+| Linux-only runtime | Bash entrypoints, shared platform guard, portable timeout fallback | Chỉ hỗ trợ Linux; không ship Windows runtime | `bash scripts/release-gate.sh` |
 | Third-party integration | Superpowers v6.1.1, BMAD 6.9.0, GSD 1.6.1, ECC, Hermes, RAG, Headroom, AgentMemory | Opt-in only; no auto-enable; user installs per dependency | `python3 scripts/audit-upstreams.py --check` |
-| Model-agnostic | No model discovery/routing/benchmark/scoring | User selects model in OpenCode UI; OPK does not manage models | `grep -r "model:" opencode-global/agents/*.md \| grep -v "^#"` |
 
 ---
 
@@ -715,10 +683,9 @@ agents to use the `opk` wrapper — never to install packages directly.
 
 | File | Role |
 |------|------|
-| `scripts/install-markitdown.sh` | Linux/macOS installer |
-| `scripts/install-markitdown.ps1` | Windows installer |
+| `scripts/install-markitdown.sh` | Linux installer |
 | `opencode-global/commands/doc-to-md.md` | Agent command documentation |
-| `bin/opk` / `bin/opk.ps1` | CLI subcommands: `markitdown`, `md-convert`, `doc-to-md` |
+| `bin/opk` | CLI subcommands: `markitdown`, `md-convert`, `doc-to-md` |
 
 See [`THIRD_PARTY.md`](./THIRD_PARTY.md) for license and update path.
 
@@ -760,10 +727,9 @@ guides agents to use the `opk` wrapper — never to install packages directly.
 
 | File | Role |
 |------|------|
-| `scripts/install-supermemory.sh` | Linux/macOS installer |
-| `scripts/install-supermemory.ps1` | Windows installer |
+| `scripts/install-supermemory.sh` | Linux installer |
 | `opencode-global/commands/supermemory-init.md` | Agent command documentation |
-| `bin/opk` / `bin/opk.ps1` | CLI subcommands: `supermemory` |
+| `bin/opk` | CLI subcommands: `supermemory` |
 
 See [`THIRD_PARTY.md`](./THIRD_PARTY.md) for license and update path.
 
@@ -793,7 +759,7 @@ Taste Skill is **optional** — installed on-demand by the user, never auto-inst
 ### Safety guarantees
 
 - **No sudo** — prefers `npx`, never uses `sudo npm`.
-- **No curl|sh** — installer is in-kit bash/PowerShell.
+- **No curl|sh** — installer là Bash script có sẵn trong kit.
 - **No .env/secrets** — Taste Skill reads no sensitive files.
 - **No core failure** — missing deps produce a warning only.
 - **Safe removal** — `opk taste off` moves to `.opk-trash/`, never `rm -rf`.
@@ -846,13 +812,11 @@ opk update-taste
 
 | File | Role |
 |------|------|
-| `scripts/install-taste-skill.sh` | Linux/macOS installer |
-| `scripts/install-taste-skill.ps1` | Windows installer |
-| `scripts/check-taste-skill.sh` | Read-only detection (Linux/macOS) |
-| `scripts/check-taste-skill.ps1` | Read-only detection (Windows) |
+| `scripts/install-taste-skill.sh` | Linux installer |
+| `scripts/check-taste-skill.sh` | Read-only detection (Linux) |
 | `opencode-global/agents/taste-ui-strong.md` | Taste UI/UX agent definition |
 | `opencode-global/skills/taste-polish/` | Slash command skills (7 commands) |
-| `bin/opk` / `bin/opk.ps1` | CLI subcommands: `taste`, `taste-status`, `taste-off`, `update-taste` |
+| `bin/opk` | CLI subcommands: `taste`, `taste-status`, `taste-off`, `update-taste` |
 
 See [`THIRD_PARTY.md`](./THIRD_PARTY.md) for license and update path.
 
@@ -870,7 +834,7 @@ security practices, and engineering rigor.
 | Trigger | Installs? | Skip behavior |
 |---------|:---------:|:-------------:|
 | `opk global` / `opk one` / `opk go` | ❌ No | N/A |
-| `install-global.sh` / `install-global.ps1` | ❌ No | N/A |
+| `install-global.sh` | ❌ No | N/A |
 | `bootstrap.sh --all` / `setup.sh --global` | ❌ No | N/A |
 | `opk up` (update) | ❌ No | N/A |
 | `opk ecc lite` | ✅ Yes | Explicit user command only |
@@ -943,9 +907,9 @@ opk e lite
 
 | File | Role |
 |------|------|
-| `scripts/audit-ecc.sh` | Linux/macOS audit script |
-| `scripts/install-ecc-lite.sh` | Linux/macOS installer |
-| `scripts/check-ecc-lite.sh` | Linux/macOS status check |
+| `scripts/audit-ecc.sh` | Linux audit script |
+| `scripts/install-ecc-lite.sh` | Linux installer |
+| `scripts/check-ecc-lite.sh` | Linux status check |
 | `opencode-global/agents/ecc-lite-strong.md` | ECC-lite agent definition |
 | `opencode-global/commands/ecc-audit.md` | ECC audit command |
 | `opencode-global/commands/quality-gate.md` | Quality gate command |
@@ -953,7 +917,7 @@ opk e lite
 | `opencode-global/commands/verify-loop.md` | Verification loop command |
 | `opencode-global/commands/backend-route-review.md` | Backend HTTP/API route review command |
 | `opencode-global/commands/harness-audit.md` | Harness audit command |
-| `bin/opk` / `bin/opk.ps1` | CLI subcommands: `ec`, `e`, `ecc`, `update-ecc` |
+| `bin/opk` | CLI subcommands: `ec`, `e`, `ecc`, `update-ecc` |
 
 See [`THIRD_PARTY.md`](./THIRD_PARTY.md) and [`docs/ECC_INTEGRATION.md`](./docs/ECC_INTEGRATION.md)
 for license, update path, and architecture details.
@@ -1176,38 +1140,6 @@ full memory strategies, safe handoff protocol, and upstream references.
 
 ---
 
-## Model-Agnostic Runtime
-
-OPK không chọn, route, benchmark, hay override model. User tự chọn model trong OpenCode UI, tất cả agent OPK inherit model đó.
-
-### Chính sách
-
-- **OPK model-agnostic** — Không discover, route, benchmark, cache model.
-- **Không per-agent override** — Mọi agent dùng chung model user đã chọn.
-- **Core không yêu cầu provider API key** — Không cần `ANTHROPIC_API_KEY` hoặc `OPENAI_API_KEY`; OPK không đọc `auth.json` và không in credential.
-- **Không tự bật model trả phí** — OPK không biết user dùng model nào.
-
-### `opk model status`
-
-```
-opk: Model-agnostic mode — OPK không quản lý model.
-    Chọn model trong OpenCode UI (Settings → Model).
-    Tất cả agent OPK inherit model đó.
-```
-
-### Safety
-
-- Workflow cải thiện consistency và verification discipline; không làm tăng intelligence của model.
-- Model vẫn do user chọn thủ công trong OpenCode; mọi agent/skill inherit lựa chọn đó.
-- Không đọc `~/.local/share/opencode/auth.json`
-- Không in credential
-- Không ghi API key vào report/log
-- Không tự bật model trả phí
-
-Xem chi tiết: [`docs/MODEL_ROUTING.md`](./docs/MODEL_ROUTING.md)
-
----
-
 ## Vietnamese Language Lock
 
 Tất cả tương tác của agent tuân theo chính sách ưu tiên tiếng Việt:
@@ -1227,19 +1159,17 @@ Xem `templates/AGENTS.md` → **Vietnamese Language Lock** để biết đầy �
 Script `scripts/validate-formatting.py` là lớp bảo vệ format cho toàn bộ kit.
 Nó kiểm tra:
 
-- **Line count tối thiểu** — README, docs, workflow files không bị collapse
-- **Workflow YAML structure** — không có `name:` dính `on:`, có `workflow_dispatch`,
-  không còn `push:`/`pull_request:`/`schedule:`
+- **Line count tối thiểu** — README và tài liệu chính không bị collapse
+- **Linux-only layout** — không còn runtime `.ps1`, `.cmd`, `.bat`
+- **Local-only validation** — không còn workflow Actions dùng làm release gate
 - **Long line check** — không có dòng text quá dài (>2000 ký tự)
-- **Payment reference check** — README không nhắc tới GitHub payment
 - **LOCAL_VALIDATION nội dung** — có các section bắt buộc
 
 ```bash
 python3 scripts/validate-formatting.py
 ```
 
-Lệnh này chạy trong `verify.sh`, trong CI workflow, và là một phần của
-local validation pipeline.
+Lệnh này chạy trong `verify.sh` và là một phần của local validation pipeline.
 
 ---
 
@@ -1260,9 +1190,9 @@ tránh lỗi phổ biến (edit quá nhiều file, chạy lệnh destructive, pr
 
 ## Xử lý sự cố
 
-- **GitHub Actions không chạy?** Actions là **optional** — chạy thủ công qua tab "Actions" trên GitHub (`workflow_dispatch`). Local validation (`verify.sh` / `verify.ps1`) là kiểm tra chính.
-- **Verify local pass nhưng Actions fail?** Đọc log và điều tra khác biệt giữa local với runner; không mặc định coi đó là lỗi môi trường. Chạy full pipeline trong [`docs/LOCAL_VALIDATION.md`](./docs/LOCAL_VALIDATION.md), gồm PowerShell runtime tests và `doctor.sh --deep`; không release khi required check fail.
-- **Format validation fail?** Chạy `python3 scripts/validate-formatting.py` để biết chi tiết, sửa các lỗi line count/YAML/markdown.
+- **Release gate fail?** Chạy `bash scripts/release-gate.sh`, sửa command bị đánh dấu FAIL rồi chạy lại.
+- **Không phải Linux?** Bản v2.1.0 chỉ hỗ trợ Linux và trả exit code `126` trên nền tảng khác.
+- **Format validation fail?** Chạy `python3 scripts/validate-formatting.py` để biết chi tiết.
 - **Cần giúp đỡ?** Chạy `opk doctor` để chẩn đoán, hoặc xem [docs/](./docs/) để biết thêm chi tiết.
 
 ---

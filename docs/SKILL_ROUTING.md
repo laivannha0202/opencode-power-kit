@@ -1,6 +1,6 @@
-# Skill Routing — Model-Agnostic
+# Skill Routing
 
-OPK skills route by **task context**, never by model.
+OPK skills are selected by **task context** and explicit workflow needs.
 
 ## Routing Rules
 
@@ -33,14 +33,5 @@ OPK skills route by **task context**, never by model.
 ## Policy
 
 - **This is documentation, not runtime enforcement.** Skills are loaded manually by the agent or user, not auto-dispatched.
-- **No model routing.** Skills do not select models. Model selection is in OpenCode UI.
-- **No per-skill model override.** All skills inherit the user-selected model.
 - **No runtime auto-load on-demand** without test evidence. Current skills require explicit invocation.
 - **Verification is manual** unless a specific test is listed.
-
-## No Model Override
-
-- Skills do NOT contain `model:` in SKILL.md frontmatter.
-- Skills do NOT route based on model name, provider, or cost.
-- Model selection happens in OpenCode UI, not in skill routing.
-- OPK skills are model-agnostic: they work with any model the user selects.

@@ -8,7 +8,7 @@ agent: ecc-lite-strong
 
 Review backend HTTP/API routes: routing structure, permissions, middleware, and error handling.
 
-**Scope:** Backend route review only — KHÔNG liên quan đến model selection, model routing, hay AI model choice.
+**Scope:** Chỉ review HTTP/API route phía backend; không mở rộng sang frontend hoặc schema migration.
 
 ## Cách dùng
 

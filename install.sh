@@ -36,6 +36,8 @@ err() {
 
 # --- Paths ---
 KIT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$KIT_DIR/scripts/require-linux.sh"
+opk_require_linux
 TARGET_DIR="$(pwd)"
 REPORT_FILE="$TARGET_DIR/opencode-power-install-report.md"
 BACKUP_DIR="$TARGET_DIR/.opencode-power-kit-backup-$(date +%Y%m%d%H%M%S)"

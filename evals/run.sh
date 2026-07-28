@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # run.sh — Workflow Regression Test Runner
-# Verify behavioral contracts: no model routing, no API keys, no overrides.
+# Verify Linux packaging, safety, workflow, timeout, and upstream contracts.
 # Usage: bash evals/run.sh [--dry-run]
 # ============================================================================
 set -uo pipefail

@@ -2,7 +2,7 @@
 # ============================================================================
 # release-gate.sh — Release readiness gate
 # Kiểm tra tất cả điều kiện trước khi release.
-# Strict by default. Use --allow-platform-skips only for conditional local checks.
+# Linux-only local release gate.
 # ============================================================================
 set -uo pipefail
 # NOTE: khong dung -e vi script tinh exit code rieng cho tung command
@@ -12,22 +12,13 @@ export RELEASE_GATE_RUNNING=1
 
 SELF="${BASH_SOURCE[0]}"
 KIT_DIR="$(cd "$(dirname "$SELF")/.." && pwd)"
+source "$KIT_DIR/scripts/require-linux.sh"
+opk_require_linux
 VERSION="$(cat "$KIT_DIR/VERSION" 2>/dev/null || echo "?")"
 errors=0
 warnings=0
-required_skips=0
-allow_platform_skips=0
-
-case "${1:-}" in
-  "") ;;
-  --allow-platform-skips) allow_platform_skips=1 ;;
-  *)
-    echo "Usage: $(basename "$0") [--allow-platform-skips]" >&2
-    exit 126
-    ;;
-esac
-if [ "$#" -gt 1 ]; then
-  echo "Usage: $(basename "$0") [--allow-platform-skips]" >&2
+if [ "$#" -gt 0 ]; then
+  echo "Usage: $(basename "$0")" >&2
   exit 126
 fi
 
@@ -56,6 +47,24 @@ if [ -f "$KIT_DIR/VERSION" ]; then
   fi
 else
   fail "VERSION file missing"
+fi
+
+# --- 1b. Linux-only distribution contract ---
+section "1b. Linux-only Distribution"
+WINDOWS_ARTIFACTS="$(find "$KIT_DIR" -type f \( -name '*.ps1' -o -name '*.cmd' -o -name '*.bat' \) \
+  -not -path "$KIT_DIR/.git/*" -not -path "$KIT_DIR/.tmp/*" -not -path "$KIT_DIR/.test/*" 2>/dev/null || true)"
+if [ -n "$WINDOWS_ARTIFACTS" ]; then
+  fail "Windows runtime artifacts are still tracked:"
+  printf '%s\n' "$WINDOWS_ARTIFACTS" | sed 's/^/     /'
+else
+  pass "No tracked .ps1/.cmd/.bat runtime artifacts"
+fi
+
+ACTION_WORKFLOWS="$(find "$KIT_DIR/.github/workflows" -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) 2>/dev/null || true)"
+if [ -n "$ACTION_WORKFLOWS" ]; then
+  fail "GitHub Actions workflows must remain disabled for the local-only release contract"
+else
+  pass "GitHub Actions workflows disabled; local Linux validation is authoritative"
 fi
 
 # --- 2. CHANGELOG ---
@@ -187,7 +196,7 @@ fi
 
 # --- 9. Tests exist ---
 section "9. Test Coverage"
-for s in test-permission-rules.py test-safety-plugin.mjs test-opk-mode.sh test-installer-preservation.sh test-timeout.sh test-timeout.ps1 test-runtime-behavior.sh; do
+for s in test-permission-rules.py test-safety-plugin.mjs test-opk-mode.sh test-installer-preservation.sh test-timeout.sh test-runtime-behavior.sh; do
   if [ -f "$KIT_DIR/scripts/$s" ]; then
     pass "scripts/$s exists"
   else
@@ -317,15 +326,6 @@ run_cmd "test-installer-preservation" \
 run_cmd "test-timeout" \
   "bash $KIT_DIR/scripts/test-timeout.sh"
 
-if command -v pwsh >/dev/null 2>&1; then
-  run_cmd "test-timeout.ps1" \
-    "pwsh -NoProfile -File '$KIT_DIR/scripts/test-timeout.ps1'"
-else
-  echo "  ⏭️  test-timeout.ps1 — REQUIRED SKIP (pwsh not found)"
-  RESULTS+=("SKIP|test-timeout.ps1|required-skip|pwsh not found")
-  required_skips=$((required_skips + 1))
-fi
-
 run_cmd "test-runtime-behavior" \
   "bash $KIT_DIR/scripts/test-runtime-behavior.sh"
 
@@ -335,15 +335,6 @@ echo "--- Full Verification ---"
 run_cmd "verify.sh" \
   "bash $KIT_DIR/verify.sh"
 
-if command -v pwsh >/dev/null 2>&1; then
-  run_cmd "verify.ps1" \
-    "pwsh -NoProfile -File '$KIT_DIR/verify.ps1'"
-else
-  echo "  ⏭️  verify.ps1 — REQUIRED SKIP (pwsh not found)"
-  RESULTS+=("SKIP|verify.ps1|required-skip|pwsh not found")
-  required_skips=$((required_skips + 1))
-fi
-
 run_cmd "doctor.sh" \
   "bash $KIT_DIR/doctor.sh"
 
@@ -352,8 +343,16 @@ CMD_TIMEOUT=300
 run_cmd "doctor.sh --deep" \
   "bash $KIT_DIR/doctor.sh --deep"
 
+OPK_TEST_MODE_WAS_SET="${OPK_TEST_MODE+x}"
+OPK_TEST_MODE_PREVIOUS="${OPK_TEST_MODE:-}"
+export OPK_TEST_MODE=1
 run_cmd "integration-test" \
   "bash $KIT_DIR/scripts/integration-test.sh"
+if [ "$OPK_TEST_MODE_WAS_SET" = "x" ]; then
+  export OPK_TEST_MODE="$OPK_TEST_MODE_PREVIOUS"
+else
+  unset OPK_TEST_MODE
+fi
 CMD_TIMEOUT=120
 
 # --- Git Checks ---
@@ -443,16 +442,8 @@ if [ "$errors" -gt 0 ]; then
   echo "❌ RELEASE GATE FAILED — $errors error(s), $warnings warning(s)"
   echo "   NOT RELEASE READY — fix required failures."
   exit 1
-elif [ "$required_skips" -gt 0 ] && [ "$allow_platform_skips" -ne 1 ]; then
-  echo "❌ RELEASE GATE BLOCKED — $required_skips required platform check(s) skipped"
-  echo "   NOT RELEASE READY — run every required platform test successfully."
-  exit 1
-elif [ "$required_skips" -gt 0 ]; then
-  echo "⚠️  CONDITIONAL PASS — NOT READY FOR CROSS-PLATFORM RELEASE"
-  echo "   $required_skips required platform check(s) skipped; local available tests passed."
-  exit 0
 else
   echo "✅ RELEASE GATE PASSED — $warnings warning(s)"
-  echo "   Ready to release v$VERSION"
+  echo "   Ready to release v$VERSION for Linux"
   exit 0
 fi

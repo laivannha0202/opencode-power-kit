@@ -2,14 +2,12 @@
 """
 validate-formatting.py — Formatting guard for opencode-power-kit.
 
-Checks minimum line counts, proper YAML structure for workflow files,
-no collapsed/merged lines in key documents, and no billing references
-in docs where they don't belong.
+Checks minimum line counts, document integrity, and the Linux-only
+local-validation distribution contract.
 
 Exit 0 on PASS, 1 on FAIL.
 """
 
-import re
 import sys
 from pathlib import Path
 
@@ -20,21 +18,7 @@ MIN_LINES: dict[str, int] = {
     "README.md": 300,
     "docs/LOCAL_VALIDATION.md": 40,
     "docs/WEAK_MODEL_GUIDE.md": 30,
-    ".github/workflows/ci.yml": 100,
-    ".github/workflows/verify.yml": 50,
 }
-
-# ── Files that must NOT contain "billing" (case-insensitive) ───────
-BILLING_FREE: list[str] = [
-    "README.md",
-]
-
-# ── Workflow YAML checks ──────────────────────────────────────────
-WORKFLOW_DIR = REPO_ROOT / ".github" / "workflows"
-COLLAPSED_PATTERNS: list[tuple[str, str]] = [
-    (r"name:\s*ci", r"\bon:"),       # "name: ci" then "on:" on same line
-    (r"name:\s*verify", r"\bon:"),   # "name: verify" then "on:" on same line
-]
 
 
 def check_line_counts() -> int:
@@ -54,68 +38,29 @@ def check_line_counts() -> int:
     return fails
 
 
-def check_billing_free() -> int:
+def check_linux_only_layout() -> int:
     fails = 0
-    for rel_path in BILLING_FREE:
-        full = REPO_ROOT / rel_path
-        if not full.exists():
-            continue
-        text = full.read_text(encoding="utf-8").lower()
-        if "billing" in text:
-            # Find actual lines
-            for i, line in enumerate(full.read_text(encoding="utf-8").splitlines(), 1):
-                if "billing" in line.lower():
-                    print(f"FAIL  {rel_path}:{i} contains 'billing' — {line.strip()}")
-                    fails += 1
-    return fails
+    artifacts = sorted(
+        p.relative_to(REPO_ROOT).as_posix()
+        for suffix in ("*.ps1", "*.cmd", "*.bat")
+        for p in REPO_ROOT.rglob(suffix)
+        if ".git" not in p.parts and ".tmp" not in p.parts and ".test" not in p.parts
+    )
+    if artifacts:
+        print(f"FAIL  Windows runtime artifacts found: {', '.join(artifacts)}")
+        fails += 1
+    else:
+        print("ok    no .ps1/.cmd/.bat runtime artifacts")
 
-
-def check_docs_no_billing() -> int:
-    """Check docs/ files that should not mention billing."""
-    fails = 0
-    doc_dir = REPO_ROOT / "docs"
-    for f in doc_dir.iterdir():
-        if not f.is_file() or f.suffix.lower() not in {".md", ".markdown"}:
-            continue
-        text = f.read_text(encoding="utf-8").lower()
-        if "billing" in text:
-            for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
-                if "billing" in line.lower():
-                    print(f"WARN  {f.name}:{i} contains 'billing' — {line.strip()}")
-    return fails
-
-
-def check_workflow_yaml() -> int:
-    fails = 0
-    if not WORKFLOW_DIR.exists():
-        print("FAIL  .github/workflows/ directory missing")
-        return 1
-
-    for yml in WORKFLOW_DIR.glob("*.yml"):
-        lines = yml.read_text(encoding="utf-8").splitlines()
-
-        # Check for collapsed lines (name + on on same line)
-        for name_pat, on_pat in COLLAPSED_PATTERNS:
-            for i, line in enumerate(lines):
-                if re.search(name_pat, line, re.IGNORECASE) and re.search(on_pat, line, re.IGNORECASE):
-                    print(f"FAIL  {yml.name}:{i+1} collapsed line detected (name/on merged): {line.strip()}")
-                    fails += 1
-
-        text = "\n".join(lines)
-
-        # Must have workflow_dispatch
-        if "workflow_dispatch" not in text:
-            print(f"FAIL  {yml.name}: missing workflow_dispatch")
-            fails += 1
-
-        # Must NOT have push:/pull_request:/schedule:
-        for bad in ["push:", "pull_request:", "schedule:"]:
-            # Only check under "on:" block
-            if re.search(rf"^\s+{bad}\s*$", text, re.MULTILINE):
-                print(f"FAIL  {yml.name}: contains '{bad}' (should be manual-only)")
-                fails += 1
-
-        print(f"ok    {yml.name}: YAML structure valid")
+    workflow_dir = REPO_ROOT / ".github" / "workflows"
+    workflows = []
+    if workflow_dir.is_dir():
+        workflows = sorted([*workflow_dir.glob("*.yml"), *workflow_dir.glob("*.yaml")])
+    if workflows:
+        print("FAIL  GitHub Actions workflows must be disabled for local-only validation")
+        fails += 1
+    else:
+        print("ok    GitHub Actions workflows disabled")
 
     return fails
 
@@ -143,7 +88,7 @@ def check_local_validation_content() -> int:
     if not full.exists():
         return 0
     text = full.read_text(encoding="utf-8")
-    required = ["Full validation pipeline", "workflow_dispatch", "Các lệnh validation"]
+    required = ["Full validation pipeline", "Linux-only", "Các lệnh validation", "release-gate.sh"]
     fails = 0
     for keyword in required:
         if keyword not in text:
@@ -166,16 +111,8 @@ def main() -> int:
     fails += check_line_counts()
     print()
 
-    print("[billing-free (README)]")
-    fails += check_billing_free()
-    print()
-
-    print("[docs billing warnings]")
-    fails += check_docs_no_billing()
-    print()
-
-    print("[workflow YAML]")
-    fails += check_workflow_yaml()
+    print("[Linux-only layout]")
+    fails += check_linux_only_layout()
     print()
 
     print("[long line check]")

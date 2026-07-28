@@ -18,8 +18,8 @@ The audit will:
 1. Validate all Hermes-lite component files
 2. Check YAML frontmatter on agent and commands
 3. Run `bash -n` syntax check on scripts
-4. Verify CLI integration (`bin/opk`, `bin/opk.ps1`)
-5. Verify integration scripts (`verify.sh`, `verify.ps1`)
+4. Verify Linux CLI integration (`bin/opk`)
+5. Verify integration script (`verify.sh`)
 6. Generate structured audit report here
 
 This file is overwritten by `audit-hermes.sh` on each run.

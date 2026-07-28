@@ -1,10 +1,10 @@
 # Eval Harness — Workflow Regression Suite
 
 Workflow regression tests for OpenCode Power Kit. Verifies behavioral
-contracts: no model routing, no API keys, no overrides, no model selection.
+contracts for Linux packaging, safety, permissions, orchestration, timeout
+behavior, documentation counts, and upstream pins.
 
-**This is NOT a model quality benchmark.** It does not call models,
-score model output, or compare providers.
+The suite validates repository behavior and does not call an AI provider.
 
 ## Structure
 
@@ -12,7 +12,7 @@ score model output, or compare providers.
 evals/
 ├── README.md          # This file
 ├── tasks/
-│   └── contracts.json # 27 behavioral workflow contracts
+│   └── contracts.json # 22 behavioral workflow contracts
 ├── results/           # Test output (auto-generated)
 └── run.sh             # Test runner
 ```
@@ -34,11 +34,10 @@ Each contract in `contracts.json` is a JSON object:
 ```json
 {
   "id": "contract-001",
-  "name": "No model routing in bin/opk",
-  "description": "bin/opk must not contain model discovery, routing, or benchmark",
-  "check_type": "grep_absent",
-  "target": "bin/opk",
-  "patterns": ["discover-free", "benchmark-free"],
+  "name": "Windows runtime artifacts removed",
+  "description": "Linux-only distribution must not ship Windows entrypoints",
+  "check_type": "file_absent",
+  "targets": ["bin/opk.cmd", "bin/opk.ps1"],
   "expected": "all_absent"
 }
 ```
@@ -62,27 +61,22 @@ Optional dependency → SKIP.
 
 | ID | Check Type | What It Verifies |
 |----|-----------|-----------------|
-| contract-001 | grep_absent | No model routing/discovery/benchmark in bin/opk |
-| contract-002 | grep_absent | No API keys in templates |
+| contract-001 | file_absent | Windows runtime artifacts removed |
+| contract-002 | grep_present | Linux-only support documented |
 | contract-003 | grep_absent | .gitignore allows .opencode/ |
-| contract-004 | file_absent | Deleted model routing scripts |
+| contract-004 | grep_present | Linux platform guard exists |
 | contract-005 | script_exec | Safety plugin test (node) |
 | contract-006 | script_exec | Permission ordering test (python3) |
-| contract-007 | file_absent | No model override template |
-| contract-008 | grep_present | Model-agnostic policy documented |
-| contract-009 | script_exec | Model status via opk CLI |
-| contract-010 | grep_absent | No model override in agent files |
+| contract-007 | file_absent | GitHub Actions workflows disabled |
 | contract-011 | grep_present | Writer/read-only reviewer policy |
 | contract-012 | grep_present | build-strong pipeline stages |
 | contract-013 | script_exec | Timeout helper exists and runs |
 | contract-014 | script_exec | Timeout forced fallback returns 124 |
 | contract-015 | script_exec | Timeout forced fallback preserves exit code |
 | contract-016a | file_present | backend-route-review exists |
-| contract-016b | file_absent | model-route-review deleted |
-| contract-017 | grep_absent | No model routing commands in backend-route-review |
 | contract-018 | grep_present | README agent count accurate |
 | contract-019 | grep_present | README command count accurate |
-| contract-020 | grep_absent | No Quality Scorecard in README |
+| contract-020 | grep_absent | No unsupported quality scorecard |
 | contract-021 | grep_present | UPSTREAM_CAPABILITY_MAP correct URLs and pins |
 | contract-022 | script_exec | Default timeout path returns 124 |
 | contract-023 | script_exec | Timeout kills grandchild processes |
@@ -92,8 +86,8 @@ Optional dependency → SKIP.
 
 ## Notes
 
-- **Workflow regression only.** Tests verify file contents and CLI behavior.
-- **No model calls.** Contracts do not invoke models or score output.
-- **No benchmark.** No model comparison or quality ranking.
+- **Repository regression only.** Tests verify file contents and CLI behavior.
+- **Linux-only.** Windows entrypoints and GitHub workflow gates must stay absent.
+- **No provider calls.** The suite runs locally and does not contact an AI model.
 - **Extensible.** Add new contracts to `contracts.json` following the format.
 - Runner auto-discovers all `*.json` in `evals/tasks/`.

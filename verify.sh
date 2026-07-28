@@ -15,6 +15,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KIT_DIR="${SCRIPT_DIR}"
+source "$KIT_DIR/scripts/require-linux.sh"
+opk_require_linux
 cd "${KIT_DIR}"
 
 VERSION_FILE="${KIT_DIR}/VERSION"
@@ -105,7 +107,7 @@ require_file "CHANGELOG.md"
 require_file "README.md"
 require_file "THIRD_PARTY.md"
 require_file "verify.sh"
-require_file "verify.ps1"
+require_file "scripts/require-linux.sh"
 require_file "opencode-global/agents/build-strong.md"
 require_file "opencode-global/agents/architect-strong.md"
 require_file "opencode-global/agents/debug-strong.md"
@@ -130,13 +132,9 @@ require_file "scripts/cleanup-agent-artifacts.sh"
 require_file "scripts/opk-command-guard.sh"
 require_file "scripts/validate-opencode-pack.py"
 require_file "scripts/install-gsd-core.sh"
-require_file "scripts/install-gsd-core.ps1"
 require_file "scripts/install-markitdown.sh"
-require_file "scripts/install-markitdown.ps1"
 require_file "scripts/install-supermemory.sh"
-require_file "scripts/install-supermemory.ps1"
 require_file "scripts/install-safety-plugin.sh"
-require_file "scripts/install-safety-plugin.ps1"
 require_file "scripts/audit-ecc.sh"
 require_file "scripts/install-ecc-lite.sh"
 require_file "scripts/check-ecc-lite.sh"
@@ -154,6 +152,29 @@ require_file "templates/AI_HANDOFF.md"
 require_file "templates/opencode.safe.json"
 require_file "templates/opencode.power.json"
 require_file "templates/plugins/opk-safety-guard.js"
+echo
+
+# ─── v2.1.0: Linux-only distribution ─────────────────────────────
+echo "[v2.1.0 Linux-only Distribution]"
+require_contains "README.md" "Linux-only"
+require_contains "scripts/require-linux.sh" "uname -s"
+require_contains "scripts/require-linux.sh" "Linux"
+WINDOWS_ARTIFACTS="$(find . -type f \( -name '*.ps1' -o -name '*.cmd' -o -name '*.bat' \) \
+	-not -path './.git/*' -not -path './.tmp/*' -not -path './.test/*' 2>/dev/null || true)"
+if [[ -n "${WINDOWS_ARTIFACTS}" ]]; then
+	fail "Windows runtime artifacts found: ${WINDOWS_ARTIFACTS//$'\n'/, }"
+else
+	ok "no .ps1/.cmd/.bat runtime artifacts"
+fi
+ACTION_WORKFLOWS="$(find .github/workflows -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) 2>/dev/null || true)"
+if [[ -n "${ACTION_WORKFLOWS}" ]]; then
+	fail "GitHub Actions workflows must be disabled for local-only validation"
+else
+	ok "GitHub Actions workflows disabled"
+fi
+for linux_entrypoint in bin/opk bootstrap.sh setup.sh install-global.sh install.sh doctor.sh verify.sh uninstall.sh update-bmad.sh scripts/release-gate.sh; do
+	require_contains "${linux_entrypoint}" "require-linux.sh"
+done
 echo
 
 # ─── Required dirs ────────────────────────────────────────────────
@@ -308,8 +329,6 @@ if grep -Eq '^\s*clean\)' "bin/opk"; then
 else
 	fail "bin/opk missing clean case"
 fi
-require_contains "bin/opk.ps1" "'up'"
-require_contains "bin/opk.ps1" "'clean'"
 require_contains "bin/opk" "up|update|upgrade"
 require_contains "scripts/cleanup-agent-artifacts.sh" "Trash dir"
 require_contains "scripts/cleanup-agent-artifacts.sh" "GLOBAL_INSTALL_REPORT"
@@ -323,25 +342,18 @@ echo "[v1.6.7 Supermemory Memory API]"
 require_contains "CHANGELOG.md" "1.6.7"
 require_contains "CHANGELOG.md" "Supermemory"
 require_file "scripts/install-supermemory.sh"
-require_file "scripts/install-supermemory.ps1"
 require_file "opencode-global/commands/supermemory-init.md"
 require_executable "scripts/install-supermemory.sh"
 # Script content checks
 require_contains "scripts/install-supermemory.sh" "supermemory"
 require_contains "scripts/install-supermemory.sh" "--dry-run"
 require_contains "scripts/install-supermemory.sh" "npm install"
-require_contains "scripts/install-supermemory.ps1" "supermemory"
-require_contains "scripts/install-supermemory.ps1" "supermemory"
 require_contains "opencode-global/commands/supermemory-init.md" "supermemory"
 require_contains "opencode-global/commands/supermemory-init.md" "opk supermemory"
 # bin/opk commands
 require_contains "bin/opk" "supermemory)"
 require_contains "bin/opk" "install-supermemory.sh"
 require_contains "bin/opk" "supermemory init"
-# bin/opk.ps1 commands
-require_contains "bin/opk.ps1" "'supermemory'"
-require_contains "bin/opk.ps1" "install-supermemory.ps1"
-require_contains "bin/opk.ps1" "supermemory init"
 # README
 require_contains "README.md" "Supermemory"
 require_contains "README.md" "supermemory/supermemory"
@@ -358,9 +370,7 @@ require_contains "CHANGELOG.md" "1.7.0"
 require_contains "CHANGELOG.md" "Taste Skill"
 # Script files
 require_file "scripts/install-taste-skill.sh"
-require_file "scripts/install-taste-skill.ps1"
 require_file "scripts/check-taste-skill.sh"
-require_file "scripts/check-taste-skill.ps1"
 require_executable "scripts/install-taste-skill.sh"
 require_executable "scripts/check-taste-skill.sh"
 # Agent / command files
@@ -368,22 +378,13 @@ require_file "opencode-global/agents/taste-ui-strong.md"
 # Script content checks
 require_contains "scripts/install-taste-skill.sh" "taste-skill"
 require_contains "scripts/install-taste-skill.sh" "npx"
-require_contains "scripts/install-taste-skill.ps1" "taste-skill"
-require_contains "scripts/install-taste-skill.ps1" "npx"
 require_contains "scripts/check-taste-skill.sh" "taste-skill"
-require_contains "scripts/check-taste-skill.ps1" "taste-skill"
 # bin/opk commands
 require_contains "bin/opk" "taste|taste-status|taste-off|update-taste)"
 require_contains "bin/opk" "taste install"
 require_contains "bin/opk" "taste status"
 require_contains "bin/opk" "taste off"
 require_contains "bin/opk" "update-taste"
-# bin/opk.ps1 commands
-require_contains "bin/opk.ps1" "'taste'"
-require_contains "bin/opk.ps1" "taste install"
-require_contains "bin/opk.ps1" "taste status"
-require_contains "bin/opk.ps1" "taste off"
-require_contains "bin/opk.ps1" "update-taste"
 # Agent routing
 require_contains "opencode-global/agents/build-strong.md" "taste-ui-strong"
 require_contains "opencode-global/commands/agent-router.md" "taste-ui-strong"
@@ -433,13 +434,6 @@ require_contains "bin/opk" "ecc status"
 require_contains "bin/opk" "ecc off"
 require_contains "bin/opk" "OPENCODE_CONFIG_DIR"
 require_contains "bin/opk" "update-ecc)"
-# bin/opk.ps1 commands
-require_contains "bin/opk.ps1" "'ec','e','ecc'"
-require_contains "bin/opk.ps1" "ecc audit"
-require_contains "bin/opk.ps1" "ecc lite"
-require_contains "bin/opk.ps1" "ecc status"
-require_contains "bin/opk.ps1" "ecc off"
-require_contains "bin/opk.ps1" "update-ecc"
 # README
 require_contains "README.md" "ECC-lite"
 require_contains "README.md" "ecc-lite-strong"
@@ -508,12 +502,6 @@ require_contains "bin/opk" "hermes audit"
 require_contains "bin/opk" "hermes status"
 require_contains "bin/opk" "hermes capsule"
 require_contains "bin/opk" "hermes off"
-# bin/opk.ps1 commands
-require_contains "bin/opk.ps1" "'hermes'"
-require_contains "bin/opk.ps1" "hermes audit"
-require_contains "bin/opk.ps1" "hermes status"
-require_contains "bin/opk.ps1" "hermes capsule"
-require_contains "bin/opk.ps1" "hermes off"
 # Docs
 require_file "docs/HERMES_INTEGRATION.md"
 require_file "docs/HERMES_AUDIT.md"
@@ -677,15 +665,12 @@ echo "[v1.6.6 MarkItDown Document Tools]"
 require_contains "CHANGELOG.md" "1.6.6"
 require_contains "CHANGELOG.md" "MarkItDown"
 require_file "scripts/install-markitdown.sh"
-require_file "scripts/install-markitdown.ps1"
 require_file "opencode-global/commands/doc-to-md.md"
 require_executable "scripts/install-markitdown.sh"
 # Script content checks
 require_contains "scripts/install-markitdown.sh" "pipx"
 require_contains "scripts/install-markitdown.sh" "markitdown"
 require_contains "scripts/install-markitdown.sh" "--dry-run"
-require_contains "scripts/install-markitdown.ps1" "pipx"
-require_contains "scripts/install-markitdown.ps1" "markitdown"
 require_contains "opencode-global/commands/doc-to-md.md" "md-convert"
 require_contains "opencode-global/commands/doc-to-md.md" "markitdown"
 # bin/opk commands
@@ -693,10 +678,6 @@ require_contains "bin/opk" "markitdown)"
 require_contains "bin/opk" "md-convert|doc-to-md)"
 require_contains "bin/opk" "install-markitdown.sh"
 require_contains "bin/opk" "command -v markitdown"
-# bin/opk.ps1 commands
-require_contains "bin/opk.ps1" "'markitdown'"
-require_contains "bin/opk.ps1" "md-convert"
-require_contains "bin/opk.ps1" "install-markitdown.ps1"
 # README
 require_contains "README.md" "MarkItDown"
 require_contains "README.md" "microsoft/markitdown"
@@ -716,8 +697,6 @@ require_contains "templates/opencode.power.json" '"permission"'
 require_contains "templates/plugins/opk-safety-guard.js" "tool.execute.before"
 require_contains "bin/opk" "mode)"
 require_contains "bin/opk" "safety-plugin)"
-require_contains "bin/opk.ps1" "'mode'"
-require_contains "bin/opk.ps1" "'safety-plugin'"
 echo
 
 # ─── v1.6.0: docs/releases ──────────────────────────────────────
@@ -822,21 +801,6 @@ require_contains "bin/opk" "tooling doctor"
 require_contains "bin/opk" "taste doctor"
 require_contains "bin/opk" "taste install --v1"
 require_contains "bin/opk" "taste install --v2"
-# bin/opk.ps1 parity
-require_contains "bin/opk.ps1" "'upstream'"
-require_contains "bin/opk.ps1" "upstream audit"
-require_contains "bin/opk.ps1" "upstream doctor"
-require_contains "bin/opk.ps1" "'superpowers'"
-require_contains "bin/opk.ps1" "superpowers status"
-require_contains "bin/opk.ps1" "superpowers reset-cache"
-require_contains "bin/opk.ps1" "superpowers doctor"
-require_contains "bin/opk.ps1" "'bmad'"
-require_contains "bin/opk.ps1" "bmad status"
-require_contains "bin/opk.ps1" "bmad update"
-require_contains "bin/opk.ps1" "'tooling'"
-require_contains "bin/opk.ps1" "tooling doctor"
-require_contains "bin/opk.ps1" "taste doctor"
-
 echo "[v2.0.0 Taste verify-gated]"
 require_contains "README.md" "verify-gated"
 require_contains "README.md" "opk taste install --v1"
@@ -860,15 +824,8 @@ if grep -q "install-taste-skill.sh.*--yes" "install-global.sh"; then
 else
 	ok "install-global.sh: no Taste auto-install call"
 fi
-# install-global.ps1 must NOT call install-taste-skill.ps1 -Yes
-if grep -q "install-taste-skill.ps1.*-Yes" "install-global.ps1"; then
-	fail "install-global.ps1 still calls install-taste-skill.ps1 -Yes (auto-install must be removed)"
-else
-	ok "install-global.ps1: no Taste auto-install call"
-fi
 # install-global must have suggestion hint
 require_contains "install-global.sh" "opk taste install"
-require_contains "install-global.ps1" "opk taste install"
 # UPSTREAM_AUDIT must not contain auto-enabled-dependency
 if grep -q "auto-enabled-dependency" "docs/UPSTREAM_AUDIT.md"; then
 	fail "docs/UPSTREAM_AUDIT.md still contains 'auto-enabled-dependency'"
@@ -973,45 +930,6 @@ if command -v shellcheck >/dev/null 2>&1; then
 	fi
 else
 	echo "  skip shellcheck (not installed)"
-fi
-echo
-
-# ─── PowerShell parser (optional) ────────────────────────────────
-echo "[powershell parser]"
-if command -v pwsh >/dev/null 2>&1; then
-	PS_FILES=(
-		"verify.ps1"
-		"bin/opk.ps1"
-		"install-global.ps1"
-		"bootstrap.ps1"
-		"setup.ps1"
-		"install.ps1"
-		"update-bmad.ps1"
-		"scripts/install-gsd-core.ps1"
-		"scripts/install-markitdown.ps1"
-		"scripts/install-supermemory.ps1"
-		"scripts/install-taste-skill.ps1"
-		"scripts/check-taste-skill.ps1"
-		"scripts/install-safety-plugin.ps1"
-		"scripts/install-fullstack-profile.ps1"
-	)
-	for ps in "${PS_FILES[@]}"; do
-		if [[ -f "${ps}" ]]; then
-			if pwsh -NoProfile -Command "
-				\$errs = \$null
-				[System.Management.Automation.Language.Parser]::ParseFile('${ps}', [ref]\$null, [ref]\$errs) | Out-Null
-				if (\$errs) { exit 1 } else { exit 0 }
-			" >/dev/null 2>&1; then
-				ok "pwsh parser ${ps}"
-			else
-				fail "pwsh parser failed for ${ps}"
-			fi
-		else
-			warn "skip pwsh parser: ${ps} not found"
-		fi
-	done
-else
-	echo "  skip pwsh parser (pwsh not installed)"
 fi
 echo
 

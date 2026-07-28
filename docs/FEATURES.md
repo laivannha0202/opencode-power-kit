@@ -2,8 +2,8 @@
 
 ## Power Mode v1.5.0
 
-- **13 core agents** — mỗi agent chuyên sâu một lĩnh vực
-- **34 commands** — phân loại theo power workflow, safety, build lifecycle, review, DB/API, QA/E2E, DevOps, quality/security, token/tooling
+- **16 active agents** — mỗi agent chuyên sâu một lĩnh vực
+- **71 commands** — phân loại theo power workflow, safety, build lifecycle, review, DB/API, QA/E2E, DevOps, quality/security, token/tooling
 - **Safety guard** — `opk-command-guard.sh` cảnh báo/chặn lệnh shell nguy hiểm (`rm -rf`, `git reset --hard`, force push, `DROP TABLE`, ...)
 - **Agent delegation** — `build-strong` tự động triệu hồi subagent chuyên biệt
 - **`/power-build`** — đầu cuối: spec → architecture → build → QA → security → release
@@ -16,9 +16,10 @@
 Stack: **Node.js + NestJS + React/Vite + MySQL**  
 5 profile commands, 5 profile skills, 9 global full-stack commands, 8 global full-stack skills.
 
-## Đa nền tảng
+## Nền tảng
 
-Linux, macOS (Git Bash/WSL), Windows (PowerShell).
+**Linux-only.** Các entrypoint chính dùng Bash và xác nhận nền tảng qua
+`scripts/require-linux.sh`.
 
 ## An toàn là ưu tiên
 

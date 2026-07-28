@@ -9,40 +9,28 @@ OPK (opencode-power-kit) extends OpenCode with additional capabilities.
 | Agent runtime | ✅ Built-in | ✅ 16 agents |
 | Skill system | ✅ Built-in | ✅ 23 skills |
 | MCP servers | ✅ Built-in | ❌ OPK does NOT auto-enable MCP |
-| Model selection | ✅ OpenCode UI | ❌ Not managed by OPK |
 | Workflow contracts | ❌ | ✅ Behavioral regression tests |
 | Release gate | ❌ | ✅ Version + eval gate |
 | Safety plugin | ❌ | ✅ OPK Safety Guard (CommonJS) |
 | Permission rules | ❌ | ✅ Template with wildcard/deny |
-| PowerShell verify | ❌ | ✅ Cross-platform verification |
-| Evals (regression) | ❌ | ✅ 27 workflow contracts |
+| Linux local verify | ❌ | ✅ Linux-only release validation |
+| Evals (regression) | ❌ | ✅ 22 workflow contracts |
 
-## OPK Does NOT Manage
+## OPK Boundaries
 
-- **Model selection** — users choose via OpenCode UI
-- **Model routing** — no discovery, benchmarking, or routing
-- **API keys** — no key management in OPK
-- **Model quality scoring** — no eval-based model ranking
 - **MCP servers** — OPK does not auto-enable MCP; OpenCode supports it natively
+- **Windows runtime** — v2.1.0 ships Linux entrypoints only
+- **GitHub Actions gate** — release acceptance runs locally on Linux
 
 ## OPK Adds
 
-- **Behavioral contracts** — verify no-model-routing, no-API-keys, no-overrides
+- **Behavioral contracts** — verify packaging, permissions, safety, timeout, and workflow structure
 - **Release gate** — version bump + eval pass required
 - **Safety plugin** — blocks dangerous operations (CommonJS, `module.exports = OPKSafetyGuard`)
 - **Permission template** — wildcard-first, deny-specific pattern
-- **Cross-platform verify** — bash + PowerShell verification
+- **Linux-only verify** — Bash validation plus shared platform guard
 - **Skill routing** — 23 skills for task context
 - **Agent delegation** — 16 specialized agents
-
-## Model-Agnostic Policy
-
-OPK is model-agnostic. The kit works with any model the user selects in OpenCode.
-- No `model:` override in agent files
-- No model discovery/routing/benchmark scripts
-- No model quality scoring
-- No API key management
-- Skills route by task context, not model
 
 ---
 

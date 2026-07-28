@@ -109,8 +109,7 @@ else
 	echo "       Install pipx or pip first, then re-run this script." >&2
 	echo ""
 	echo "  Debian/Ubuntu:  sudo apt install python3-pip python3-pipx"
-	echo "  macOS:          brew install pipx && pipx ensurepath"
-	echo "  Windows:        pip install pipx"
+	echo "  Linux:          python3 -m pip install --user pipx && python3 -m pipx ensurepath"
 	exit 1
 fi
 

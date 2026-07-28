@@ -114,13 +114,6 @@ exit 0
 STUB
 chmod +x "$NPX_STUB_DIR/npx"
 
-# Also stub npx.cmd in case Windows-y callers resolve it
-cat >"$NPX_STUB_DIR/npx.cmd" <<'STUB'
-@echo off
-echo NPX_INVOCATION %* >> %NPX_LOG%
-exit /b 0
-STUB
-
 cleanup() {
 	if [ -n "${TMP_DIR:-}" ] && [ -d "$TMP_DIR" ]; then
 		info "Cleanup: rm -rf $TMP_DIR"
@@ -311,7 +304,7 @@ info "Regression guard: no hardcoded '--user-name nha' in repo ..."
 # Run grep, then check output file. Don't use `if grep` (last grep -v in
 # pipe exits 1 when it filters everything, masking the real result).
 # `--` separator is REQUIRED so `--user-name...` isn't parsed as a flag.
-grep -rEn --include='*.sh' --include='*.ps1' --include='*.cmd' \
+grep -rEn --include='*.sh' \
 	-- '--user-name[[:space:]]+nha\b' "$KIT_DIR" 2>/dev/null |
 	grep -vE '/(\.tmp|\.test|node_modules|coverage|dist|build)/' |
 	grep -vE '\.bak$|\.orig$' >"$TMP_DIR/hardcode-user.txt" 2>/dev/null || true

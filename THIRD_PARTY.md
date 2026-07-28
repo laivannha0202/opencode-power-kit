@@ -117,7 +117,7 @@ curated skills, separate from Superpowers.
 | Integration | **Install-time dependency** — `install.sh` runs `npx bmad-method@VERSION install` into the target project |
 | Source | https://github.com/bmad-code-org/BMAD-METHOD |
 | npm | `bmad-method` (published to npm registry) |
-| Version pin | `BMAD_METHOD_VERSION` env (default: 6.9.0) in `install.sh`, `install.ps1`, `update-bmad.sh`, `update-bmad.ps1` |
+| Version pin | `BMAD_METHOD_VERSION` env (default: 6.9.0) in `install.sh` and `update-bmad.sh` |
 | Kit ships | Wrapper scripts that call the official npm installer |
 | Update path | `bash update-bmad.sh` / `opk update-bmad` — re-runs `npx bmad-method@... install` |
 | License | MIT (per upstream) |
@@ -142,7 +142,7 @@ The kit's `install.sh` and `update-bmad.sh` are thin wrappers that:
 | Source | https://github.com/open-gsd/gsd-core |
 | npm | `@opengsd/gsd-core` |
 | Installer | `npx @opengsd/gsd-core@1.6.1` |
-| Kit ships | `scripts/install-gsd-core.sh` + `scripts/install-gsd-core.ps1` — thin wrappers |
+| Kit ships | `scripts/install-gsd-core.sh` — Linux wrapper |
 | Update path | `opk gsd` / `opk update-gsd` / `opk update-all --with-gsd` |
 | License | See npm package page |
 
@@ -167,7 +167,7 @@ refresh.
 | Source | https://github.com/microsoft/markitdown |
 | PyPI | `markitdown[all]` |
 | Installer | `pipx install "markitdown[all]"` (preferred) or `pip install --user "markitdown[all]"` |
-| Kit ships | `scripts/install-markitdown.sh` + `scripts/install-markitdown.ps1` — thin wrappers |
+| Kit ships | `scripts/install-markitdown.sh` — Linux wrapper |
 | Update path | `opk markitdown install` (re-runs pipx/pip) |
 | License | MIT (per upstream) |
 
@@ -214,7 +214,7 @@ Agents never install packages directly.
 | Kit label | `opencode-supermemory` (internal integration name) |
 | npm | `supermemory` (migrated from `@supermemory/ai` which is deprecated) |
 | Installer | `npm install -g supermemory` |
-| Kit ships | `scripts/install-supermemory.sh` + `scripts/install-supermemory.ps1` — thin wrappers |
+| Kit ships | `scripts/install-supermemory.sh` — Linux wrapper |
 | Update path | `opk supermemory install` (re-runs npm global install) |
 | License | Apache-2.0 (per upstream) |
 | Migration | `@supermemory/ai` → `supermemory` (2026-07-03). Deprecated package reference only in migration comments. |
@@ -258,8 +258,8 @@ Agents never install packages directly.
 | Integration | **Verify-gated dependency** — user-installed via `opk taste install`. No auto-install. Optional. |
 | Source | https://github.com/Leonxlnx/taste-skill |
 | Installer | `npx taste-skill` (official npx package) |
-| Kit ships | `scripts/install-taste-skill.sh` + `scripts/install-taste-skill.ps1` — installers |
-| | `scripts/check-taste-skill.sh` + `scripts/check-taste-skill.ps1` — read-only detection |
+| Kit ships | `scripts/install-taste-skill.sh` — Linux installer |
+| | `scripts/check-taste-skill.sh` — read-only detection |
 | Update path | `opk update-taste` (re-runs npx) |
 | License | MIT (per upstream) |
 
@@ -283,7 +283,7 @@ package installations during global setup.
 
 - **Never vendors** any Taste Skill source code.
 - **No sudo** — prefers `npx`, never uses `sudo npm`.
-- **No curl|sh** — installer is a bash/PowerShell script in the kit.
+- **No curl|sh** — installer là Bash script có sẵn trong kit.
 - **No .env/secrets modification** — Taste Skill reads no sensitive files.
 - **No core install failure** — missing deps produce a warning only.
 - **`OPK_SKIP_TASTE=1`** — legacy escape hatch (no longer needed since global scripts no longer auto-install Taste).
@@ -332,7 +332,7 @@ Agents never install packages directly. All installs go through `opk` wrappers.
 | Kit ships | `scripts/audit-ecc.sh`, `scripts/install-ecc-lite.sh`, `scripts/check-ecc-lite.sh` — OPK-native scripts |
 | | `opencode-global/agents/ecc-lite-strong.md` — ECC-lite agent (6 core principles) |
 | | `opencode-global/commands/ecc-audit.md`, `quality-gate.md`, `research-first.md`, `verify-loop.md`, `backend-route-review.md`, `harness-audit.md` — 6 commands |
-| | `bin/opk` / `bin/opk.ps1` — CLI subcommands: `ec`, `e`, `ecc`, `update-ecc` |
+| | `bin/opk` — CLI subcommands: `ec`, `e`, `ecc`, `update-ecc` |
 | Update path | `opk update-ecc` (re-sources from OPK repo, not from ECC upstream) |
 
 ECC-lite is **not** full ECC. It ships only OPK-native components:
@@ -389,7 +389,7 @@ cleaning up — no global config changes, no full asset copy.
 | Kit ships | `scripts/audit-hermes.sh`, `scripts/check-hermes-lite.sh`, `scripts/hermes-learning-capsule.sh` — OPK-native scripts |
 | | `opencode-global/agents/hermes-lite-strong.md` — Hermes-lite agent |
 | | `opencode-global/commands/hermes-reflect.md`, `hermes-skill.md`, `hermes-kanban.md`, `hermes-memory.md`, `hermes-budget.md`, `hermes-audit.md`, `hermes-learn.md`, `hermes-research.md` — 8 commands |
-| | `bin/opk` / `bin/opk.ps1` — CLI subcommands: `hermes` |
+| | `bin/opk` — CLI subcommands: `hermes` |
 | | `docs/HERMES_INTEGRATION.md`, `docs/HERMES_AUDIT.md`, `docs/LEARNING_LOOP.md`, `docs/AGENT_KANBAN.md` — 4 docs |
 | Update path | `opk hermes status` checks local files; `git pull` refreshes from OPK repo |
 
@@ -626,12 +626,11 @@ AgentMemory-lite is designed to avoid license conflict with upstream:
 
 ### What OPK KHÔNG tham khảo
 
-1. Multi-model routing — OPK uses single model
-2. MCP integration — OPK keeps no MCP by default
-3. Gateway/server — OPK is local-first
-4. Team Mode/background agents — OPK uses single agent
-5. Telegram/Discord/Slack — no external integrations
-6. Telemetry — OPK has no usage tracking
+1. MCP integration — OPK keeps no MCP by default
+2. Gateway/server — OPK is local-first
+3. Team Mode/background agents — OPK uses a foreground workflow
+4. Telegram/Discord/Slack — no external integrations
+5. Telemetry — OPK has no usage tracking
 
 ### License-safe design
 

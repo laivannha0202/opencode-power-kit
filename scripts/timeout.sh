@@ -66,7 +66,7 @@ _gnu_timeout_cmd() {
 
 # ── Portable Python fallback ──
 # Uses Python subprocess with start_new_session=True to create a new session,
-# and os.killpg to kill the entire process tree. Works on macOS without setsid.
+# and os.killpg to kill the entire process tree on Linux.
 _fallback_python() {
   if ! _has_cmd python3; then
     echo "Error: python3 not available for fallback timeout" >&2
@@ -223,7 +223,7 @@ _fallback_bash() {
   watchdog_pid=$!
 
   # Handshake until the watchdog publishes its timer PID. Avoid wait -n so this
-  # remains compatible with the Bash version shipped by older macOS releases.
+  # remains compatible with Bash versions commonly available on Linux.
   _attempt=0
   while [ ! -s "$_watchdog_state" ] && kill -0 "$watchdog_pid" 2>/dev/null; do
     _attempt=$((_attempt + 1))

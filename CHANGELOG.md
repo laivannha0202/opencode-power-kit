@@ -5,9 +5,9 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.1.0] - 2026-07-10
+## [2.1.0] - 2026-07-28
 
-### Runtime Hardening, Model-Agnostic & Safety Fixes
+### Runtime Hardening, Linux-only Packaging & Safety Fixes
 
 #### Added
 
@@ -19,11 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   shell syntax, and test coverage before release.
 - **`scripts/test-runtime-behavior.sh`** — orchestration script that runs all
   behavioral/integration tests in one pass.
-- **`docs/MODEL_ROUTING.md`** — model-agnostic policy documentation.
-- **`docs/SKILL_ROUTING.md`** — skill routing by task context, not model.
+- **`scripts/require-linux.sh`** — shared Linux platform guard for every main
+  entrypoint.
+- **`docs/SKILL_ROUTING.md`** — skill routing by task context.
 - **`docs/UPSTREAM_CAPABILITY_MAP.md`** — OPK vs OpenCode native capability map.
-- **`evals/`** — eval harness with 27 workflow contracts and runner for testing
-  behavioral regression (no model routing, no API keys, no overrides).
+- **`evals/`** — eval harness with 22 workflow contracts for Linux packaging,
+  safety, permissions, orchestration, timeout behavior, and upstream pins.
 - **`scripts/test-permission-rules.py`** — behavioral test verifying permission
   deny-list ordering (wildcard first, deny last) in all templates.
 - **`scripts/test-safety-plugin.mjs`** — unit tests for safety plugin helpers
@@ -32,16 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (POWER/SAFE/CUSTOM) via JSON parser.
 - **`scripts/test-installer-preservation.sh`** — integration test verifying
   installer idempotency and backup preservation.
-- **`verify.ps1`** — PowerShell verification with model-agnostic contract:
-  no model override template, no model override in agents, build-strong
-  pipeline stages, writer/read-only reviewer policy.
 
 #### Changed
 
 - **`scripts/merge-opk-project.py`** — fixed missing `import os` (used by
   `os.getpid()` in backup filename generation).
-- **`bin/opk`** — model-agnostic policy: single `model)` branch outputs
-  "OPK không quản lý model". Removed model routing/discovery/benchmark commands.
+- **`bin/opk`** — Linux-only CLI with shared platform guard; unsupported kernels
+  exit `126`.
 - **`templates/opencode.json`** — permission rule ordering fixed: wildcard
   `"*"` first, specific allows, deny rules last (OpenCode "last rule wins").
 - **`templates/opencode.power.json`** — same rule ordering fix.
@@ -56,9 +54,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`evals/run.sh`** — unknown check_type now FAIL (not SKIP). Added
   `script_exec` check_type for running actual commands. Required missing
   dependency → FAIL; optional → SKIP.
-- **`evals/tasks/contracts.json`** — 27 workflow contracts: safety plugin
-  test, permission rules test, model status CLI, agent model override scan,
-  build-strong pipeline stages, writer/read-only reviewer.
+- **`evals/tasks/contracts.json`** — 22 workflow contracts, including Linux-only
+  layout, disabled Actions workflows, safety plugin, permission rules, timeout,
+  build-strong stages, and writer/read-only reviewer.
 - **GSD agents moved** — 34 GSD companion agents relocated from
   `opencode-global/agents/` to `extras/gsd-agent-reference/`. Active agents:
   16 (was 48+).
@@ -68,15 +66,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and backup-on-overwrite for existing plugins.
 - **`install.sh`** — uses merge script for idempotent config, backup with
   timestamp for all managed files.
+- **Local validation** — `verify.sh`, `doctor.sh`, integration tests, evals, and
+  `scripts/release-gate.sh` are the authoritative acceptance path.
 - **VERSION** — bumped from 2.0.0 to 2.1.0.
 
 #### Removed
 
-- **`templates/opencode.models.example.jsonc`** — model override template
-  removed (model-agnostic policy).
-- **Model routing scripts** — `scripts/opk-model-discover.sh`,
-  `scripts/opk-model-route.sh`, `scripts/opk-model-benchmark.sh`,
-  `scripts/validate-free-model.sh` deleted.
+- **Windows runtime** — removed all PowerShell/CMD entrypoints, installers,
+  validators, timeout helpers, and Windows-only tests.
+- **GitHub Actions release gate** — removed `ci.yml` and `verify.yml`; local
+  Linux validation is authoritative.
+- **Model policy surface** — removed `docs/MODEL_ROUTING.md`, `opk model status`,
+  and model-policy eval/validator contracts.
 
 #### Security
 
@@ -87,8 +88,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   not just instruction-level.
 - No personal paths (`/home/nha`) in any runtime directory.
 - GSD agents no longer in active path — reference-only in extras/.
-- Model-agnostic policy: no model discovery, routing, benchmarking, or
-  override in any OPK file.
+- Linux-only packaging is enforced by validation and the shared platform guard.
 
 ## [2.0.0] - 2026-06-14
 

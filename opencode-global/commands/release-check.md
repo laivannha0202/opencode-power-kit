@@ -41,7 +41,7 @@ git diff --stat
 ```
 
 ### 6. CI status
-Kiểm tra GitHub Actions / CI passes trên main branch.
+Kiểm tra bằng chứng `bash scripts/release-gate.sh` pass tại đúng commit trên main branch.
 
 ## Output
 ```

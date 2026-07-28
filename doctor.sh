@@ -12,6 +12,8 @@ set -euo pipefail
 
 SELF="${BASH_SOURCE[0]}"
 KIT_DIR="$(cd "$(dirname "$SELF")" && pwd)"
+source "$KIT_DIR/scripts/require-linux.sh"
+opk_require_linux
 VERSION="$(cat "$KIT_DIR/VERSION" 2>/dev/null || echo "?")"
 DEEP=0
 FIX_MODE=0
@@ -131,7 +133,7 @@ done
 section "Agents & Commands"
 AGENTS_COUNT=$(find "$KIT_DIR/opencode-global/agents" -maxdepth 1 -name "*.md" 2>/dev/null | wc -l)
 COMMANDS_COUNT=$(find "$KIT_DIR/opencode-global/commands" -maxdepth 1 -name "*.md" 2>/dev/null | wc -l)
-SKILLS_COUNT=$(find "$KIT_DIR/opencode-global/skills" -maxdepth 1 -type d 2>/dev/null | wc -l)
+SKILLS_COUNT=$(find "$KIT_DIR/opencode-global/skills" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l)
 info "Agents: $AGENTS_COUNT, Commands: $COMMANDS_COUNT, Skills: $SKILLS_COUNT"
 
 # GSD reference check

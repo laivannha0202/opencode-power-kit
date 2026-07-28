@@ -16,8 +16,8 @@ This document defines when and how opencode-power-kit updates references to exte
 **Process:**
 1. Verify new version works with existing integration
 2. Update default pin in all relevant scripts:
-   - `install.sh` / `install.ps1`
-   - `update-bmad.sh` / `update-bmad.ps1`
+   - `install.sh`
+   - `update-bmad.sh`
    - Any other scripts with hardcoded versions
 3. Add migration note in CHANGELOG.md
 4. Update THIRD_PARTY.md if integration type changes
@@ -26,7 +26,7 @@ This document defines when and how opencode-power-kit updates references to exte
 **Example:**
 ```bash
 # BMAD Method 6.8.0 → 6.9.0
-sed -i 's/6\.8\.0/6.9.0/g' install.sh install.ps1 update-bmad.sh update-bmad.ps1
+sed -i 's/6\.8\.0/6.9.0/g' install.sh update-bmad.sh
 ```
 
 ### 2. Documentation Updates Only
@@ -136,6 +136,7 @@ Before merging any upstream update:
 
 - [ ] `python3 scripts/validate-opencode-pack.py` passes
 - [ ] `bash verify.sh` passes
+- [ ] `bash scripts/release-gate.sh` passes on Linux
 - [ ] No new `@supermemory/ai` references outside migration section
 - [ ] No `get-shit-done` package references
 - [ ] No `use_skill` or `find_skills` as main workflow

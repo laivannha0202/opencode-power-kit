@@ -46,6 +46,8 @@ USAGE
 done
 
 KIT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$KIT_DIR/scripts/require-linux.sh"
+opk_require_linux
 TARGET_DIR="$(pwd)"
 
 info "Target: $TARGET_DIR"

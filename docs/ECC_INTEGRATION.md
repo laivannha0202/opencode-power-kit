@@ -146,9 +146,9 @@ no hidden side effects**.
 
 | File | Role |
 |------|------|
-| `scripts/audit-ecc.sh` | Linux/macOS audit script |
-| `scripts/install-ecc-lite.sh` | Linux/macOS installer |
-| `scripts/check-ecc-lite.sh` | Linux/macOS status check |
+| `scripts/audit-ecc.sh` | Linux audit script |
+| `scripts/install-ecc-lite.sh` | Linux installer |
+| `scripts/check-ecc-lite.sh` | Linux status check |
 | `opencode-global/agents/ecc-lite-strong.md` | ECC-lite agent definition |
 | `opencode-global/commands/ecc-audit.md` | ECC audit command |
 | `opencode-global/commands/quality-gate.md` | Quality gate command |
@@ -156,6 +156,6 @@ no hidden side effects**.
 | `opencode-global/commands/verify-loop.md` | Verification loop command |
 | `opencode-global/commands/backend-route-review.md` | Backend HTTP/API route review command |
 | `opencode-global/commands/harness-audit.md` | Harness audit command |
-| `bin/opk` / `bin/opk.ps1` | CLI subcommands: `ecc`, `ec`, `e`, `update-ecc` |
+| `bin/opk` | CLI subcommands: `ecc`, `ec`, `e`, `update-ecc` |
 
 See [`THIRD_PARTY.md`](./THIRD_PARTY.md) for license and update path.

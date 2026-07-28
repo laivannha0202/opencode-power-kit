@@ -3,7 +3,7 @@
 ## Yêu cầu trước khi release
 
 - Working tree sạch (`git status` không có thay đổi chưa commit)
-- Tất cả tests pass (`opk verify` hoặc `verify.sh`/`verify.ps1`)
+- Tất cả tests pass (`opk verify` và `bash scripts/release-gate.sh`)
 - Local tags khớp với file `VERSION`
 - `CHANGELOG.md` đã cập nhật cho phiên bản hiện tại
 
@@ -45,7 +45,7 @@ gh release create v1.x.x --title "v1.x.x — Release Name" --notes-file docs/rel
 
 - Xác nhận GitHub Release đã tồn tại
 - Xác nhận tag đã được push
-- Xác nhận CI pass trên tag
+- Xác nhận local Linux release gate pass tại đúng commit được tag
 
 ## Sơ đồ phiên bản
 

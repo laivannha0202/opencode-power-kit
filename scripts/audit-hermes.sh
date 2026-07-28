@@ -235,17 +235,6 @@ if [[ -f "${KIT_DIR}/bin/opk" ]]; then
 		WARNINGS+=("CLI_MISSING: hermes not in bin/opk")
 	fi
 fi
-if [[ -f "${KIT_DIR}/bin/opk.ps1" ]]; then
-	TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
-	if grep -q 'hermes' "${KIT_DIR}/bin/opk.ps1" 2>/dev/null; then
-		echo "  ✅ bin/opk.ps1 — hermes subcommand found"
-		PASSED_CHECKS=$((PASSED_CHECKS + 1))
-	else
-		echo "  ⚠️  bin/opk.ps1 — hermes subcommand NOT found"
-		FAILED_CHECKS=$((FAILED_CHECKS + 1))
-		WARNINGS+=("CLI_MISSING: hermes not in bin/opk.ps1")
-	fi
-fi
 echo ""
 
 # ─── Phase 6: Verify integration ──────────────────────────────────
@@ -259,17 +248,6 @@ if [[ -f "${KIT_DIR}/verify.sh" ]]; then
 		echo "  ⚠️  verify.sh — hermes checks NOT found"
 		FAILED_CHECKS=$((FAILED_CHECKS + 1))
 		WARNINGS+=("VERIFY_MISSING: hermes not in verify.sh")
-	fi
-fi
-if [[ -f "${KIT_DIR}/verify.ps1" ]]; then
-	TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
-	if grep -q 'hermes' "${KIT_DIR}/verify.ps1" 2>/dev/null; then
-		echo "  ✅ verify.ps1 — hermes checks found"
-		PASSED_CHECKS=$((PASSED_CHECKS + 1))
-	else
-		echo "  ⚠️  verify.ps1 — hermes checks NOT found"
-		FAILED_CHECKS=$((FAILED_CHECKS + 1))
-		WARNINGS+=("VERIFY_MISSING: hermes not in verify.ps1")
 	fi
 fi
 echo ""
