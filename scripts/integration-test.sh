@@ -60,7 +60,11 @@ fi
 SCRATCH_ROOT="$KIT_DIR/.tmp"
 mkdir -p "$SCRATCH_ROOT"
 TMP_DIR="$(mktemp -d -p "$SCRATCH_ROOT" -t opk-integration-XXXXXX)"
+SCRATCH_HOME="$TMP_DIR/home"
+mkdir -p "$SCRATCH_HOME"
+export HOME="$SCRATCH_HOME"
 info "Scratch project: $TMP_DIR"
+info "Scratch HOME: $HOME"
 
 # Stub npx: log every invocation to a file + create faux install artifacts
 # so downstream artifact checks pass. Never hits network.
@@ -217,6 +221,27 @@ check_path "opencode-power-install-report.md" "file"
 
 # --- Test full-stack profile install ---
 if [ -x "$KIT_DIR/scripts/install-fullstack-profile.sh" ]; then
+	if [ "$(id -u)" -eq 0 ]; then
+		info "Asserting profile installer still blocks root outside test mode ..."
+		set +e
+		(
+			unset OPK_TEST_MODE
+			cd "$TMP_DIR" && bash "$KIT_DIR/scripts/install-fullstack-profile.sh"
+		) >"$TMP_DIR/profile-root-guard.log" 2>&1
+		profile_guard_rc=$?
+		set -e
+		if [ "$profile_guard_rc" -eq 0 ]; then
+			err "install-fullstack-profile.sh allowed root without OPK_TEST_MODE"
+		elif ! grep -qF "Không chạy với sudo/root." "$TMP_DIR/profile-root-guard.log"; then
+			err "profile root guard failed for an unexpected reason (rc=$profile_guard_rc)"
+		elif [ -f "$TMP_DIR/FULLSTACK_PROFILE_REPORT.md" ] || \
+			grep -qF "OPENCODE-POWER-KIT-MARKER: fullstack-profile-begin" "$TMP_DIR/AGENTS.md" "$TMP_DIR/OPENCODE.md"; then
+			err "profile root guard produced profile side effects"
+		else
+			ok "install-fullstack-profile.sh blocks production root before side effects (rc=$profile_guard_rc)"
+		fi
+	fi
+
 	info "Running scripts/install-fullstack-profile.sh in $TMP_DIR ..."
 	set +e
 	(cd "$TMP_DIR" && bash "$KIT_DIR/scripts/install-fullstack-profile.sh") >"$TMP_DIR/profile.log" 2>&1
@@ -229,6 +254,13 @@ if [ -x "$KIT_DIR/scripts/install-fullstack-profile.sh" ]; then
 		tail -30 "$TMP_DIR/profile.log" >&2
 	else
 		ok "install-fullstack-profile.sh completed (rc=0)"
+		if [ "$(id -u)" -eq 0 ]; then
+			if grep -qF "OPK_TEST_MODE=1: test-only root bypass; production root guard remains enabled" "$TMP_DIR/profile.log"; then
+				ok "profile installer emitted the required test-only root warning"
+			else
+				err "profile installer did not emit the required test-only root warning"
+			fi
+		fi
 	fi
 
 	# Verify profile artifacts

@@ -15,6 +15,8 @@ fail_count=0
 skip_count=0
 case_count=0
 _MARKER_FILE=""
+_TEMP_FILES=""
+_TEMP_DIRS=""
 
 green='✅'
 red='❌'
@@ -27,7 +29,14 @@ info() { echo "  ℹ️  $*"; }
 case_start() { case_count=$((case_count + 1)); }
 
 cleanup() {
+  local file dir
   [ -n "$_MARKER_FILE" ] && rm -f "$_MARKER_FILE" 2>/dev/null || true
+  for file in $_TEMP_FILES; do
+    rm -f "$file" 2>/dev/null || true
+  done
+  for dir in $_TEMP_DIRS; do
+    rmdir "$dir" 2>/dev/null || true
+  done
 }
 trap cleanup EXIT
 
@@ -88,7 +97,7 @@ poll_process_state() {
 }
 
 test_grandchild() {
-  local backend="$1" grand_pid final_state
+  local backend="$1" grand_pid final_state process_args
   _MARKER_FILE=$(mktemp "${TMPDIR:-/tmp}/.opk-timeout-test-XXXXXX")
   rm -f "$_MARKER_FILE"
 
@@ -116,11 +125,175 @@ test_grandchild() {
     gone|zombie) pass "$backend: grandchild stopped ($final_state)" ;;
     *)
       fail "$backend: grandchild still running ($final_state)"
-      kill -9 "$grand_pid" 2>/dev/null || true
+      process_args=$(ps -o args= -p "$grand_pid" 2>/dev/null || true)
+      case "$process_args" in
+        *"$_MARKER_FILE"*) kill -9 "$grand_pid" 2>/dev/null || true ;;
+        *) fail "$backend: refused cleanup because PID $grand_pid no longer matches the test marker" ;;
+      esac
       ;;
   esac
   rm -f "$_MARKER_FILE"
   _MARKER_FILE=""
+}
+
+read_lifecycle_pid_record() {
+  local pid_file="$1"
+  watchdog_pid=""
+  timer_pid=""
+  watchdog_identity=""
+  timer_identity=""
+  if [ -s "$pid_file" ]; then
+    {
+      read -r watchdog_pid timer_pid
+      IFS= read -r watchdog_identity || true
+      IFS= read -r timer_identity || true
+    } <"$pid_file"
+  fi
+}
+
+assert_pid_gone() {
+  local label="$1" pid="$2" expected_identity="$3" current_identity
+  if ! [[ "$pid" =~ ^[1-9][0-9]*$ ]]; then
+    fail "$label PID missing or invalid ('$pid')"
+    return
+  fi
+  if kill -0 "$pid" 2>/dev/null; then
+    current_identity=$(ps -o lstart= -p "$pid" 2>/dev/null || true)
+    if [ -n "$expected_identity" ] && [ "$current_identity" = "$expected_identity" ]; then
+      fail "$label process still running (PID $pid)"
+      kill "$pid" 2>/dev/null || true
+      wait "$pid" 2>/dev/null || true
+    else
+      fail "$label PID $pid was reused; refusing to kill a process outside this test"
+    fi
+  else
+    pass "$label process reaped (PID $pid)"
+  fi
+}
+
+test_bash_lifecycle() {
+  local pid_file output_file output rc start elapsed watchdog_pid timer_pid iteration
+  local watchdog_identity timer_identity
+
+  case_start
+  echo ""
+  echo "=== Bash lifecycle and latency ==="
+
+  if ! backend_available bash; then
+    skip "bash backend unavailable — lifecycle suite SKIP"
+    return
+  fi
+
+  pid_file=$(mktemp "${TMPDIR:-/tmp}/.opk-timeout-pids-XXXXXX")
+  output_file=$(mktemp "${TMPDIR:-/tmp}/.opk-timeout-output-XXXXXX")
+  _TEMP_FILES="$_TEMP_FILES $pid_file $output_file"
+  rm -f "$pid_file"
+
+  start=$SECONDS
+  env OPK_TIMEOUT_BACKEND=bash OPK_TIMEOUT_TEST_PID_FILE="$pid_file" \
+    "$TIMEOUT_TOOL" 47 sh -c 'printf direct' >"$output_file"
+  rc=$?
+  elapsed=$((SECONDS - start))
+  output=$(<"$output_file")
+  [ "$rc" -eq 0 ] && pass "bash: direct early completion exits 0" || fail "bash: direct early completion expected 0, got $rc"
+  [ "$output" = direct ] && pass "bash: direct stdout preserved" || fail "bash: direct stdout expected direct, got '$output'"
+  [ "$elapsed" -lt 2 ] && pass "bash: direct completion is early (${elapsed}s)" || fail "bash: direct completion waited ${elapsed}s"
+
+  read_lifecycle_pid_record "$pid_file"
+  assert_pid_gone "bash: watchdog" "$watchdog_pid" "$watchdog_identity"
+  assert_pid_gone "bash: timer" "$timer_pid" "$timer_identity"
+
+  start=$SECONDS
+  output=$(env OPK_TIMEOUT_BACKEND=bash "$TIMEOUT_TOOL" 5 sh -c 'printf hello')
+  rc=$?
+  elapsed=$((SECONDS - start))
+  [ "$rc" -eq 0 ] && pass "bash: captured stdout exits 0" || fail "bash: captured stdout expected 0, got $rc"
+  [ "$output" = hello ] && pass "bash: captured stdout preserved" || fail "bash: captured stdout expected hello, got '$output'"
+  [ "$elapsed" -lt 2 ] && pass "bash: captured completion is early (${elapsed}s)" || fail "bash: captured completion held pipe for ${elapsed}s"
+
+  start=$SECONDS
+  output=$(env OPK_TIMEOUT_BACKEND=bash "$TIMEOUT_TOOL" 5 sh -c 'printf problem >&2' 2>&1)
+  rc=$?
+  elapsed=$((SECONDS - start))
+  [ "$rc" -eq 0 ] && pass "bash: captured stderr exits 0" || fail "bash: captured stderr expected 0, got $rc"
+  [ "$output" = problem ] && pass "bash: captured stderr preserved" || fail "bash: captured stderr expected problem, got '$output'"
+  [ "$elapsed" -lt 2 ] && pass "bash: captured stderr completes early (${elapsed}s)" || fail "bash: captured stderr held pipe for ${elapsed}s"
+
+  rm -f "$pid_file"
+  env OPK_TIMEOUT_BACKEND=bash OPK_TIMEOUT_TEST_PID_FILE="$pid_file" \
+    "$TIMEOUT_TOOL" 1 sleep 10
+  rc=$?
+  [ "$rc" -eq 124 ] && pass "bash: lifecycle timeout returns 124" || fail "bash: lifecycle timeout expected 124, got $rc"
+  read_lifecycle_pid_record "$pid_file"
+  assert_pid_gone "bash: timed-out watchdog" "$watchdog_pid" "$watchdog_identity"
+  assert_pid_gone "bash: timed-out timer" "$timer_pid" "$timer_identity"
+
+  for iteration in 1 2 3 4 5; do
+    rm -f "$pid_file"
+    env OPK_TIMEOUT_BACKEND=bash OPK_TIMEOUT_TEST_PID_FILE="$pid_file" \
+      "$TIMEOUT_TOOL" 47 sh -c 'exit 0'
+    rc=$?
+    if [ "$rc" -ne 0 ]; then
+      fail "bash: rapid iteration $iteration expected 0, got $rc"
+      continue
+    fi
+    read_lifecycle_pid_record "$pid_file"
+    assert_pid_gone "bash: iteration $iteration watchdog" "$watchdog_pid" "$watchdog_identity"
+    assert_pid_gone "bash: iteration $iteration timer" "$timer_pid" "$timer_identity"
+  done
+}
+
+test_backend_exec_errors() {
+  local backend="$1" missing noexec bad_interpreter bad_name bad_dir module_dir module_output module_rc
+  missing="opk-command-that-does-not-exist-$$-$backend"
+
+  run_backend "$backend" 5 "$missing"
+  [ "$RUN_RC" -eq 127 ] && pass "$backend: missing command returns 127" || fail "$backend: missing command expected 127, got $RUN_RC${RUN_OUTPUT:+ — $RUN_OUTPUT}"
+  case "$RUN_OUTPUT" in
+    *Traceback*) fail "$backend: missing command leaked Python traceback" ;;
+    *) pass "$backend: missing command has no traceback" ;;
+  esac
+
+  noexec=$(mktemp "${TMPDIR:-/tmp}/.opk-timeout-noexec-XXXXXX")
+  _TEMP_FILES="$_TEMP_FILES $noexec"
+  chmod 600 "$noexec"
+  run_backend "$backend" 5 "$noexec"
+  [ "$RUN_RC" -eq 126 ] && pass "$backend: non-executable command returns 126" || fail "$backend: non-executable command expected 126, got $RUN_RC${RUN_OUTPUT:+ — $RUN_OUTPUT}"
+  case "$RUN_OUTPUT" in
+    *Traceback*) fail "$backend: non-executable command leaked Python traceback" ;;
+    *) pass "$backend: non-executable command has no traceback" ;;
+  esac
+  rm -f "$noexec"
+
+  if [ "$backend" = python ]; then
+    bad_interpreter=$(mktemp "${TMPDIR:-/tmp}/.opk-timeout-bad-interpreter-XXXXXX")
+    _TEMP_FILES="$_TEMP_FILES $bad_interpreter"
+    printf '#!/opk/missing/interpreter\nexit 0\n' >"$bad_interpreter"
+    chmod 700 "$bad_interpreter"
+    bad_name=${bad_interpreter##*/}
+    bad_dir=${bad_interpreter%/*}
+    PATH="$bad_dir:$PATH" run_backend "$backend" 5 "$bad_name"
+    [ "$RUN_RC" -eq 126 ] && pass "python: PATH command with missing interpreter returns 126" || fail "python: PATH command with missing interpreter expected 126, got $RUN_RC${RUN_OUTPUT:+ — $RUN_OUTPUT}"
+    case "$RUN_OUTPUT" in
+      *Traceback*) fail "python: missing interpreter leaked Python traceback" ;;
+      *) pass "python: missing interpreter has no traceback" ;;
+    esac
+    rm -f "$bad_interpreter"
+
+    module_dir=$(mktemp -d "${TMPDIR:-/tmp}/.opk-timeout-python-path-XXXXXX")
+    _TEMP_DIRS="$_TEMP_DIRS $module_dir"
+    _TEMP_FILES="$_TEMP_FILES $module_dir/shutil.py"
+    printf 'raise RuntimeError("untrusted cwd import")\n' >"$module_dir/shutil.py"
+    module_output=$(cd "$module_dir" && env PYTHONDONTWRITEBYTECODE=1 OPK_TIMEOUT_BACKEND=python \
+      "$TIMEOUT_TOOL" 5 sh -c 'exit 0' 2>&1) && module_rc=0 || module_rc=$?
+    [ "$module_rc" -eq 0 ] && pass "python: backend ignores modules from command cwd" || fail "python: cwd module isolation expected 0, got $module_rc${module_output:+ — $module_output}"
+    case "$module_output" in
+      *Traceback*) fail "python: cwd module injection leaked traceback" ;;
+      *) pass "python: cwd module injection has no traceback" ;;
+    esac
+    rm -f "$module_dir/shutil.py"
+    rmdir "$module_dir"
+  fi
 }
 
 test_backend() {
@@ -153,6 +326,9 @@ test_backend() {
     env OPK_TIMEOUT_BACKEND="$backend" "$TIMEOUT_TOOL" 2 sh -c 'exit 42'
   assert_backend_status "$backend" "nested wrapper returns inner timeout" 124 5 \
     env OPK_TIMEOUT_BACKEND="$backend" "$TIMEOUT_TOOL" 1 sleep 10
+
+  test_backend_exec_errors "$backend"
+  [ "$backend" = bash ] && test_bash_lifecycle
 }
 
 test_selector_contract() {
@@ -211,6 +387,7 @@ main() {
     --case)
       case "${2:-}" in
         selector|backend-selector) test_selector_contract ;;
+        lifecycle|bash-lifecycle) test_bash_lifecycle ;;
         gnu|python|bash) test_backend "$2" ;;
         *) echo "Unknown case: ${2:-}" >&2; exit 1 ;;
       esac
