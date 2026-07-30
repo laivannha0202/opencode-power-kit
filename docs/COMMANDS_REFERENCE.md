@@ -4,7 +4,7 @@
 
 | Lệnh | File | Mục đích |
 |---------|------|----------|
-| `/agent-router` | `any.md` | Định tuyến tác vụ tới agent chuyên biệt phù hợp |
+| `/agent-router` | `opencode-global/commands/agent-router.md` | Định tuyến tác vụ tới agent chuyên biệt phù hợp |
 | `/power-build` | `power-build.md` | Build đầu cuối: spec → architecture → build → QA → security → release |
 | `/tooling-doctor` | `tooling-doctor.md` | Phát hiện công cụ bên thứ ba có sẵn |
 
@@ -130,3 +130,15 @@
 | `opk fullstack` | Cài full-stack profile (Node/Nest/React/MySQL) |
 | `opk path` | Hiển thị đường dẫn kit |
 | `opk update` | Cập nhật kit từ git origin |
+| `opk mode show\|power\|safe` | Xem hoặc đổi mode trong `.opencode/opencode.json` của project hiện tại; backup config cũ, không sửa template mặc định |
+| `opk safety-plugin status\|install` | Kiểm tra hoặc cài safety plugin vào project hiện tại |
+| `opk hermes audit [--dry-run\|--check\|--write\|--help]` | Audit Hermes-lite; mặc định `--check` read-only, chỉ `--write` ghi `docs/HERMES_AUDIT.md` |
+| `opk hermes status\|capsule\|off\|help` | Kiểm tra, tạo capsule, xem help hoặc move component Hermes đã biết vào config `.opk-trash/` |
+| `opk ecc audit\|lite\|status\|update\|off` | Audit, cài, kiểm tra, cập nhật hoặc move component ECC đã biết vào config `.opk-trash/` |
+| `opk ec ...` / `opk e ...` | Alias tương thích cho namespace `opk ecc`, gồm cả `off` |
+| `opk supermemory install\|update\|status\|init\|init-help` | Quản lý Supermemory; `init-help` chỉ in help và không download package |
+
+`opk hermes off` và `opk ecc off` không xóa file. Chúng chỉ move manifest
+agent/command đã biết vào `.opk-trash/<integration>-<timestamp>/` bên trong
+OpenCode config để có thể khôi phục; file tùy chỉnh nằm ngoài các đường dẫn
+manifest đã biết không bị động tới.

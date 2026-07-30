@@ -5,6 +5,25 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.2] - 2026-07-30
+
+### Fixed
+
+- Restored the documented `mode`, `safety-plugin`, `hermes`, `ecc`, and
+  `supermemory` command surfaces in `bin/opk` help and dispatch.
+- Made `opk mode power|safe` update only the current project's
+  `.opencode/opencode.json`, preserve a timestamped backup, and leave default
+  templates and global config unchanged.
+- Made `opk hermes off` and `opk ecc off` move only known integration
+  components into the OpenCode config `.opk-trash/` for restoration without
+  touching custom files outside those known manifest paths.
+- Made Hermes audits read-only by default; only `--write` updates
+  `docs/HERMES_AUDIT.md`.
+- Made Supermemory init help available without installing or downloading a
+  package.
+- Added CLI runtime contracts and a checker that catches missing literal file
+  references from `bin/opk`.
+
 ## [2.1.0] - 2026-07-28
 
 ### Runtime Hardening, Linux-only Packaging & Safety Fixes

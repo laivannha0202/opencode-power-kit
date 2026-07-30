@@ -1,6 +1,6 @@
 # OpenCode Power Kit
 
-[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-2.1.2-blue.svg)](./VERSION)
 [![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.9.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
@@ -42,6 +42,11 @@ opencode
 | `opk up` / `opk update` / `opk upgrade` | Update kit + project (One Command Update) |
 | `opk clean` | Cleanup agent artifacts an toàn (mặc định dry-run) |
 | `opk up --clean` | Update + cleanup apply trong một lệnh |
+| `opk mode show\|power\|safe` | Xem hoặc đổi permission mode của project hiện tại |
+| `opk safety-plugin status\|install` | Kiểm tra hoặc cài safety guard vào project |
+| `opk hermes audit\|status\|capsule\|off\|help` | Audit và quản lý Hermes-lite |
+| `opk ecc audit\|lite\|status\|update\|off` | Audit và quản lý ECC-lite (`ec`/`e` tương thích) |
+| `opk supermemory install\|update\|status\|init\|init-help` | Cài, cập nhật và khởi tạo Supermemory |
 
 ---
 
@@ -98,7 +103,7 @@ opk clean --apply  # apply: move vào .opk-trash/<timestamp>/
 | GSD reference agents | 34 | `extras/gsd-agent-reference/` (reference-only, not active) |
 | Slash commands | 71 | `opencode-global/commands/` |
 | Skills | 23 | `opencode-global/skills/` |
-| Helper scripts | 34 | `scripts/` |
+| Helper scripts | 39 | `scripts/` |
 | Root-level scripts | 8 | `*.sh` (install, bootstrap, verify, doctor, ...) |
 | Full-stack profile | 1 | `profiles/node-nest-react-mysql/` |
 | Safety scripts | 4 | `verify.sh`, `doctor.sh`, `cleanup-agent-artifacts.sh`, `opk-command-guard.sh` |
@@ -194,6 +199,11 @@ opk mode safe
 
 ### File config
 
+`opk mode power` và `opk mode safe` chỉ ghi `.opencode/opencode.json` trong
+project hiện tại. Lệnh không sửa `templates/opencode.json` hoặc config mặc định
+toàn cục. Nếu config project đã tồn tại, OPK tạo bản sao
+`.opencode/opencode.json.bak.<timestamp>` trước khi thay thế.
+
 | File | Mode | Mục đích |
 |------|------|----------|
 | `templates/opencode.json` | Power (`permission: allow`) | Backward compatible — mặc định |
@@ -215,6 +225,13 @@ opk safety-plugin status
 ```
 
 Tham khảo: `templates/plugins/opk-safety-guard.js`
+
+### Optional integration removal
+
+`opk hermes off` và `opk ecc off` chỉ di chuyển các agent/command đã biết của
+integration tương ứng vào thư mục config OpenCode
+`.opk-trash/<integration>-<timestamp>/`. Có thể khôi phục các file từ đó; lệnh
+không xóa và không di chuyển file tùy chỉnh nằm ngoài các đường dẫn manifest đã biết.
 
 ---
 
@@ -567,7 +584,7 @@ Kit tích hợp nhiều upstream bên ngoài. Bảng tổng quan:
 | BMAD Method | Install-time dependency | Yes (during install) | `npx bmad-method@VERSION install` | `opk update-bmad` | Medium |
 | GSD Core | Opt-in wrapper | No | `opk gsd` | `opk update-gsd` | Low |
 | MarkItDown | Opt-in wrapper | No | `opk markitdown install` | `opk markitdown install --upgrade` | Low |
-| Supermemory | Opt-in wrapper | No | `opk supermemory install` | `opk supermemory install` | High (migrated) |
+| Supermemory | Opt-in wrapper | No | `opk supermemory install` | `opk supermemory update` | High (migrated) |
 | Taste Skill | Verify-gated (user-installed) | Yes (with verification) | `opk taste install` | `opk update-taste` | Medium |
 | ECC | Opt-in wrapper | No | `opk ecc lite` | `opk update-ecc` | Low |
 | Hermes Agent | Inspiration-only | No (reference only) | N/A | N/A | Low |
@@ -716,6 +733,12 @@ opk supermemory install
 
 # Initialize — set up memory store and API key
 opk supermemory init
+
+# Show init help without installing or downloading anything
+opk supermemory init-help
+
+# Update the installed CLI
+opk supermemory update
 ```
 
 ### Agent command
@@ -865,6 +888,9 @@ opk ecc audit
 opk ecc off
 
 # Update
+opk ecc update
+
+# Backward-compatible update alias
 opk update-ecc
 
 # Short aliases
@@ -902,6 +928,8 @@ opk e lite
 - **No network in status check** — `check-ecc-lite.sh` only checks local files.
 - **No sudo** — all operations user-scoped.
 - **Read-only audit** — `audit-ecc.sh` clones to `.tmp/`, audits, then cleans up.
+- **Restorable removal** — `ecc off` moves only known ECC-lite components into
+  the OpenCode config `.opk-trash/`; custom files are untouched.
 
 ### Files
 
@@ -1191,7 +1219,7 @@ tránh lỗi phổ biến (edit quá nhiều file, chạy lệnh destructive, pr
 ## Xử lý sự cố
 
 - **Release gate fail?** Chạy `bash scripts/release-gate.sh`, sửa command bị đánh dấu FAIL rồi chạy lại.
-- **Không phải Linux?** Bản v2.1.0 chỉ hỗ trợ Linux và trả exit code `126` trên nền tảng khác.
+- **Không phải Linux?** Bản v2.1.2 chỉ hỗ trợ Linux và trả exit code `126` trên nền tảng khác.
 - **Format validation fail?** Chạy `python3 scripts/validate-formatting.py` để biết chi tiết.
 - **Cần giúp đỡ?** Chạy `opk doctor` để chẩn đoán, hoặc xem [docs/](./docs/) để biết thêm chi tiết.
 
