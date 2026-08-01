@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# OpenCode Power Kit CLI v2.1.2 — Linux-only, fail-fast updater.
+# OpenCode Power Kit CLI v2.1.3 — Linux-only, fail-fast updater.
 set -euo pipefail
 SELF="${BASH_SOURCE[0]}"
 BIN_DIR="$(cd "$(dirname "$SELF")" && pwd)"
@@ -26,47 +26,43 @@ path_has_symlink(){
   return 1
 }
 mode_command(){
-  (($# <= 1)) || err 'mode: use exactly one of show|power|safe'
-  local action="${1:-show}" project base base_real target source mode_temp=""
+  (($# <= 1)) || err 'mode: use exactly one of show|power|safe|migrate'
+  local action="${1:-show}" project target legacy
   project="$(pwd -P)" || err 'cannot resolve current project'
-  base="$project/.opencode"
-  [[ ! -L "$base" ]] || err 'mode: refusing symlink .opencode directory'
-  [[ ! -e "$base" || -d "$base" ]] || err 'mode: .opencode is not a directory'
-  if [[ -d "$base" ]]; then
-    base_real="$(cd "$base" && pwd -P)" || err 'mode: cannot resolve .opencode'
-    [[ "$base_real" == "$project/.opencode" ]] || err 'mode: .opencode escapes current project'
-  fi
-  target="$base/opencode.json"
+  target="$project/opencode.json"
+  legacy="$project/.opencode/opencode.json"
   [[ ! -L "$target" ]] || err 'mode: refusing symlink config target'
   [[ ! -e "$target" || -f "$target" ]] || err 'mode: config target is not a regular file'
+  [[ ! -L "$legacy" ]] || err 'mode: refusing symlink legacy config'
+  [[ ! -e "$legacy" || -f "$legacy" ]] || err 'mode: legacy config is not a regular file'
   case "$action" in
     show)
-      [[ -f "$target" ]] || target="$KIT_DIR/templates/opencode.json"
-      need "$KIT_DIR/scripts/detect-mode.py"
-      exec python3 "$KIT_DIR/scripts/detect-mode.py" "$target"
+      need "$KIT_DIR/scripts/opk-permissions.py"
+      exec python3 "$KIT_DIR/scripts/opk-permissions.py"
       ;;
     power|safe)
       safe_opencode_project || err 'run inside a safe project with a project marker'
-      source="$KIT_DIR/templates/opencode.$action.json"; need "$source"
-      mkdir -p -- "$base"
-      base_real="$(cd "$base" && pwd -P)" || err 'mode: cannot resolve .opencode'
-      [[ "$base_real" == "$project/.opencode" && ! -L "$base" ]] || err 'mode: .opencode escapes current project'
-      [[ ! -L "$target" ]] || err 'mode: refusing symlink config target'
-      mode_temp="$(mktemp "$base/.opencode.json.tmp.XXXXXX")" || err 'mode: cannot create temporary config'
-      trap '[[ -z "${mode_temp:-}" ]] || rm -f -- "$mode_temp"' EXIT
-      cp -- "$source" "$mode_temp"
-      chmod 0644 "$mode_temp"
-      if [[ -f "$target" ]]; then
-        [[ ! -L "$target" ]] || err 'mode: refusing symlink config target'
-        cp -p -- "$target" "$target.bak.$(date +%Y%m%d-%H%M%S-%N)"
-      fi
-      mv -f -- "$mode_temp" "$target"
-      mode_temp=""
-      trap - EXIT
+      [[ ! -e "$legacy" ]] || err 'mode: legacy config exists; run opk mode migrate first'
+      need "$KIT_DIR/scripts/merge-opk-project.py"
+      exec python3 "$KIT_DIR/scripts/merge-opk-project.py" --project-dir "$project" --mode "$action"
       ;;
-    *) err 'mode: use show|power|safe' ;;
+    migrate)
+      safe_opencode_project || err 'run inside a safe project with a project marker'
+      need "$KIT_DIR/scripts/merge-opk-project.py"
+      exec python3 "$KIT_DIR/scripts/merge-opk-project.py" --project-dir "$project" --migrate-only
+      ;;
+    *) err 'mode: use show|power|safe|migrate' ;;
   esac
 }
+require_power_mode(){
+  safe_opencode_project || err 'run inside a safe project with a project marker'
+  need "$KIT_DIR/scripts/opk-permissions.py"
+  local report mode
+  report="$(python3 "$KIT_DIR/scripts/opk-permissions.py" --json)" || err 'cannot resolve OpenCode permissions'
+  mode="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["mode"])' <<<"$report")"
+  [[ "$mode" == POWER ]] || err 'effective mode is not POWER; run: opk mode power'
+}
+opencode_has_auto(){ command -v opencode >/dev/null 2>&1 && opencode --help 2>&1 | grep -q -- '--auto'; }
 trash_known(){
   local prefix="$1" raw_base lexical_base base kit_real home_real trash trash_real rel src dest moved=0
   local -a components existing
@@ -129,7 +125,10 @@ Core:
   opk global | install | fullstack | verify | doctor | one | all
   opk update [--dry-run] [--yes] [--clean] [--profile auto|none|node-nest-react-mysql]
   opk update-all [--dry-run] [--yes] [--with-gsd] [--with-optional] [--refresh-superpowers]
-  opk mode [show|power|safe]
+  opk mode [show|power|safe|migrate]
+  opk permissions doctor
+  opk auto [opencode args...]
+  opk run-auto "prompt"
   opk safety-plugin status|install [--yes]
 
 Integrations:
@@ -148,6 +147,23 @@ HELP
   version|-v|--version) echo "opk $VERSION" ;;
   path) echo "$KIT_DIR" ;;
   mode) mode_command "$@" ;;
+  permissions)
+    sub="${1:-doctor}"; shift || true
+    [[ "$sub" == doctor && $# -eq 0 ]] || err 'permissions: use doctor'
+    need "$KIT_DIR/scripts/opk-permissions.py"
+    exec python3 "$KIT_DIR/scripts/opk-permissions.py"
+    ;;
+  auto)
+    require_power_mode
+    opencode_has_auto || err 'installed OpenCode does not support --auto; update OpenCode manually'
+    exec opencode --auto "$@"
+    ;;
+  run-auto)
+    (($# > 0)) || err 'run-auto: provide a prompt'
+    require_power_mode
+    opencode_has_auto || err 'installed OpenCode does not support --auto; update OpenCode manually'
+    exec opencode run --auto "$@"
+    ;;
   safety-plugin)
     sub="${1:-status}"; shift || true
     case "$sub" in

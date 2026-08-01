@@ -85,7 +85,7 @@ fi
 # --- Restore from backup if present ---
 if [ -n "$BACKUP_DIR" ]; then
 	info "Restore từ backup: $BACKUP_DIR"
-	for f in AGENTS.md OPENCODE.md .opencode/opencode.json; do
+	for f in AGENTS.md OPENCODE.md opencode.json; do
 		if [ -e "$BACKUP_DIR/$f" ]; then
 			mkdir -p "$TARGET_DIR/$(dirname "$f")"
 			cp -f "$BACKUP_DIR/$f" "$TARGET_DIR/$f"

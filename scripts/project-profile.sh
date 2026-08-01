@@ -19,7 +19,7 @@ opk_project_has_repo_marker() {
 
 opk_project_has_opencode_marker() {
   local dir="${1:-$PWD}"
-  [[ -e "$dir/.git" || -f "$dir/package.json" || -f "$dir/pyproject.toml" || -f "$dir/go.mod" || -f "$dir/Cargo.toml" || -f "$dir/pom.xml" || -f "$dir/build.gradle" || -f "$dir/AGENTS.md" || -f "$dir/OPENCODE.md" || -f "$dir/.opencode/opencode.json" ]]
+  [[ -e "$dir/.git" || -f "$dir/package.json" || -f "$dir/pyproject.toml" || -f "$dir/go.mod" || -f "$dir/Cargo.toml" || -f "$dir/pom.xml" || -f "$dir/build.gradle" || -f "$dir/AGENTS.md" || -f "$dir/OPENCODE.md" || -f "$dir/opencode.json" ]]
 }
 
 opk_detect_profile() {

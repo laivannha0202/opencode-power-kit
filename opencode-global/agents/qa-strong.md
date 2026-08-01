@@ -1,20 +1,6 @@
 ---
 description: QA/testing — write tests, run test suites, verify coverage, find regressions, E2E
 mode: subagent
-permission:
-  edit: ask
-  bash:
-    "*": ask
-    "git status*": allow
-    "git diff*": allow
-    "git log*": allow
-    "git show*": allow
-    "rg *": allow
-    "fd *": allow
-    "ls *": allow
-    "pwd": allow
-    "which *": allow
-    "cat *": allow
 ---
 
 > **Vietnamese Language Lock:** Luôn trả lời user bằng tiếng Việt.

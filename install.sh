@@ -128,7 +128,7 @@ else
   KHÔNG fallback copy thô để tránh ghi đè config user."
 	fi
 	BACKUP_NEEDED=true
-	ok "AGENTS.md / OPENCODE.md / .opencode/opencode.json (merged)"
+	ok "AGENTS.md / OPENCODE.md / opencode.json (merged)"
 	ok "Safety plugin: .opencode/plugins/opk-safety-guard.js"
 fi
 
@@ -218,7 +218,7 @@ cat >"$REPORT_FILE" <<EOF
 |------|-----------|
 | AGENTS.md | ✅ (merged, giữ nội dung user) |
 | OPENCODE.md | ✅ (merged, giữ nội dung user) |
-| .opencode/opencode.json | ✅ (merged, giữ model/provider/MCP/plugin) |
+| opencode.json | ✅ (merged, giữ model/provider/MCP/plugin) |
 | .opencode/plugins/opk-safety-guard.js | ✅ (runtime safety plugin) |
 | .gitignore (merged) | ✅ |
 | knip.json | $([ -f "$TARGET_DIR/knip.json" ] && echo "✅" || echo "⏭️ Đã có") |

@@ -31,6 +31,7 @@ for arg in "$@"; do
       ;;
   esac
 done
+: "$VERSION" "$FIX_MODE"
 
 # --- Helpers ---
 pass()  { echo "  ✅ $*"; }
@@ -168,16 +169,16 @@ done
 
 # --- Section 6: Project state (if in a project) ---
 section "Project State (current dir)"
-if [ -f ".opencode/opencode.json" ]; then
-  pass ".opencode/opencode.json exists"
+if [ -f "opencode.json" ]; then
+  pass "opencode.json exists"
   # Check permission mode
-  if python3 -c "import json,sys; d=json.load(sys.open('.opencode/opencode.json')); p=d.get('permission'); sys.exit(0 if p=='allow' else 1)" 2>/dev/null; then
+  if python3 -c "import json,sys; d=json.load(sys.open('opencode.json')); p=d.get('permission'); sys.exit(0 if p=='allow' else 1)" 2>/dev/null; then
     info "Mode: POWER (permission: allow)"
-  elif [ -f ".opencode/opencode.json" ]; then
+  elif [ -f "opencode.json" ]; then
     info "Mode: SAFE or CUSTOM (permission object)"
   fi
 else
-  info ".opencode/opencode.json not found (not in project?)"
+  info "opencode.json not found (not in project?)"
 fi
 
 if [ -f ".opencode/plugins/opk-safety-guard.js" ]; then

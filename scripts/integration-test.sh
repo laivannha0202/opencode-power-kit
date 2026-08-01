@@ -203,7 +203,7 @@ check_path() {
 
 check_path "AGENTS.md" "file"
 check_path "OPENCODE.md" "file"
-check_path ".opencode/opencode.json" "file"
+check_path "opencode.json" "file"
 check_path ".gitignore" "file"
 check_path "knip.json" "file"
 check_path "lefthook.yml" "file"
