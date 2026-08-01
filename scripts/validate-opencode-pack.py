@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -40,7 +41,7 @@ PROFILES_DIR = KIT_ROOT / "profiles"
 TEMPLATES_DIR = KIT_ROOT / "templates"
 
 # ─── version compliance constants ───────────────────────────────────
-EXPECTED_VERSION = "2.1.0"
+EXPECTED_VERSION = "2.1.2"
 
 AUTO_ROUTER_NEEDLES: tuple[tuple[str, str], ...] = (
     ("templates/AGENTS.md", "Natural Language Auto Router"),
@@ -100,6 +101,52 @@ def die(msg: str) -> "NoReturn":  # type: ignore[name-defined]
 
 def ok(msg: str) -> None:
     print(f"  ok: {msg}")
+
+
+def validate_cli_help_contract() -> list[str]:
+    """Validate the current public CLI surface through its read-only help command."""
+    errors: list[str] = []
+    opk_path = KIT_ROOT / "bin" / "opk"
+    if not opk_path.is_file():
+        return ["bin/opk missing"]
+
+    env = os.environ.copy()
+    env["OPK_KIT_DIR"] = str(KIT_ROOT)
+    try:
+        result = subprocess.run(
+            [str(opk_path), "help"],
+            cwd=KIT_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return [f"bin/opk help failed: {exc}"]
+
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip() or "no output"
+        return [f"bin/opk help exited {result.returncode}: {detail}"]
+
+    required_families = (
+        ("mode", r"\bopk\s+mode\s+\[show\s*\|\s*power\s*\|\s*safe\]"),
+        ("safety-plugin", r"\bopk\s+safety-plugin\s+status\s*\|\s*install\s+\[--yes\]"),
+        ("bmad", r"\bopk\s+bmad\s+status\s*\|\s*update\s+\[--stable\s*\|\s*--next\s*\|\s*--version\s+X\.Y\.Z\]"),
+        ("gsd", r"\bopk\s+gsd\s+\[status\s*\|\s*install\]"),
+        ("taste", r"\bopk\s+taste\s+install\s*\|\s*status\s*\|\s*doctor\s*\|\s*off\s*\|\s*update\b"),
+        ("supermemory", r"\bopk\s+supermemory\s+install\s*\|\s*status\s*\|\s*update\s*\|\s*init\s*\|\s*init-help\b"),
+        ("ecc", r"\bopk\s+ecc\s+audit\s*\|\s*lite\s*\|\s*status\s*\|\s*update\s*\|\s*off\b"),
+        ("hermes", r"\bopk\s+hermes\s+audit\s+\[--dry-run\s*\|\s*--check\s*\|\s*--write\s*\|\s*--help\]\s*\|\s*status\s*\|\s*capsule\s*\|\s*off\s*\|\s*help\b"),
+        ("upstream", r"\bopk\s+upstream\s+audit\s*\|\s*doctor\b"),
+        ("superpowers", r"\bopk\s+superpowers\s+status\s*\|\s*reset-cache\s*\|\s*doctor\b"),
+    )
+    for family, pattern in required_families:
+        if re.search(pattern, result.stdout):
+            ok(f"bin/opk help lists supported {family} family")
+        else:
+            errors.append(f"bin/opk help missing supported {family} family")
+    return errors
 
 
 def parse_frontmatter(text: str) -> dict | None:
@@ -445,9 +492,6 @@ def validate_version() -> list[str]:
         ("scripts/check-taste-skill.sh", "taste-skill"),
         ("opencode-global/agents/build-strong.md", "taste-ui-strong"),
         ("opencode-global/commands/agent-router.md", "taste-ui-strong"),
-        ("bin/opk", "taste|taste-status|taste-off|update-taste)"),
-        ("bin/opk", "taste install"),
-        ("bin/opk", "taste status"),
         ("THIRD_PARTY.md", "Taste Skill"),
     ]
     for rel, needle in v170_checks:
@@ -582,37 +626,16 @@ def validate_version() -> list[str]:
             else:
                 ok(f"{rel} does not contain deprecated reference: {needle}")
 
-    # v2.0.0: CLI Expansion — bin/opk subcommands
-    print("[v2.0.0 CLI Expansion — bin/opk]")
-    v200_opk_checks = [
-        ("bin/opk", "upstream)"),
-        ("bin/opk", "upstream audit"),
-        ("bin/opk", "upstream doctor"),
-        ("bin/opk", "superpowers)"),
-        ("bin/opk", "superpowers status"),
-        ("bin/opk", "superpowers reset-cache"),
-        ("bin/opk", "superpowers doctor"),
-        ("bin/opk", "bmad)"),
-        ("bin/opk", "bmad status"),
-        ("bin/opk", "bmad update"),
-        ("bin/opk", "tooling)"),
-        ("bin/opk", "tooling doctor"),
-        ("bin/opk", "taste doctor"),
-        ("bin/opk", "taste install --v1"),
-        ("bin/opk", "taste install --v2"),
-    ]
-    for rel, needle in v200_opk_checks:
-        p = KIT_ROOT / rel
-        if p.is_file() and needle in p.read_text(encoding="utf-8"):
-            ok(f"{rel} contains: {needle}")
-        else:
-            errors.append(f"{rel} missing needle: {needle}")
+    # Current CLI contract: execute read-only help instead of matching source formatting.
+    print("[Current CLI help contract — bin/opk]")
+    errors += validate_cli_help_contract()
 
     # v2.0.0: Taste verify-gated checks
     print("[v2.0.0 Taste verify-gated]")
     v200_taste_checks = [
         ("README.md", "verify-gated"),
-        ("README.md", "opk taste install --v1"),
+        ("README.md", "opk taste install"),
+        ("README.md", "opk taste update"),
         ("README.md", "opk taste doctor"),
         ("THIRD_PARTY.md", "verify-gated"),
         ("THIRD_PARTY.md", "user-installed"),
@@ -625,6 +648,27 @@ def validate_version() -> list[str]:
             ok(f"{rel} contains: {needle}")
         else:
             errors.append(f"{rel} missing needle: {needle}")
+
+    current_taste_docs = (
+        "README.md",
+        "THIRD_PARTY.md",
+        "docs/UPSTREAM_AUDIT.md",
+        "docs/UPSTREAM_CAPABILITY_MAP.md",
+        "docs/UPSTREAM_RISKS.md",
+        "docs/UPSTREAM_UPDATE_POLICY.md",
+    )
+    unsupported_taste_flags = re.compile(
+        r"opk\s+taste\s+install\s+--v[12]\b", re.IGNORECASE
+    )
+    for rel in current_taste_docs:
+        p = KIT_ROOT / rel
+        if not p.is_file():
+            errors.append(f"current Taste documentation missing: {rel}")
+            continue
+        if unsupported_taste_flags.search(p.read_text(encoding="utf-8")):
+            errors.append(f"{rel} advertises unsupported opk taste install --v1/--v2")
+        else:
+            ok(f"{rel}: no unsupported opk taste install --v1/--v2 claim")
 
     # v2.0.0: No rm -rf in taste off paths
     print("[v2.0.0 Taste safe removal]")

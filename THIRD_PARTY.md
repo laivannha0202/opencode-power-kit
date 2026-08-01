@@ -34,7 +34,7 @@
 | **Target platform** | Nền tảng mà kit cấu hình / đóng gói workflow | No | No | OpenCode |
 | **Plugin reference** | Plugin được load runtime từ GitHub/npm | Via OpenCode | No | Superpowers |
 | **Install-time dependency** | Cài vào project user qua official installer | Via npx | No | BMAD Method |
-| **Verify-gated dependency** | Cài khi user yêu cầu explicit, dùng official installer | Via npx | Via opk update-* | Taste Skill |
+| **Verify-gated dependency** | Cài khi user yêu cầu explicit, dùng official installer | Via npx | Explicit `opk taste update` | Taste Skill |
 | **Config-only reference** | Kit chỉ ship template config trỏ đến upstream | No | No | Biome config |
 | **Opt-in wrapper** | Chỉ gọi installer chính thức khi user yêu cầu | No | No | GSD Core, MarkItDown, ECC-lite |
 | **Detect-only** | Chỉ phát hiện tool đã cài sẵn trên PATH | No | No | rg, fd, semgrep |
@@ -257,10 +257,10 @@ Agents never install packages directly.
 | Role | AI-augmented UI/UX design — image-to-code, redesign, polish, brand kit, landing page, mobile UI optimization |
 | Integration | **Verify-gated dependency** — user-installed via `opk taste install`. No auto-install. Optional. |
 | Source | https://github.com/Leonxlnx/taste-skill |
-| Installer | `npx taste-skill` (official npx package) |
+| Installer | `npx skills add Leonxlnx/taste-skill` via the `npx` executable |
 | Kit ships | `scripts/install-taste-skill.sh` — Linux installer |
 | | `scripts/check-taste-skill.sh` — read-only detection |
-| Update path | `opk update-taste` (re-runs npx) |
+| Update path | `opk taste update` (explicit; re-runs npx and may exit nonzero) |
 | License | MIT (per upstream) |
 
 The kit integrates Taste Skill as a **verify-gated** optional dependency. Unlike
@@ -273,9 +273,8 @@ package installations during global setup.
 | Trigger | Install? | Skip if missing? |
 |---------|:--------:|:----------------:|
 | `opk global` / `opk one` / `opk go` | ❌ No (user runs `opk taste install` separately) | N/A |
-| `opk taste install` | ✅ Yes | Verify node/npx before install |
-| `opk taste install --v1` | ✅ Yes (legacy) | Verify node/npx before install |
-| `opk taste install --v2` | ✅ Yes (default) | Verify node/npx before install |
+| `opk taste install` | ✅ Yes | Check `npx`, then install the current Taste Skill |
+| `opk taste update` | ✅ Yes | Explicit refresh; failures return a nonzero exit status |
 | `opk up` (update) | ❌ No | N/A |
 | Shell startup | ❌ No | N/A |
 
@@ -285,18 +284,18 @@ package installations during global setup.
 - **No sudo** — prefers `npx`, never uses `sudo npm`.
 - **No curl|sh** — installer là Bash script có sẵn trong kit.
 - **No .env/secrets modification** — Taste Skill reads no sensitive files.
-- **No core install failure** — missing deps produce a warning only.
+- **Failure propagation** — missing `npx`, install errors, or verification errors return nonzero.
+- **Refresh recovery** — an existing install is moved to kit `.opk-trash/` before reinstall; recovery may require a manual move.
 - **`OPK_SKIP_TASTE=1`** — legacy escape hatch (no longer needed since global scripts no longer auto-install Taste).
-- **Fail soft** — if `npx` fails, install continues without error.
 
 ### Taste Skill commands
 
 | CLI | Description |
 |-----|-------------|
-| `opk taste install` | Install Taste Skill via npx |
+| `opk taste install` | Install the current Taste Skill via npx |
+| `opk taste update` / `opk update-taste` | Refresh the installed Taste Skill |
 | `opk taste status` / `opk taste-status` | Check installation status |
 | `opk taste off` / `opk taste-off` | Remove Taste Skill |
-| `opk update-taste` | Refresh Taste Skill installation |
 | `OPK_SKIP_TASTE=1` | Legacy env var (no longer needed for global setup) |
 
 ### Slash commands
@@ -738,13 +737,14 @@ scaffolding, agents, and commands are designed for.
 
 ### Verify-gated dependencies (Taste Skill)
 
-- `opk taste install` — user-installed, not auto-installed.
-- `opk taste install --v1` — install v1 (legacy).
-- `opk taste install --v2` — install v2 (default).
+- `opk taste install` — install the current Taste Skill; user-initiated, never automatic.
+- `opk taste update` — explicit refresh that may fail nonzero. An existing
+  install is moved to kit `.opk-trash/` first, so recovery may require a manual
+  move.
 - `opk taste doctor` — check runtime dependencies.
 - `opk taste off` — safe removal (moves to `.opk-trash/`).
 - `OPK_SKIP_TASTE=1` — legacy env var (no longer needed since global scripts no longer auto-install Taste).
-- Graceful degradation if node/npx/network missing.
+- Missing `npx`, network failures, or post-install verification failures return nonzero.
 
 ### Plugin references (Superpowers)
 

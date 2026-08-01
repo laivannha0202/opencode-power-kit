@@ -126,7 +126,7 @@ người dùng hiểu rõ ranh giới.
 | **Target platform** | Nền tảng mà kit cấu hình workflow | No | No | OpenCode |
 | **Plugin reference** | Plugin được load runtime từ GitHub/npm | Via OpenCode | No | Superpowers |
 | **Install-time dependency** | Cài vào project user qua official installer | Via npx | No | BMAD Method |
-| **Verify-gated dependency** | Cài khi user yêu cầu explicit, dùng official installer | Via opk update-* | No | Taste Skill |
+| **Verify-gated dependency** | Cài khi user yêu cầu explicit, dùng official installer | Explicit `opk taste update` | No | Taste Skill |
 | **Config-only reference** | Kit chỉ ship template config trỏ đến upstream | No | No | Biome config |
 | **Opt-in wrapper** | Chỉ gọi installer chính thức khi user yêu cầu | No | No | GSD Core |
 | **Detect-only** | Chỉ phát hiện tool đã cài sẵn trên PATH | No | No | rg, fd, semgrep, gitleaks |
@@ -585,7 +585,7 @@ Kit tích hợp nhiều upstream bên ngoài. Bảng tổng quan:
 | GSD Core | Opt-in wrapper | No | `opk gsd` | `opk update-gsd` | Low |
 | MarkItDown | Opt-in wrapper | No | `opk markitdown install` | `opk markitdown install --upgrade` | Low |
 | Supermemory | Opt-in wrapper | No | `opk supermemory install` | `opk supermemory update` | High (migrated) |
-| Taste Skill | Verify-gated (user-installed) | Yes (with verification) | `opk taste install` | `opk update-taste` | Medium |
+| Taste Skill | Verify-gated (user-installed) | Yes (with verification) | `opk taste install` | `opk taste update` | Medium |
 | ECC | Opt-in wrapper | No | `opk ecc lite` | `opk update-ecc` | Low |
 | Hermes Agent | Inspiration-only | No (reference only) | N/A | N/A | Low |
 | rtk, repomix, ast-grep, etc. | Detect-only | No (user-installs) | User-installs | User-updates | Low |
@@ -771,11 +771,14 @@ Taste Skill is **optional** — installed on-demand by the user, never auto-inst
 | Trigger | Installs? | Skip behavior |
 |---------|:---------:|:-------------:|
 | `opk global` / `opk one` / `opk go` | ❌ No | Use `opk taste install` to add |
-| `opk taste install` | ✅ Yes | Verify node/npx before install |
-| `opk taste install --v1` | ✅ Yes | Install v1 (legacy, specific skill name) |
-| `opk taste install --v2` | ✅ Yes | Install v2 (default, latest) |
+| `opk taste install` | ✅ Yes | Check `npx`, then install the current Taste Skill |
+| `opk taste update` | ✅ Yes | Explicit refresh; failures return a nonzero exit status |
 | `opk up` (update) | ❌ No | N/A |
 | Shell startup | ❌ No | N/A |
+
+Use `opk taste install` to install and `opk taste update` to refresh. Refresh
+is explicit and may fail nonzero. If an installation already exists, OPK moves
+it to `.opk-trash/` before reinstalling; recovery may require a manual move.
 
 `OPK_SKIP_TASTE=1` is a legacy escape hatch — no longer needed since global scripts no longer auto-install Taste Skill (v2.0.0).
 
@@ -784,7 +787,7 @@ Taste Skill is **optional** — installed on-demand by the user, never auto-inst
 - **No sudo** — prefers `npx`, never uses `sudo npm`.
 - **No curl|sh** — installer là Bash script có sẵn trong kit.
 - **No .env/secrets** — Taste Skill reads no sensitive files.
-- **No core failure** — missing deps produce a warning only.
+- **Failure propagation** — missing `npx`, install errors, or verification errors return nonzero.
 - **Safe removal** — `opk taste off` moves to `.opk-trash/`, never `rm -rf`.
 
 ### Usage
@@ -795,11 +798,11 @@ opk taste status
 # or
 opk taste-status
 
-# Install (default: v2)
+# Install the current Taste Skill
 opk taste install
 
-# Install v1 (legacy)
-opk taste install --v1
+# Refresh the installed Taste Skill
+opk taste update
 
 # Check runtime dependencies
 opk taste doctor
@@ -929,7 +932,8 @@ opk e lite
 - **No sudo** — all operations user-scoped.
 - **Read-only audit** — `audit-ecc.sh` clones to `.tmp/`, audits, then cleans up.
 - **Restorable removal** — `ecc off` moves only known ECC-lite components into
-  the OpenCode config `.opk-trash/`; custom files are untouched.
+  the OpenCode config `.opk-trash/`; custom files outside known manifest paths
+  are untouched.
 
 ### Files
 

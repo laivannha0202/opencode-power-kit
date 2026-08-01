@@ -5,10 +5,12 @@ SELF="${BASH_SOURCE[0]}"
 BIN_DIR="$(cd "$(dirname "$SELF")" && pwd)"
 if [[ -n "${OPK_KIT_DIR:-}" && -f "$OPK_KIT_DIR/install.sh" ]]; then KIT_DIR="$OPK_KIT_DIR"; else KIT_DIR="$(cd "$BIN_DIR/.." && pwd)"; fi
 [[ -f "$KIT_DIR/install.sh" ]] || { echo "opk: kit not found: $KIT_DIR" >&2; exit 1; }
+# shellcheck source=scripts/require-linux.sh
 source "$KIT_DIR/scripts/require-linux.sh"; opk_require_linux
 VERSION="$(cat "$KIT_DIR/VERSION" 2>/dev/null || echo '?')"
 err(){ echo "opk: $*" >&2; exit 1; }
 need(){ [[ -f "$1" ]] || err "missing file: $1"; }
+# shellcheck source=scripts/project-profile.sh
 safe_project(){ source "$KIT_DIR/scripts/project-profile.sh"; export OPK_KIT_DIR="$KIT_DIR"; opk_project_is_safe "$PWD"; }
 safe_opencode_project(){ safe_project && opk_project_has_opencode_marker "$PWD"; }
 run_script(){ need "$1"; exec bash "$1" "${@:2}"; }
@@ -170,6 +172,7 @@ HELP
     bash "$KIT_DIR/install-global.sh" --yes
     if safe_project; then
       bash "$KIT_DIR/install.sh" --yes
+      # shellcheck source=scripts/project-profile.sh
       profile="$(source "$KIT_DIR/scripts/project-profile.sh"; opk_detect_profile "$PWD")"
       [[ "$profile" == node-nest-react-mysql ]] && bash "$KIT_DIR/scripts/install-fullstack-profile.sh" --yes || true
       bash "$KIT_DIR/verify.sh"
@@ -180,6 +183,7 @@ HELP
   clean) run_script "$KIT_DIR/scripts/cleanup-agent-artifacts.sh" "$@" ;;
   update-bmad) safe_project || err 'run inside a real project'; run_script "$KIT_DIR/update-bmad.sh" "$@" ;;
   bmad)
+    # shellcheck source=scripts/upstream-versions.sh
     sub="${1:-status}"; shift || true; source "$KIT_DIR/scripts/upstream-versions.sh"
     case "$sub" in
       status) echo "BMAD pin: ${BMAD_METHOD_VERSION:-$OPK_BMAD_VERSION}"; [[ -d .bmad || -d _bmad ]] && echo INSTALLED || echo NOT_INSTALLED ;;
