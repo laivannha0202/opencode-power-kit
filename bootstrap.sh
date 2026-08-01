@@ -347,7 +347,7 @@ if command -v opk >/dev/null 2>&1; then
 	info "  2) opk path"
 	info "  3) opencode"
 else
-	info "  1) source ~/.bashrc   # nạp PATH + OPENCODE_CONFIG_DIR"
+	info "  1) source ~/.bashrc   # nạp PATH + OPK_KIT_DIR"
 	info "  2) opk help"
 	info "  3) opencode"
 fi
