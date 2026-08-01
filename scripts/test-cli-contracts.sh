@@ -300,6 +300,10 @@ else
   fail "mode commands leave templates unchanged"
 fi
 
+# mode power installs the safety plugin as a side effect; remove it to test
+# the initial-status → install → installed-status flow cleanly.
+rm -f .opencode/plugins/opk-safety-guard.js
+rmdir .opencode/plugins 2>/dev/null || true
 assert_success "safety-plugin initial status succeeds" "$OPK" safety-plugin status
 safety_output="$LAST_OUTPUT"
 assert_contains "safety-plugin initially not installed" "$safety_output" "NOT_INSTALLED"
