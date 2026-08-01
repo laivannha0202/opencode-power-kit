@@ -1,16 +1,125 @@
 #!/usr/bin/env bash
-# OpenCode Power Kit CLI v2.1.1 — Linux-only, fail-fast updater.
+# OpenCode Power Kit CLI v2.1.2 — Linux-only, fail-fast updater.
 set -euo pipefail
 SELF="${BASH_SOURCE[0]}"
 BIN_DIR="$(cd "$(dirname "$SELF")" && pwd)"
 if [[ -n "${OPK_KIT_DIR:-}" && -f "$OPK_KIT_DIR/install.sh" ]]; then KIT_DIR="$OPK_KIT_DIR"; else KIT_DIR="$(cd "$BIN_DIR/.." && pwd)"; fi
 [[ -f "$KIT_DIR/install.sh" ]] || { echo "opk: kit not found: $KIT_DIR" >&2; exit 1; }
+# shellcheck source=scripts/require-linux.sh
 source "$KIT_DIR/scripts/require-linux.sh"; opk_require_linux
 VERSION="$(cat "$KIT_DIR/VERSION" 2>/dev/null || echo '?')"
 err(){ echo "opk: $*" >&2; exit 1; }
 need(){ [[ -f "$1" ]] || err "missing file: $1"; }
+# shellcheck source=scripts/project-profile.sh
 safe_project(){ source "$KIT_DIR/scripts/project-profile.sh"; export OPK_KIT_DIR="$KIT_DIR"; opk_project_is_safe "$PWD"; }
+safe_opencode_project(){ safe_project && opk_project_has_opencode_marker "$PWD"; }
 run_script(){ need "$1"; exec bash "$1" "${@:2}"; }
+path_has_symlink(){
+  local rel="$2" current="$1" part
+  local -a parts
+  IFS='/' read -r -a parts <<<"$rel"
+  for part in "${parts[@]}"; do
+    [[ -n "$part" ]] || continue
+    current="$current/$part"
+    [[ ! -L "$current" ]] || return 0
+  done
+  return 1
+}
+mode_command(){
+  (($# <= 1)) || err 'mode: use exactly one of show|power|safe'
+  local action="${1:-show}" project base base_real target source mode_temp=""
+  project="$(pwd -P)" || err 'cannot resolve current project'
+  base="$project/.opencode"
+  [[ ! -L "$base" ]] || err 'mode: refusing symlink .opencode directory'
+  [[ ! -e "$base" || -d "$base" ]] || err 'mode: .opencode is not a directory'
+  if [[ -d "$base" ]]; then
+    base_real="$(cd "$base" && pwd -P)" || err 'mode: cannot resolve .opencode'
+    [[ "$base_real" == "$project/.opencode" ]] || err 'mode: .opencode escapes current project'
+  fi
+  target="$base/opencode.json"
+  [[ ! -L "$target" ]] || err 'mode: refusing symlink config target'
+  [[ ! -e "$target" || -f "$target" ]] || err 'mode: config target is not a regular file'
+  case "$action" in
+    show)
+      [[ -f "$target" ]] || target="$KIT_DIR/templates/opencode.json"
+      need "$KIT_DIR/scripts/detect-mode.py"
+      exec python3 "$KIT_DIR/scripts/detect-mode.py" "$target"
+      ;;
+    power|safe)
+      safe_opencode_project || err 'run inside a safe project with a project marker'
+      source="$KIT_DIR/templates/opencode.$action.json"; need "$source"
+      mkdir -p -- "$base"
+      base_real="$(cd "$base" && pwd -P)" || err 'mode: cannot resolve .opencode'
+      [[ "$base_real" == "$project/.opencode" && ! -L "$base" ]] || err 'mode: .opencode escapes current project'
+      [[ ! -L "$target" ]] || err 'mode: refusing symlink config target'
+      mode_temp="$(mktemp "$base/.opencode.json.tmp.XXXXXX")" || err 'mode: cannot create temporary config'
+      trap '[[ -z "${mode_temp:-}" ]] || rm -f -- "$mode_temp"' EXIT
+      cp -- "$source" "$mode_temp"
+      chmod 0644 "$mode_temp"
+      if [[ -f "$target" ]]; then
+        [[ ! -L "$target" ]] || err 'mode: refusing symlink config target'
+        cp -p -- "$target" "$target.bak.$(date +%Y%m%d-%H%M%S-%N)"
+      fi
+      mv -f -- "$mode_temp" "$target"
+      mode_temp=""
+      trap - EXIT
+      ;;
+    *) err 'mode: use show|power|safe' ;;
+  esac
+}
+trash_known(){
+  local prefix="$1" raw_base lexical_base base kit_real home_real trash trash_real rel src dest moved=0
+  local -a components existing
+  case "$prefix" in
+    hermes) components=(agents/hermes-lite-strong.md commands/hermes-audit.md commands/hermes-budget.md commands/hermes-kanban.md commands/hermes-learn.md commands/hermes-memory.md commands/hermes-reflect.md commands/hermes-research.md commands/hermes-skill.md) ;;
+    ecc) components=(agents/ecc-lite-strong.md commands/ecc-audit.md commands/quality-gate.md commands/research-first.md commands/verify-loop.md commands/backend-route-review.md commands/harness-audit.md) ;;
+    *) err "unsupported trash manifest: $prefix" ;;
+  esac
+  command -v realpath >/dev/null 2>&1 || err 'realpath is required'
+  raw_base="${OPENCODE_CONFIG_DIR:-$HOME/.config/opencode}"
+  lexical_base="$(realpath -ms -- "$raw_base")" || err 'cannot normalize OpenCode config directory'
+  base="$(realpath -m -- "$raw_base")" || err 'cannot resolve OpenCode config directory'
+  [[ "$lexical_base" == "$base" ]] || err "refusing symlinked OpenCode config directory: $raw_base"
+  kit_real="$(realpath -e -- "$KIT_DIR")" || err 'cannot resolve kit directory'
+  home_real="$(realpath -m -- "${HOME:-/root}")" || err 'cannot resolve home directory'
+  case "$base" in
+    /|/bin|/bin/*|/boot|/boot/*|/dev|/dev/*|/etc|/etc/*|/lib|/lib/*|/lib64|/lib64/*|/proc|/proc/*|/root|/run|/run/*|/sbin|/sbin/*|/sys|/sys/*|/tmp|/tmp/*|/usr|/usr/*|/var|/var/*|"$home_real") err "unsafe OpenCode config directory: $base" ;;
+    "$kit_real"|"$kit_real"/*) err 'refusing to trash files from the OPK source tree' ;;
+  esac
+  existing=()
+  for rel in "${components[@]}"; do
+    [[ "$rel" != /* && "$rel" != *'..'* ]] || err "unsafe component path: $rel"
+    path_has_symlink "$base" "$rel" && err "refusing symlink component path: $base/$rel"
+    src="$base/$rel"
+    if [[ -e "$src" ]]; then
+      [[ -f "$src" ]] || err "component is not a regular file: $src"
+      existing+=("$rel")
+    fi
+  done
+  ((${#existing[@]} > 0)) || return 0
+  path_has_symlink "$base" '.opk-trash' && err "refusing symlink trash directory: $base/.opk-trash"
+  trash="$base/.opk-trash/$prefix-$(date +%Y%m%d-%H%M%S-%N)"
+  trash_real="$(realpath -m -- "$trash")" || err 'cannot resolve trash destination'
+  case "$trash_real" in "$base/.opk-trash/"*) ;; *) err 'trash destination escapes OpenCode config directory' ;; esac
+  [[ ! -e "$trash" && ! -L "$trash" ]] || err "trash destination already exists: $trash"
+  for rel in "${existing[@]}"; do
+    dest="$trash/$rel"
+    [[ ! -e "$dest" && ! -L "$dest" ]] || err "trash destination already exists: $dest"
+  done
+  for rel in "${existing[@]}"; do
+    mkdir -p -- "$trash/$(dirname "$rel")" || err "cannot create trash destination: $trash"
+  done
+  path_has_symlink "$base" '.opk-trash' && err "refusing symlink trash directory: $base/.opk-trash"
+  for rel in "${existing[@]}"; do
+    src="$base/$rel"; dest="$trash/$rel"
+    if ! mv -- "$src" "$dest"; then
+      echo "opk: move failed; recover files from: $trash" >&2
+      return 1
+    fi
+    moved=1
+  done
+  ((moved == 0)) || echo "MOVED_TO $trash"
+}
 cmd="${1:-help}"; shift || true
 case "$cmd" in
   help|-h|--help) cat <<HELP
@@ -20,14 +129,16 @@ Core:
   opk global | install | fullstack | verify | doctor | one | all
   opk update [--dry-run] [--yes] [--clean] [--profile auto|none|node-nest-react-mysql]
   opk update-all [--dry-run] [--yes] [--with-gsd] [--with-optional] [--refresh-superpowers]
+  opk mode [show|power|safe]
+  opk safety-plugin status|install [--yes]
 
 Integrations:
   opk bmad status|update [--stable|--next|--version X.Y.Z]
   opk gsd [status|install]     opk taste install|status|doctor|off|update
   opk markitdown install|status|update
-  opk supermemory install|status|update|init
-  opk ecc audit|lite|status|update
-  opk hermes audit|status|capsule
+  opk supermemory install|status|update|init|init-help
+  opk ecc audit|lite|status|update|off
+  opk hermes audit [--dry-run|--check|--write|--help] | status | capsule | off | help
   opk upstream audit|doctor   opk superpowers status|reset-cache|doctor
 
 Safety: updater dry-runs are read-only, pulls fail-fast, and missing optional
@@ -36,6 +147,19 @@ HELP
     ;;
   version|-v|--version) echo "opk $VERSION" ;;
   path) echo "$KIT_DIR" ;;
+  mode) mode_command "$@" ;;
+  safety-plugin)
+    sub="${1:-status}"; shift || true
+    case "$sub" in
+      status)
+        [[ -f .opencode/plugins/opk-safety-guard.js ]] && grep -qF '@opk-plugin opk-safety-guard' .opencode/plugins/opk-safety-guard.js && { echo INSTALLED; exit 0; }
+        need "$KIT_DIR/templates/plugins/opk-safety-guard.js"
+        echo AVAILABLE_NOT_INSTALLED
+        ;;
+      install) safe_opencode_project || err 'run inside a safe project with a project marker'; run_script "$KIT_DIR/scripts/install-safety-plugin.sh" "$@" ;;
+      *) err 'safety-plugin: use status|install' ;;
+    esac
+    ;;
   global) run_script "$KIT_DIR/install-global.sh" "$@" ;;
   quick) run_script "$KIT_DIR/install-global.sh" --yes "$@" ;;
   install|project|init) safe_project || err 'run inside a real project'; run_script "$KIT_DIR/install.sh" "$@" ;;
@@ -48,6 +172,7 @@ HELP
     bash "$KIT_DIR/install-global.sh" --yes
     if safe_project; then
       bash "$KIT_DIR/install.sh" --yes
+      # shellcheck source=scripts/project-profile.sh
       profile="$(source "$KIT_DIR/scripts/project-profile.sh"; opk_detect_profile "$PWD")"
       [[ "$profile" == node-nest-react-mysql ]] && bash "$KIT_DIR/scripts/install-fullstack-profile.sh" --yes || true
       bash "$KIT_DIR/verify.sh"
@@ -58,6 +183,7 @@ HELP
   clean) run_script "$KIT_DIR/scripts/cleanup-agent-artifacts.sh" "$@" ;;
   update-bmad) safe_project || err 'run inside a real project'; run_script "$KIT_DIR/update-bmad.sh" "$@" ;;
   bmad)
+    # shellcheck source=scripts/upstream-versions.sh
     sub="${1:-status}"; shift || true; source "$KIT_DIR/scripts/upstream-versions.sh"
     case "$sub" in
       status) echo "BMAD pin: ${BMAD_METHOD_VERSION:-$OPK_BMAD_VERSION}"; [[ -d .bmad || -d _bmad ]] && echo INSTALLED || echo NOT_INSTALLED ;;
@@ -93,17 +219,45 @@ HELP
     ;;
   supermemory)
     sub="${1:-status}"; shift || true
-    case "$sub" in install) run_script "$KIT_DIR/scripts/install-supermemory.sh" "$@";; update) run_script "$KIT_DIR/scripts/install-supermemory.sh" --upgrade "$@";; status) command -v supermemory || true;; init) command -v supermemory >/dev/null || err 'not installed'; exec supermemory init "$@";; *) err 'supermemory: install|update|status|init';; esac
+    case "$sub" in
+      install) run_script "$KIT_DIR/scripts/install-supermemory.sh" "$@" ;;
+      update) run_script "$KIT_DIR/scripts/install-supermemory.sh" --upgrade "$@" ;;
+      status) command -v supermemory || true ;;
+      init-help)
+        if command -v supermemory >/dev/null; then exec supermemory init --help; fi
+        echo 'Usage: supermemory init [options]. Run: opk supermemory install'
+        ;;
+      init)
+        if command -v supermemory >/dev/null; then exec supermemory init "$@"; fi
+        [[ "${1:-}" == --help || "${1:-}" == -h ]] && { echo 'Usage: supermemory init [options]. Run: opk supermemory install'; exit 0; }
+        err 'not installed'
+        ;;
+      *) err 'supermemory: install|update|status|init|init-help' ;;
+    esac
     ;;
   ecc|ec|e|update-ecc)
     [[ "$cmd" == update-ecc ]] && set -- update "$@"
     sub="${1:-status}"; shift || true
-    case "$sub" in audit) run_script "$KIT_DIR/scripts/audit-ecc.sh" "$@";; lite) run_script "$KIT_DIR/scripts/install-ecc-lite.sh" "$@";; update) run_script "$KIT_DIR/scripts/install-ecc-lite.sh" --refresh "$@";; status) run_script "$KIT_DIR/scripts/check-ecc-lite.sh" "$@";; *) err 'ecc: audit|lite|update|status';; esac
+    case "$sub" in
+      audit) run_script "$KIT_DIR/scripts/audit-ecc.sh" "$@" ;;
+      lite) run_script "$KIT_DIR/scripts/install-ecc-lite.sh" "$@" ;;
+      update) run_script "$KIT_DIR/scripts/install-ecc-lite.sh" --refresh "$@" ;;
+      status) run_script "$KIT_DIR/scripts/check-ecc-lite.sh" "$@" ;;
+      off) trash_known ecc ;;
+      *) err 'ecc: audit|lite|update|status|off' ;;
+    esac
     ;;
   hermes|hermes-status)
     [[ "$cmd" == hermes-status ]] && set -- status "$@"
     sub="${1:-status}"; shift || true
-    case "$sub" in audit) run_script "$KIT_DIR/scripts/audit-hermes.sh" "$@";; status) run_script "$KIT_DIR/scripts/check-hermes-lite.sh" "$@";; capsule) run_script "$KIT_DIR/scripts/hermes-learning-capsule.sh" "$@";; *) err 'hermes: audit|status|capsule';; esac
+    case "$sub" in
+      audit) (($# > 0)) || set -- --check; run_script "$KIT_DIR/scripts/audit-hermes.sh" "$@" ;;
+      status) run_script "$KIT_DIR/scripts/check-hermes-lite.sh" "$@" ;;
+      capsule) run_script "$KIT_DIR/scripts/hermes-learning-capsule.sh" "$@" ;;
+      off) trash_known hermes ;;
+      help|-h|--help) echo 'Usage: opk hermes audit [--dry-run|--check|--write|--help] | status | capsule | off | help' ;;
+      *) err 'hermes: audit|status|capsule|off|help' ;;
+    esac
     ;;
   upstream)
     sub="${1:-audit}"; shift || true

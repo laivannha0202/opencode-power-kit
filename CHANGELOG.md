@@ -5,6 +5,17 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.2]
+
+### Fixed
+
+- Restored mode and safety-plugin CLI compatibility.
+- Restored Hermes audit with read-only default behavior.
+- Restored safe ECC-lite and Hermes-lite removal commands.
+- Added CLI file-reference validation.
+- Added runtime CLI contract tests.
+- Prevented help/documentation drift from executable CLI behavior.
+
 ## [2.1.0] - 2026-07-28
 
 ### Runtime Hardening, Linux-only Packaging & Safety Fixes

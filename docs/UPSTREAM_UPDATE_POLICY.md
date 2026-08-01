@@ -87,23 +87,25 @@ SUPERMEMORY_PACKAGE="supermemory"  # Changed from @supermemory/ai
 3. **Check license compatibility** before integrating
 4. **Document license** for each upstream
 
-## Taste Skill Updates (v1/v2)
+## Taste Skill Updates
 
-**When:** Upstream Taste Skill releases new version or user wants v1 legacy.
+**When:** Upstream Taste Skill releases a new version or the user wants to refresh the installation.
 
 **Process:**
-1. User runs `opk taste install` (default: v2) or `opk taste install --v1` (legacy)
-2. Script verifies node/npx availability before install
+1. User runs `opk taste install` for a first install or `opk taste update` to refresh
+2. Script checks `npx` availability before install or update
 3. Script uses `--dry-run` to preview, `--yes` to confirm
-4. No auto-update — user explicitly requests update via `opk update-taste`
+4. No auto-update — refreshes happen only after an explicit `opk taste update` request
+5. Install, network, or post-install verification failures return nonzero
 
-**Version differences:**
-- **v2 (default):** `npx skills add Leonxlnx/taste-skill` — latest, recommended
-- **v1 (legacy):** `npx skills add https://github.com/Leonxlnx/taste-skill --skill "design-taste-frontend-v1"` — specific skill name
+The supported contract installs the current Taste Skill through the official
+`npx` flow; OPK does not expose version-selection flags. During refresh, an
+existing installation is moved to kit `.opk-trash/` before reinstalling. If
+reinstall fails, recovery may require moving it back manually.
 
 **Safety:**
 - Never auto-installed during global setup
-- `OPK_SKIP_TASTE=1` bypasses any auto-install in scripts
+- `OPK_SKIP_TASTE=1` is a legacy variable and is no longer needed
 - `opk taste off` moves to `.opk-trash/` (no `rm -rf`)
 
 ## Security Advisories

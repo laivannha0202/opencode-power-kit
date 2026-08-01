@@ -1,6 +1,6 @@
 # Danh sách Scripts
 
-OpenCode Power Kit v2.1.0 chỉ hỗ trợ Linux.
+OpenCode Power Kit v2.1.2 chỉ hỗ trợ Linux.
 
 | Script | Mục đích |
 |--------|----------|
@@ -19,8 +19,11 @@ OpenCode Power Kit v2.1.0 chỉ hỗ trợ Linux.
 | `scripts/test-timeout.sh` | Kiểm thử timeout contract |
 | `scripts/integration-test.sh` | Kiểm thử cài đặt end-to-end offline |
 | `scripts/test-runtime-behavior.sh` | Behavioral regression suite |
+| `scripts/test-cli-contracts.sh` | Kiểm thử runtime contract của CLI, mode, safety plugin, integrations và checker |
+| `scripts/test-opk-mode.sh` | Kiểm thử detect mode và ghi config project-local có backup |
 | `scripts/validate-formatting.py` | Kiểm tra format và Linux-only layout |
 | `scripts/validate-opencode-pack.py` | Kiểm tra agents, commands, skills và packaging |
+| `scripts/check-cli-file-references.py` | Kiểm tra các file literal mà `bin/opk` tham chiếu đều tồn tại hoặc được guard |
 | `scripts/install-fullstack-profile.sh` | Cài profile Node/Nest/React/MySQL |
 | `scripts/install-taste-skill.sh` | Cài Taste Skill qua npx |
 | `scripts/check-taste-skill.sh` | Kiểm tra Taste Skill không gọi network |
@@ -29,7 +32,7 @@ OpenCode Power Kit v2.1.0 chỉ hỗ trợ Linux.
 | `scripts/audit-ecc.sh` | Audit ECC read-only |
 | `scripts/install-ecc-lite.sh` | Cài ECC-lite |
 | `scripts/check-ecc-lite.sh` | Kiểm tra ECC-lite |
-| `scripts/audit-hermes.sh` | Audit Hermes-lite |
+| `scripts/audit-hermes.sh` | Audit Hermes-lite; mặc định read-only, chỉ `--write` cập nhật `docs/HERMES_AUDIT.md` |
 | `scripts/check-hermes-lite.sh` | Kiểm tra Hermes-lite |
 | `scripts/hermes-learning-capsule.sh` | Đóng gói learning capsule |
 

@@ -15,6 +15,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KIT_DIR="${SCRIPT_DIR}"
+# shellcheck source=scripts/require-linux.sh
 source "$KIT_DIR/scripts/require-linux.sh"
 opk_require_linux
 cd "${KIT_DIR}"
@@ -69,6 +70,15 @@ require_contains() {
 	fi
 }
 
+require_help_contains() {
+	local needle="$1"
+	if [[ ${OPK_HELP_STATUS} -eq 0 ]] && grep -Fq -- "${needle}" <<<"${OPK_HELP_OUTPUT}"; then
+		ok "bin/opk help advertises: ${needle}"
+	else
+		fail "bin/opk help missing:  ${needle}"
+	fi
+}
+
 require_executable() {
 	local path="$1"
 	if [[ -x "${path}" ]]; then
@@ -99,6 +109,16 @@ else
 	warn "VERSION file missing at ${VERSION_FILE} (continuing without version check)"
 fi
 echo
+
+# Capture the public CLI contract through the local read-only help command.
+OPK_HELP_OUTPUT=""
+OPK_HELP_STATUS=0
+if OPK_HELP_OUTPUT="$(OPK_KIT_DIR="$KIT_DIR" "$KIT_DIR/bin/opk" help 2>&1)"; then
+	:
+else
+	OPK_HELP_STATUS=$?
+	fail "bin/opk help exited ${OPK_HELP_STATUS}"
+fi
 
 # ─── Required files ───────────────────────────────────────────────
 echo "[required files]"
@@ -131,6 +151,7 @@ require_file "opencode-global/commands/tooling-doctor.md"
 require_file "scripts/cleanup-agent-artifacts.sh"
 require_file "scripts/opk-command-guard.sh"
 require_file "scripts/validate-opencode-pack.py"
+require_file "scripts/test-cli-contracts.sh"
 require_file "scripts/install-gsd-core.sh"
 require_file "scripts/install-markitdown.sh"
 require_file "scripts/install-supermemory.sh"
@@ -379,12 +400,8 @@ require_file "opencode-global/agents/taste-ui-strong.md"
 require_contains "scripts/install-taste-skill.sh" "taste-skill"
 require_contains "scripts/install-taste-skill.sh" "npx"
 require_contains "scripts/check-taste-skill.sh" "taste-skill"
-# bin/opk commands
+# Stable dispatcher token; public command wording is checked via local help below.
 require_contains "bin/opk" "taste|taste-status|taste-off|update-taste)"
-require_contains "bin/opk" "taste install"
-require_contains "bin/opk" "taste status"
-require_contains "bin/opk" "taste off"
-require_contains "bin/opk" "update-taste"
 # Agent routing
 require_contains "opencode-global/agents/build-strong.md" "taste-ui-strong"
 require_contains "opencode-global/commands/agent-router.md" "taste-ui-strong"
@@ -426,14 +443,9 @@ require_contains "scripts/install-ecc-lite.sh" "OPENCODE_CONFIG_DIR"
 require_contains "scripts/check-ecc-lite.sh" "ecc-lite"
 require_contains "scripts/check-ecc-lite.sh" "OPENCODE_CONFIG_DIR"
 require_contains "opencode-global/agents/ecc-lite-strong.md" "ECC-lite"
-# bin/opk commands
-require_contains "bin/opk" "ec|e|ecc)"
-require_contains "bin/opk" "ecc audit"
-require_contains "bin/opk" "ecc lite"
-require_contains "bin/opk" "ecc status"
-require_contains "bin/opk" "ecc off"
+# Stable dispatcher token; public command wording is checked via local help below.
+require_contains "bin/opk" "ecc|ec|e|update-ecc)"
 require_contains "bin/opk" "OPENCODE_CONFIG_DIR"
-require_contains "bin/opk" "update-ecc)"
 # README
 require_contains "README.md" "ECC-lite"
 require_contains "README.md" "ecc-lite-strong"
@@ -496,12 +508,8 @@ require_contains "scripts/hermes-learning-capsule.sh" "hermes"
 for hermes_cmd in hermes-reflect hermes-skill hermes-kanban hermes-memory hermes-budget hermes-audit hermes-learn hermes-research; do
 	require_file "opencode-global/commands/${hermes_cmd}.md"
 done
-# bin/opk commands
-require_contains "bin/opk" "hermes|hermes-status|hermes-off)"
-require_contains "bin/opk" "hermes audit"
-require_contains "bin/opk" "hermes status"
-require_contains "bin/opk" "hermes capsule"
-require_contains "bin/opk" "hermes off"
+# Stable dispatcher token; public command wording is checked via local help below.
+require_contains "bin/opk" "hermes|hermes-status)"
 # Docs
 require_file "docs/HERMES_INTEGRATION.md"
 require_file "docs/HERMES_AUDIT.md"
@@ -726,8 +734,12 @@ require_contains "CHANGELOG.md" "evidence-report"
 require_contains "CHANGELOG.md" "init-deep-lite"
 require_contains "CHANGELOG.md" "no MCP"
 require_contains "CHANGELOG.md" "no telemetry"
-# VERSION
-require_contains "VERSION" "2.1.0"
+# VERSION must match the current release exactly, not by substring.
+if [[ "${EXPECTED_VERSION}" == "2.1.2" ]]; then
+	ok "VERSION exactly matches 2.1.2"
+else
+	fail "VERSION is '${EXPECTED_VERSION:-missing}', expected exactly 2.1.2"
+fi
 # New commands (5)
 require_file "opencode-global/commands/intent-router.md"
 require_file "opencode-global/commands/init-deep-lite.md"
@@ -783,27 +795,24 @@ else
 	ok "oh-my-openagent not vendored"
 fi
 
-# ─── v2.0.0: CLI Expansion & Taste verify-gated ──────────────────
-echo "[v2.0.0 CLI Expansion]"
-# bin/opk subcommands
-require_contains "bin/opk" "upstream)"
-require_contains "bin/opk" "upstream audit"
-require_contains "bin/opk" "upstream doctor"
-require_contains "bin/opk" "superpowers)"
-require_contains "bin/opk" "superpowers status"
-require_contains "bin/opk" "superpowers reset-cache"
-require_contains "bin/opk" "superpowers doctor"
-require_contains "bin/opk" "bmad)"
-require_contains "bin/opk" "bmad status"
-require_contains "bin/opk" "bmad update"
-require_contains "bin/opk" "tooling)"
-require_contains "bin/opk" "tooling doctor"
-require_contains "bin/opk" "taste doctor"
-require_contains "bin/opk" "taste install --v1"
-require_contains "bin/opk" "taste install --v2"
+# Help assertions detect documentation drift only. scripts/release-gate.sh runs
+# scripts/test-cli-contracts.sh immediately before verify.sh for executable behavior.
+# ─── Current CLI help contract & Taste verify-gated ────────────────
+echo "[Current CLI help contract]"
+require_help_contains "opk mode [show|power|safe]"
+require_help_contains "opk safety-plugin status|install [--yes]"
+require_help_contains "opk bmad status|update [--stable|--next|--version X.Y.Z]"
+require_help_contains "opk gsd [status|install]"
+require_help_contains "opk taste install|status|doctor|off|update"
+require_help_contains "opk markitdown install|status|update"
+require_help_contains "opk supermemory install|status|update|init|init-help"
+require_help_contains "opk ecc audit|lite|status|update|off"
+require_help_contains "opk hermes audit [--dry-run|--check|--write|--help] | status | capsule | off | help"
+require_help_contains "opk upstream audit|doctor"
+require_help_contains "opk superpowers status|reset-cache|doctor"
 echo "[v2.0.0 Taste verify-gated]"
 require_contains "README.md" "verify-gated"
-require_contains "README.md" "opk taste install --v1"
+require_contains "README.md" "opk taste update"
 require_contains "README.md" "opk taste doctor"
 require_contains "THIRD_PARTY.md" "verify-gated"
 require_contains "THIRD_PARTY.md" "user-installed"
@@ -923,7 +932,7 @@ if command -v shellcheck >/dev/null 2>&1; then
 	if [[ -x "bin/opk" ]]; then
 		SHELLCHECK_FILES+=("bin/opk")
 	fi
-	if shellcheck "${SHELLCHECK_FILES[@]}"; then
+	if shellcheck -x -P scripts "${SHELLCHECK_FILES[@]}"; then
 		ok "shellcheck clean"
 	else
 		fail "shellcheck found issues (see above)"

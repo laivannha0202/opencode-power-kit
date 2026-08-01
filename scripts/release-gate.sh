@@ -145,7 +145,8 @@ fi
 
 # --- 6. Scripts ---
 section "6. Scripts"
-for s in detect-mode.py merge-opk-project.py validate-opencode-pack.py; do
+for s in detect-mode.py merge-opk-project.py validate-opencode-pack.py \
+         check-cli-file-references.py test-cli-contracts.sh audit-hermes.sh; do
   if [ -f "$KIT_DIR/scripts/$s" ]; then
     pass "scripts/$s exists"
   else
@@ -305,6 +306,9 @@ run_cmd "audit-upstreams" \
 run_cmd "validate-opencode-pack" \
   "python3 $KIT_DIR/scripts/validate-opencode-pack.py"
 
+run_cmd "check-cli-file-references" \
+  "python3 $KIT_DIR/scripts/check-cli-file-references.py"
+
 # --- Permission & Safety Tests ---
 echo ""
 echo "--- Permission & Safety Tests ---"
@@ -319,6 +323,12 @@ echo ""
 echo "--- Shell Tests ---"
 run_cmd "test-opk-mode" \
   "bash $KIT_DIR/scripts/test-opk-mode.sh"
+
+run_cmd "test-cli-contracts" \
+  "bash $KIT_DIR/scripts/test-cli-contracts.sh"
+
+run_cmd "audit-hermes --check" \
+  "bash $KIT_DIR/scripts/audit-hermes.sh --check"
 
 run_cmd "test-installer-preservation" \
   "bash $KIT_DIR/scripts/test-installer-preservation.sh"

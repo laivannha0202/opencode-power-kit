@@ -194,7 +194,7 @@
     "target": "docs/UPSTREAM_CAPABILITY_MAP.md",
     "patterns": [
       "v6.1.1 (template pin)",
-      "6.9.0 (pinned)",
+      "6.10.0 (CLI/update pin)",
       "@1.6.1 (pinned)",
       "https://github.com/obra/superpowers.git",
       "https://github.com/bmad-code-org/BMAD-METHOD",
@@ -242,7 +242,7 @@
     "check_type": "grep_present",
     "target": "THIRD_PARTY.md",
     "patterns": [
-      "6.9.0",
+      "6.10.0",
       "@1.6.1",
       "rohitg00/agentmemory",
       "obra/superpowers"

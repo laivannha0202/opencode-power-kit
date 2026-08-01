@@ -1,7 +1,7 @@
 # OpenCode Power Kit
 
-[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](./VERSION)
-[![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.9.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
+[![Version](https://img.shields.io/badge/version-2.1.2-blue.svg)](./VERSION)
+[![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.10.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
 [![Linux-only](https://img.shields.io/badge/platform-Linux--only-blue.svg)](#cài-nhanh)
@@ -42,6 +42,11 @@ opencode
 | `opk up` / `opk update` / `opk upgrade` | Update kit + project (One Command Update) |
 | `opk clean` | Cleanup agent artifacts an toàn (mặc định dry-run) |
 | `opk up --clean` | Update + cleanup apply trong một lệnh |
+| `opk mode show\|power\|safe` | Xem hoặc đổi permission mode của project hiện tại |
+| `opk safety-plugin status\|install` | Kiểm tra hoặc cài safety guard vào project |
+| `opk hermes audit\|status\|capsule\|off\|help` | Audit và quản lý Hermes-lite |
+| `opk ecc audit\|lite\|status\|update\|off` | Audit và quản lý ECC-lite (`ec`/`e` tương thích) |
+| `opk supermemory install\|update\|status\|init\|init-help` | Cài, cập nhật và khởi tạo Supermemory |
 
 ---
 
@@ -98,7 +103,7 @@ opk clean --apply  # apply: move vào .opk-trash/<timestamp>/
 | GSD reference agents | 34 | `extras/gsd-agent-reference/` (reference-only, not active) |
 | Slash commands | 71 | `opencode-global/commands/` |
 | Skills | 23 | `opencode-global/skills/` |
-| Helper scripts | 34 | `scripts/` |
+| Helper scripts | 39 | `scripts/` |
 | Root-level scripts | 8 | `*.sh` (install, bootstrap, verify, doctor, ...) |
 | Full-stack profile | 1 | `profiles/node-nest-react-mysql/` |
 | Safety scripts | 4 | `verify.sh`, `doctor.sh`, `cleanup-agent-artifacts.sh`, `opk-command-guard.sh` |
@@ -121,7 +126,7 @@ người dùng hiểu rõ ranh giới.
 | **Target platform** | Nền tảng mà kit cấu hình workflow | No | No | OpenCode |
 | **Plugin reference** | Plugin được load runtime từ GitHub/npm | Via OpenCode | No | Superpowers |
 | **Install-time dependency** | Cài vào project user qua official installer | Via npx | No | BMAD Method |
-| **Verify-gated dependency** | Cài khi user yêu cầu explicit, dùng official installer | Via opk update-* | No | Taste Skill |
+| **Verify-gated dependency** | Cài khi user yêu cầu explicit, dùng official installer | Explicit `opk taste update` | No | Taste Skill |
 | **Config-only reference** | Kit chỉ ship template config trỏ đến upstream | No | No | Biome config |
 | **Opt-in wrapper** | Chỉ gọi installer chính thức khi user yêu cầu | No | No | GSD Core |
 | **Detect-only** | Chỉ phát hiện tool đã cài sẵn trên PATH | No | No | rg, fd, semgrep, gitleaks |
@@ -194,6 +199,11 @@ opk mode safe
 
 ### File config
 
+`opk mode power` và `opk mode safe` chỉ ghi `.opencode/opencode.json` trong
+project hiện tại. Lệnh không sửa `templates/opencode.json` hoặc config mặc định
+toàn cục. Nếu config project đã tồn tại, OPK tạo bản sao
+`.opencode/opencode.json.bak.<timestamp>` trước khi thay thế.
+
 | File | Mode | Mục đích |
 |------|------|----------|
 | `templates/opencode.json` | Power (`permission: allow`) | Backward compatible — mặc định |
@@ -215,6 +225,13 @@ opk safety-plugin status
 ```
 
 Tham khảo: `templates/plugins/opk-safety-guard.js`
+
+### Optional integration removal
+
+`opk hermes off` và `opk ecc off` chỉ di chuyển các agent/command đã biết của
+integration tương ứng vào thư mục config OpenCode
+`.opk-trash/<integration>-<timestamp>/`. Có thể khôi phục các file từ đó; lệnh
+không xóa và không di chuyển file tùy chỉnh nằm ngoài các đường dẫn manifest đã biết.
 
 ---
 
@@ -552,7 +569,7 @@ Phù hợp nhất cho project dùng: NestJS backend, React/Vite frontend, MySQL 
 | Safety | CommonJS safety plugin, opk-command-guard, cleanup-safe | Instruction-based, not sandbox; depends on model compliance | `node scripts/test-safety-plugin.mjs` |
 | Build verification | 22 behavioral contracts, eval regression suite | Contracts verify workflow, not model output quality | `bash evals/run.sh` |
 | Linux-only runtime | Bash entrypoints, shared platform guard, portable timeout fallback | Chỉ hỗ trợ Linux; không ship Windows runtime | `bash scripts/release-gate.sh` |
-| Third-party integration | Superpowers v6.1.1, BMAD 6.9.0, GSD 1.6.1, ECC, Hermes, RAG, Headroom, AgentMemory | Opt-in only; no auto-enable; user installs per dependency | `python3 scripts/audit-upstreams.py --check` |
+| Third-party integration | Superpowers v6.1.1, BMAD updater pin 6.10.0, GSD 1.6.1, ECC, Hermes, RAG, Headroom, AgentMemory | Opt-in only; no auto-enable; user installs per dependency | `python3 scripts/audit-upstreams.py --check` |
 
 ---
 
@@ -567,8 +584,8 @@ Kit tích hợp nhiều upstream bên ngoài. Bảng tổng quan:
 | BMAD Method | Install-time dependency | Yes (during install) | `npx bmad-method@VERSION install` | `opk update-bmad` | Medium |
 | GSD Core | Opt-in wrapper | No | `opk gsd` | `opk update-gsd` | Low |
 | MarkItDown | Opt-in wrapper | No | `opk markitdown install` | `opk markitdown install --upgrade` | Low |
-| Supermemory | Opt-in wrapper | No | `opk supermemory install` | `opk supermemory install` | High (migrated) |
-| Taste Skill | Verify-gated (user-installed) | Yes (with verification) | `opk taste install` | `opk update-taste` | Medium |
+| Supermemory | Opt-in wrapper | No | `opk supermemory install` | `opk supermemory update` | High (migrated) |
+| Taste Skill | Verify-gated (user-installed) | Yes (with verification) | `opk taste install` | `opk taste update` | Medium |
 | ECC | Opt-in wrapper | No | `opk ecc lite` | `opk update-ecc` | Low |
 | Hermes Agent | Inspiration-only | No (reference only) | N/A | N/A | Low |
 | rtk, repomix, ast-grep, etc. | Detect-only | No (user-installs) | User-installs | User-updates | Low |
@@ -716,6 +733,12 @@ opk supermemory install
 
 # Initialize — set up memory store and API key
 opk supermemory init
+
+# Show init help without installing or downloading anything
+opk supermemory init-help
+
+# Update the installed CLI
+opk supermemory update
 ```
 
 ### Agent command
@@ -748,11 +771,14 @@ Taste Skill is **optional** — installed on-demand by the user, never auto-inst
 | Trigger | Installs? | Skip behavior |
 |---------|:---------:|:-------------:|
 | `opk global` / `opk one` / `opk go` | ❌ No | Use `opk taste install` to add |
-| `opk taste install` | ✅ Yes | Verify node/npx before install |
-| `opk taste install --v1` | ✅ Yes | Install v1 (legacy, specific skill name) |
-| `opk taste install --v2` | ✅ Yes | Install v2 (default, latest) |
+| `opk taste install` | ✅ Yes | Check `npx`, then install the current Taste Skill |
+| `opk taste update` | ✅ Yes | Explicit refresh; failures return a nonzero exit status |
 | `opk up` (update) | ❌ No | N/A |
 | Shell startup | ❌ No | N/A |
+
+Use `opk taste install` to install and `opk taste update` to refresh. Refresh
+is explicit and may fail nonzero. If an installation already exists, OPK moves
+it to `.opk-trash/` before reinstalling; recovery may require a manual move.
 
 `OPK_SKIP_TASTE=1` is a legacy escape hatch — no longer needed since global scripts no longer auto-install Taste Skill (v2.0.0).
 
@@ -761,7 +787,7 @@ Taste Skill is **optional** — installed on-demand by the user, never auto-inst
 - **No sudo** — prefers `npx`, never uses `sudo npm`.
 - **No curl|sh** — installer là Bash script có sẵn trong kit.
 - **No .env/secrets** — Taste Skill reads no sensitive files.
-- **No core failure** — missing deps produce a warning only.
+- **Failure propagation** — missing `npx`, install errors, or verification errors return nonzero.
 - **Safe removal** — `opk taste off` moves to `.opk-trash/`, never `rm -rf`.
 
 ### Usage
@@ -772,11 +798,11 @@ opk taste status
 # or
 opk taste-status
 
-# Install (default: v2)
+# Install the current Taste Skill
 opk taste install
 
-# Install v1 (legacy)
-opk taste install --v1
+# Refresh the installed Taste Skill
+opk taste update
 
 # Check runtime dependencies
 opk taste doctor
@@ -865,6 +891,9 @@ opk ecc audit
 opk ecc off
 
 # Update
+opk ecc update
+
+# Backward-compatible update alias
 opk update-ecc
 
 # Short aliases
@@ -902,6 +931,9 @@ opk e lite
 - **No network in status check** — `check-ecc-lite.sh` only checks local files.
 - **No sudo** — all operations user-scoped.
 - **Read-only audit** — `audit-ecc.sh` clones to `.tmp/`, audits, then cleans up.
+- **Restorable removal** — `ecc off` moves only known ECC-lite components into
+  the OpenCode config `.opk-trash/`; custom files outside known manifest paths
+  are untouched.
 
 ### Files
 
@@ -1191,7 +1223,7 @@ tránh lỗi phổ biến (edit quá nhiều file, chạy lệnh destructive, pr
 ## Xử lý sự cố
 
 - **Release gate fail?** Chạy `bash scripts/release-gate.sh`, sửa command bị đánh dấu FAIL rồi chạy lại.
-- **Không phải Linux?** Bản v2.1.0 chỉ hỗ trợ Linux và trả exit code `126` trên nền tảng khác.
+- **Không phải Linux?** Bản v2.1.2 chỉ hỗ trợ Linux và trả exit code `126` trên nền tảng khác.
 - **Format validation fail?** Chạy `python3 scripts/validate-formatting.py` để biết chi tiết.
 - **Cần giúp đỡ?** Chạy `opk doctor` để chẩn đoán, hoặc xem [docs/](./docs/) để biết thêm chi tiết.
 
