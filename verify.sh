@@ -222,10 +222,10 @@ require_executable "scripts/check-ecc-lite.sh"
 require_executable "bin/opk"
 echo
 
-# ─── Auto Router presence ─────────────────────────────────────────
-echo "[Natural Language Auto Router]"
-require_contains "templates/AGENTS.md" "Natural Language Auto Router"
-require_contains "templates/OPENCODE.md" "Natural Language Auto Router"
+# ─── Lightweight router presence ──────────────────────────────────
+echo "[Lightweight Routing]"
+require_contains "templates/AGENTS.md" "Lightweight Routing"
+require_contains "templates/OPENCODE.md" "Runtime instructions live in root"
 echo
 
 # ─── CHANGELOG mentions v1.3.3 / v1.3.4 / v1.4.0 / v1.5.0 / v1.6.0 ──────
@@ -258,20 +258,20 @@ require_contains "THIRD_PARTY.md" "GSD Core"
 # ─── v1.6.0: Full Auto Permission Mode ──────────────────────────
 echo "[v1.6.0 Full Auto Permission Mode]"
 require_contains "templates/opencode.json" '"permission"'
-require_contains "templates/AGENTS.md" "Full Auto Permission Mode"
-require_contains "templates/OPENCODE.md" "Full Auto Permission Mode"
+require_contains "templates/AGENTS.md" "Power And Safe Modes"
+require_contains "templates/OPENCODE.md" "opk mode power"
 echo
 
 # ─── v1.6.0: Vietnamese Language Lock ───────────────────────────
 echo "[v1.6.0 Vietnamese Language Lock]"
-require_contains "templates/AGENTS.md" "Vietnamese Language Lock"
-require_contains "templates/OPENCODE.md" "Vietnamese Language Lock"
+require_contains "templates/AGENTS.md" "## Language"
+require_contains "templates/OPENCODE.md" "AGENTS.md"
 echo
 
 # ─── v1.6.2: Scope Lock — docs-only/read-only scope drift fix ──
 echo "[v1.6.2 Scope Lock — docs-only/read-only]"
-require_contains "templates/AGENTS.md" "Scope Lock — Docs-only / Read-only"
-require_contains "templates/OPENCODE.md" "Scope Lock — Docs-only / Read-only"
+require_contains "templates/AGENTS.md" "## Scope"
+require_contains "templates/OPENCODE.md" "AGENTS.md"
 require_contains "opencode-global/agents/build-strong.md" "Scope Gate"
 require_contains "profiles/node-nest-react-mysql/AGENTS.append.md" "Scope Gate"
 require_contains "profiles/node-nest-react-mysql/OPENCODE.append.md" "Scope Gate"
@@ -735,10 +735,10 @@ require_contains "CHANGELOG.md" "init-deep-lite"
 require_contains "CHANGELOG.md" "no MCP"
 require_contains "CHANGELOG.md" "no telemetry"
 # VERSION must match the current release exactly, not by substring.
-if [[ "${EXPECTED_VERSION}" == "2.1.2" ]]; then
-	ok "VERSION exactly matches 2.1.2"
+if [[ "${EXPECTED_VERSION}" == "2.1.3" ]]; then
+	ok "VERSION exactly matches 2.1.3"
 else
-	fail "VERSION is '${EXPECTED_VERSION:-missing}', expected exactly 2.1.2"
+	fail "VERSION is '${EXPECTED_VERSION:-missing}', expected exactly 2.1.3"
 fi
 # New commands (5)
 require_file "opencode-global/commands/intent-router.md"
@@ -799,7 +799,7 @@ fi
 # scripts/test-cli-contracts.sh immediately before verify.sh for executable behavior.
 # ─── Current CLI help contract & Taste verify-gated ────────────────
 echo "[Current CLI help contract]"
-require_help_contains "opk mode [show|power|safe]"
+require_help_contains "opk mode [show|power|safe|migrate]"
 require_help_contains "opk safety-plugin status|install [--yes]"
 require_help_contains "opk bmad status|update [--stable|--next|--version X.Y.Z]"
 require_help_contains "opk gsd [status|install]"
@@ -833,8 +833,8 @@ if grep -q "install-taste-skill.sh.*--yes" "install-global.sh"; then
 else
 	ok "install-global.sh: no Taste auto-install call"
 fi
-# install-global must have suggestion hint
-require_contains "install-global.sh" "opk taste install"
+# The shell entrypoint delegates messaging and installation to Python.
+require_contains "scripts/install-global.py" "opk taste install"
 # UPSTREAM_AUDIT must not contain auto-enabled-dependency
 if grep -q "auto-enabled-dependency" "docs/UPSTREAM_AUDIT.md"; then
 	fail "docs/UPSTREAM_AUDIT.md still contains 'auto-enabled-dependency'"

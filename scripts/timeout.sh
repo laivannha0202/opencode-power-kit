@@ -2,6 +2,7 @@
 # ─────────────────────────────────────────────────────────────────
 # timeout.sh — Portable timeout wrapper
 # opencode-power-kit v2.1.0
+# shellcheck disable=SC2329
 #
 # Runs a command with a timeout. Returns exit code 124 if timeout occurs.
 #

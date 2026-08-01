@@ -15,18 +15,16 @@ This document defines when and how opencode-power-kit updates references to exte
 
 **Process:**
 1. Verify new version works with existing integration
-2. Update default pin in all relevant scripts:
-   - `install.sh`
-   - `update-bmad.sh`
-   - Any other scripts with hardcoded versions
-3. Add migration note in CHANGELOG.md
-4. Update THIRD_PARTY.md if integration type changes
-5. Run validation: `python3 scripts/validate-opencode-pack.py`
+2. Update the single reviewed pin in `scripts/upstream-versions.sh`.
+3. If the pin is embedded in a runtime reference, update generated/template references and keep the drift validator green.
+4. Add migration note in CHANGELOG.md
+5. Update THIRD_PARTY.md if integration type changes
+6. Run `python3 scripts/audit-upstreams.py --check` and `python3 scripts/validate-opencode-pack.py`.
 
 **Example:**
 ```bash
-# BMAD Method 6.8.0 → 6.9.0
-sed -i 's/6\.8\.0/6.9.0/g' install.sh update-bmad.sh
+# Edit OPK_BMAD_VERSION once, then run the validators.
+$EDITOR scripts/upstream-versions.sh
 ```
 
 ### 2. Documentation Updates Only
@@ -143,6 +141,7 @@ Before merging any upstream update:
 - [ ] No `get-shit-done` package references
 - [ ] No `use_skill` or `find_skills` as main workflow
 - [ ] Permission templates have deny-list for destructive commands
+- [ ] Template/plugin pins match `scripts/upstream-versions.sh`
 - [ ] THIRD_PARTY.md updated with new version/integration info
 - [ ] CHANGELOG.md entry added
 - [ ] No secrets or API keys exposed

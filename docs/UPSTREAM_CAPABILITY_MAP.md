@@ -38,9 +38,9 @@ OPK (opencode-power-kit) extends OpenCode with additional capabilities.
 
 | Upstream | Repository | License | Pin/Tag/Commit | Integration Mode | Capability Learned | Agent/Skill Using It | Not Used | Security Risk | Update Policy |
 |----------|-----------|---------|----------------|-----------------|-------------------|---------------------|----------|--------------|---------------|
-| Superpowers | https://github.com/obra/superpowers.git | MIT | v6.1.1 (template pin) | Plugin reference (loaded at runtime) | Skill system, agent delegation patterns | build-strong, all agents via skill system | N/A | Medium — runtime dependency, pinned tag | Pinned tag, manual update |
+| Superpowers | https://github.com/obra/superpowers.git | MIT | v6.2.0 (central + template pin) | Plugin reference (loaded at runtime) | Skill system, agent delegation patterns | build-strong, all agents via skill system | N/A | Medium — runtime dependency, pinned tag | Central pin + drift validator |
 | BMAD Method | https://github.com/bmad-code-org/BMAD-METHOD | MIT | 6.10.0 (CLI/update pin) | Install-time dependency | Project scaffolding, planning templates | bin/opk, update-bmad.sh, update-opk.sh | N/A | Low — install-time only | Central pin in `scripts/upstream-versions.sh` |
-| GSD Core | https://github.com/open-gsd/gsd-core | MIT (npm @opengsd/gsd-core) | @1.6.1 (pinned) | Opt-in wrapper (`opk gsd`) | Workflow orchestration, agent patterns | extras/gsd-agent-reference/ (34 files, reference-only) | Active agents: no GSD in agents/ | Medium — npm dependency, pinned | Version pinned, override via env |
+| GSD Core | https://github.com/open-gsd/gsd-core | MIT (npm @opengsd/gsd-core) | @1.8.0 (reviewed central pin) | Opt-in wrapper (`opk gsd`) | Workflow orchestration, agent patterns | extras/gsd-agent-reference/ (34 files, reference-only) | Active agents: no GSD in agents/ | Medium — npm dependency, pinned | Version pinned, override via env |
 | ECC | https://github.com/affaan-m/ECC | UNKNOWN | unpinned (latest) | Opt-in wrapper (`opk ecc lite`) | Error handling, retry patterns | ecc-lite skill | N/A | Low — opt-in only | Manual update |
 | Hermes | https://github.com/NousResearch/hermes-agent | UNKNOWN | N/A | Inspiration-only | Meta-cognition, learning loop, reflection | hermes-lite-strong agent | No runtime dependency | Low — no code imported | Reference only |
 | AgentMemory | https://github.com/rohitg00/agentmemory | Apache-2.0 | N/A | Inspiration-only | Agent memory, state persistence, session handoff | agentmemory-lite skill | No runtime dependency | Low — no code imported | Reference only |
@@ -50,7 +50,7 @@ OPK (opencode-power-kit) extends OpenCode with additional capabilities.
 
 ### Notes
 
-- **Verified pins**: Superpowers v6.1.1 (template pin), BMAD 6.10.0 (central script pin), GSD @1.6.1 (npm pin) — all verified against installed packages and config files. Local cache v5.0.7 is an old install, not source-of-truth.
+- **Verified pins**: Superpowers v6.2.0 is the current official stable release and matches the central/template pins; BMAD 6.10.0 matches its official stable release. GSD remains at the reviewed @1.8.0 central pin in this patch; the newer @1.9.1 release is intentionally not bundled into this permission/runtime fix.
 - **UNKNOWN**: ECC, Taste Skill version pins not verified. Do not claim audited without verification.
 - **Integration modes**: "Inspiration-only" = no code imported, pattern reference. "Opt-in wrapper" = user must explicitly install. "Plugin reference" = loaded at runtime by OpenCode.
 - **Not Used**: Column indicates what OPK does NOT use from the upstream.

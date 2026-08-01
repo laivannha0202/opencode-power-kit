@@ -125,12 +125,15 @@
 | `opk version` | Hiển thị phiên bản |
 | `opk doctor` | Chẩn đoán (read-only) |
 | `opk verify` | Kiểm tra project sẵn sàng chưa |
-| `opk global` | Cài đặt toàn cục (agents/commands/skills) |
+| `opk global [--mode power\|safe]` | Merge global config và managed-copy agents/commands/skills; không flag thì giữ mode cũ, config mới dùng Safe |
 | `opk install` | Cài vào project hiện tại |
 | `opk fullstack` | Cài full-stack profile (Node/Nest/React/MySQL) |
 | `opk path` | Hiển thị đường dẫn kit |
 | `opk update` | Cập nhật kit từ git origin |
-| `opk mode show\|power\|safe` | Xem hoặc đổi mode trong `.opencode/opencode.json` của project hiện tại; backup config cũ, không sửa template mặc định |
+| `opk mode show\|power\|safe\|migrate` | Xem resolved mode, merge profile vào root `opencode.json`, hoặc migrate legacy config có backup |
+| `opk permissions doctor` | Chẩn đoán read-only config paths, env override, effective permission, agent conflict và hỗ trợ `--auto` |
+| `opk auto [args...]` | Chạy `opencode --auto` sau khi xác minh effective mode là POWER |
+| `opk run-auto "prompt"` | Chạy `opencode run --auto` với prompt literal, không `eval` |
 | `opk safety-plugin status\|install` | Kiểm tra hoặc cài safety plugin vào project hiện tại |
 | `opk hermes audit [--dry-run\|--check\|--write\|--help]` | Audit Hermes-lite; mặc định `--check` read-only, chỉ `--write` ghi `docs/HERMES_AUDIT.md` |
 | `opk hermes status\|capsule\|off\|help` | Kiểm tra, tạo capsule, xem help hoặc move component Hermes đã biết vào config `.opk-trash/` |
@@ -142,3 +145,8 @@
 agent/command đã biết vào `.opk-trash/<integration>-<timestamp>/` bên trong
 OpenCode config để có thể khôi phục; file tùy chỉnh nằm ngoài các đường dẫn
 manifest đã biết không bị động tới.
+
+`opk mode power/safe` không thay model, provider, MCP, plugin, formatter hoặc
+LSP của project. `opk mode migrate` chỉ archive legacy config sau khi root
+config parse và verify thành công. Approval `always` chỉ sống trong session;
+Power profile trong `opencode.json` mới là cấu hình persistent.

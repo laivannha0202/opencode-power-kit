@@ -1,12 +1,12 @@
 # Danh sách Scripts
 
-OpenCode Power Kit v2.1.2 chỉ hỗ trợ Linux.
+OpenCode Power Kit v2.1.3 chỉ hỗ trợ Linux.
 
 | Script | Mục đích |
 |--------|----------|
 | `bootstrap.sh` | Cài đặt một lệnh cho Linux |
 | `setup.sh` | Menu và entrypoint setup đầy đủ |
-| `install-global.sh` | Cài agents, commands, skills và CLI toàn cục |
+| `install-global.sh` | Wrapper Linux cho global config/assets installer an toàn |
 | `install.sh` | Cài cấu hình OPK vào project hiện tại |
 | `verify.sh` | Kiểm tra cấu trúc, tính năng và validator |
 | `doctor.sh` | Chẩn đoán read-only |
@@ -21,6 +21,13 @@ OpenCode Power Kit v2.1.2 chỉ hỗ trợ Linux.
 | `scripts/test-runtime-behavior.sh` | Behavioral regression suite |
 | `scripts/test-cli-contracts.sh` | Kiểm thử runtime contract của CLI, mode, safety plugin, integrations và checker |
 | `scripts/test-opk-mode.sh` | Kiểm thử detect mode và ghi config project-local có backup |
+| `scripts/merge-opk-project.py` | Merge root config, atomic write và migrate legacy config |
+| `scripts/install-global.py` | Merge `~/.config/opencode/opencode.json`, managed-copy assets và migrate RC marker |
+| `scripts/opk-permissions.py` | Đọc resolved config và báo effective permission mà không in secret |
+| `scripts/check-opencode-config-paths.py` | Chặn production code dùng legacy config như active path |
+| `scripts/check-agent-permission-contracts.py` | Validate agent ask/edit/bash contracts |
+| `scripts/test-global-installer.sh` | Test preservation, managed manifest, RC migration, idempotency và symlink rejection |
+| `scripts/test-opencode-resolved-config.sh` | Integration test bằng OpenCode thật với HOME/project fixture |
 | `scripts/validate-formatting.py` | Kiểm tra format và Linux-only layout |
 | `scripts/validate-opencode-pack.py` | Kiểm tra agents, commands, skills và packaging |
 | `scripts/check-cli-file-references.py` | Kiểm tra các file literal mà `bin/opk` tham chiếu đều tồn tại hoặc được guard |

@@ -5,6 +5,51 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.3] - 2026-08-01
+
+### Fixed
+
+- Project config is now installed and managed at root `opencode.json`, the
+  documented OpenCode project location.
+- Power-compatible agents no longer override edit/bash permissions with `ask`.
+- Global install no longer points `OPENCODE_CONFIG_DIR` at a mutable kit checkout.
+- Permission diagnostics capture large resolved configs without the OpenCode
+  pipe truncation that previously produced a false BROKEN result.
+
+### Changed
+
+- Power Mode uses granular allow rules with explicit deny rules for secrets,
+  destructive commands, external directories and doom loops.
+- Global assets use managed copies under `~/.config/opencode/` with a manifest;
+  custom collisions are preserved.
+- `AGENTS.md` is the single auto-discovered runtime instruction source;
+  `OPENCODE.md` is a short reference and is not explicitly loaded.
+- Compaction pruning and noisy-directory watcher ignores are enabled.
+- Small tasks remain on the main/build agent; build-strong/BMAD/subagents are
+  reserved for larger scopes.
+- Superpowers runtime references now match the reviewed central `v6.2.0` pin.
+
+### Migration
+
+- `opk mode migrate` parses JSON/JSONC, backs up root and legacy configs,
+  preserves custom keys, unions plugin/instruction lists, verifies root output,
+  then archives legacy config under `.opk-trash/legacy-config-<timestamp>/`.
+- Global RC managed blocks retain `OPK_KIT_DIR` and PATH but remove the old
+  managed `OPENCODE_CONFIG_DIR` export. Custom exports outside markers remain.
+
+### Compatibility
+
+- Linux-only, model-agnostic and provider-agnostic.
+- Existing model, provider, MCP, plugin, formatter, LSP and unknown keys are
+  preserved during merge; no OpenAI or Anthropic key is required.
+- Local Linux release validation remains authoritative; no GitHub Actions added.
+
+### Validation
+
+- Added real `opencode debug config` integration coverage, config-path and agent
+  permission validators, global installer contracts, migration race/symlink
+  tests, and auto-wrapper quoting tests.
+
 ## [2.1.2]
 
 ### Fixed

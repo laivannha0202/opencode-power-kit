@@ -3,6 +3,7 @@
 # test-timeout.sh — Deterministic backend coverage for timeout.sh
 # opencode-power-kit v2.1.0
 # ─────────────────────────────────────────────────────────────────
+# shellcheck disable=SC2015,SC2034
 
 set -uo pipefail
 

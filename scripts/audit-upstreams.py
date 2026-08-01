@@ -257,6 +257,20 @@ def check_report(root: Path) -> list[str]:
         if '"permission": "allow"' in template_content:
             errors.append('templates/opencode.json still has bare "permission": "allow"')
 
+    # 8. Runtime plugin templates must use the reviewed central Superpowers pin.
+    pins_path = root / "scripts" / "upstream-versions.sh"
+    pins_content = pins_path.read_text(encoding="utf-8") if pins_path.is_file() else ""
+    central_match = re.search(r"OPK_SUPERPOWERS_VERSION:=(\d+\.\d+\.\d+)", pins_content)
+    if not central_match:
+        errors.append("scripts/upstream-versions.sh missing OPK_SUPERPOWERS_VERSION")
+    else:
+        expected = central_match.group(1)
+        for name in ("opencode.json", "opencode.power.json", "opencode.safe.json"):
+            path = root / "templates" / name
+            match = re.search(r"superpowers\.git#v(\d+\.\d+\.\d+)", path.read_text(encoding="utf-8"))
+            if not match or match.group(1) != expected:
+                errors.append(f"templates/{name} Superpowers pin does not match central v{expected}")
+
     return errors
 
 
