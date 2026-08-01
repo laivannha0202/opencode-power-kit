@@ -23,13 +23,16 @@ Nếu request chứa keyword: "chỉ kiểm tra", "không sửa file", "read-onl
 
 ## Phân loại Intent
 
+Task `implement` hoặc `refactor` trong một module, tối đa 2 file, dùng main/build agent.
+Chỉ chọn `build-strong` khi task nhiều layer, hơn 2 file, hoặc cần phối hợp contract.
+
 | Intent | Keywords (vi/en) | Agent đề xuất | Workflow |
 |--------|-----------------|---------------|----------|
 | `research` | "tìm hiểu", "phân tích", "research", "explore" | `plan-lite` | Đọc → phân tích → báo cáo |
 | `plan` | "lập kế hoạch", "kế hoạch", "plan", "design" | `architect-strong` | Spec → plan → confirm → execute |
-| `implement` | "thêm", "tạo", "làm", "code", "build", "implement" | `build-strong` | Plan → build-slice → verify |
+| `implement` | "thêm", "tạo", "làm", "code", "build", "implement" | main/build; `build-strong` nếu nhiều layer | Targeted plan → edit → targeted verify |
 | `debug` | "lỗi", "bug", "fix", "broken", "error", "crash" | `debug-strong` | Reproduce → root cause → fix → verify |
-| `refactor` | "tối ưu", "refactor", "clean up", "restructure" | `build-strong` | Checkpoint → refactor → verify |
+| `refactor` | "tối ưu", "refactor", "clean up", "restructure" | main/build; `build-strong` nếu cross-module | Targeted diff → refactor → verify |
 | `test` | "test", "viết test", "coverage", "E2E" | `qa-strong` | Plan test → write → run → report |
 | `security` | "bảo mật", "security", "vulnerability", "audit" | `security-strong` | Audit → report → fix → verify |
 | `release` | "release", "publish", "version", "bump" | `release-strong` | Version → changelog → tag → publish |
@@ -73,7 +76,7 @@ Nếu request chứa keyword: "chỉ kiểm tra", "không sửa file", "read-onl
 | Agent | Khi nào dùng |
 |-------|-------------|
 | `architect-strong` | System design, ADR, tech decision, > 5 files |
-| `build-strong` | Feature implementation, bugfix, refactor |
+| `build-strong` | Feature/refactor nhiều layer hoặc hơn 2 file |
 | `debug-strong` | Bug phức tạp, intermittent, không tìm root cause |
 | `qa-strong` | Test suite, coverage, E2E |
 | `security-strong` | OWASP, SAST, threat model |

@@ -15,6 +15,13 @@ Phân tích task và route đến agent chuyên môn phù hợp.
 
 ## Routing logic
 
+Trước khi route, đo scope:
+
+- Một module và tối đa 2 file: giữ ở main/build agent, targeted search và targeted test.
+- Nhiều layer, hơn 2 file, hoặc contract FE/BE/DB: mới route `build-strong` hay agent chuyên môn.
+- Không spawn subagent chỉ vì agent tồn tại.
+- BMAD chỉ dùng cho project mới, PRD/spec lớn, domain research hoặc nhiều milestone.
+
 ## ⚠️ Scope Guard — Docs-only / Read-only routing
 
 Nếu task chứa keyword docs-only, read-only, chỉ kiểm tra, không sửa file, audit, review:
@@ -48,7 +55,7 @@ hoặc main agent (nếu cần docs/report).
 
 ## Workflow
 
-1. Parse task description — xác định category chính.
-2. Nếu task phức tạp → spawn agent chuyên môn qua `task` tool.
-3. Thu thập output, tổng hợp response.
-4. Nếu task lớn → spawn nhiều agent tuần tự (architect → db → api → build → qa → security).
+1. Parse task description và đo số module/layer/file dự kiến.
+2. Task nhỏ: giữ ở main/build agent, không spawn.
+3. Task phức tạp: spawn đúng một agent chuyên môn cần thiết.
+4. Chỉ task nhiều layer mới dùng chuỗi architect → db → api → build → qa → security.

@@ -1,207 +1,68 @@
-# Scope Lock — Docs-only / Read-only
+# OpenCode Power Kit Project Rules
 
-Nếu user ghi một trong các cụm sau trong prompt, scope lock có hiệu lực
-**tuyệt đối** và ưu tiên hơn mọi auto-router/workflow khác:
+## Language
 
-- "chỉ kiểm tra"
-- "không sửa file"
-- "read-only"
-- "docs-only"
-- "chỉ tài liệu"
-- "không code"
-- "không sửa backend/frontend/database"
-- "không migration"
-- "không commit"
-- "không push"
+- Trả lời user bằng tiếng Việt theo mặc định.
+- Giữ tiếng Anh cho code, command, path, API, package, log, stacktrace và keyword kỹ thuật.
+- Chỉ đổi ngôn ngữ khi user yêu cầu rõ.
 
-Khi scope lock kích hoạt, **bắt buộc**:
+## Scope
 
-- KHÔNG gọi build-strong.
-- KHÔNG gọi /power-build.
-- KHÔNG gọi /agent-router.
-- KHÔNG gọi build-slice.
-- KHÔNG tự chuyển sang implementation/fix code.
-- KHÔNG tạo Todo implementation (migration, constants, contracts, service, seed).
-- KHÔNG sửa backend, frontend, hay database.
-- KHÔNG tạo migration.
-- KHÔNG commit.
-- KHÔNG push.
-- Nếu phát hiện code/spec lệch nhau → chỉ ghi checklist hoặc báo cáo.
-- Sau khi báo cáo xong → **dừng**.
+- Yêu cầu read-only/docs-only/"không sửa file" luôn thắng mọi router.
+- Khi scope chỉ là review hoặc audit: không gọi build-strong, không sửa code, không commit, không push.
+- Không biến một yêu cầu kiểm tra thành implementation nếu user chưa yêu cầu fix.
 
-`docs/` là tài liệu tham khảo, không phải danh sách task tự động để thực thi.
-Không tự đọc toàn bộ `docs/**/*.md` nếu user không chỉ định rõ.
+## Safety
 
----
+- Kiểm tra `git status --short` trước và sau task có thay đổi file.
+- Không dùng `rm -rf`, `git reset --hard`, `git clean -fd`, force push hoặc rewrite history.
+- Không đọc, sửa hoặc in `.env`, token, secret, private key hay credential.
+- Không chạy `DROP`, `TRUNCATE`, mass `DELETE` hoặc migration dữ liệu nguy hiểm khi chưa có backup và yêu cầu rõ.
+- Không tự push, tạo PR, tag hoặc publish nếu user chưa yêu cầu.
+- Chỉ stage file có chủ đích; không dùng `git add .` hoặc `git add -A`.
+- Tôn trọng file đang dirty của user; không stash, discard hoặc ghi đè thay đổi ngoài scope.
 
-# Agent Rules - OpenCode Project
+OpenCode permissions chặn thẳng secret reads, destructive commands, external paths và doom loops. Instruction này là lớp bảo vệ bổ sung, không thay thế permission deny rules.
 
-## Quy tắc bắt buộc
+## Workflow
 
-1. **Đọc AGENTS.md và OPENCODE.md trước khi sửa bất kỳ file nào.**
-2. **Trước khi sửa code phải chạy `git status`** để xác nhận trạng thái working tree.
-3. **Dùng `rg`, `fd`, `ast-grep`** để tìm file/code, không dùng `grep`/`find` thủ công.
-4. **Không đọc toàn bộ repo** nếu task chỉ liên quan 1 module.
-5. **Không xóa file** trừ khi được yêu cầu rõ ràng.
-6. **Không `git reset --hard`**, không `git push --force`, không `git clean -fd`.
+1. Xác định acceptance criteria và file liên quan.
+2. Dùng `rg`, `fd`, `git diff --stat` và symbol/LSP search trước khi đọc file lớn.
+3. Không scan `.git`, `node_modules`, `dist`, `build`, `coverage`, generated output hoặc lockfile lớn nếu không cần.
+4. Với bug: reproduce, tìm root cause, viết regression test, rồi sửa nhỏ nhất.
+5. Với behavior mới: test fail trước, implementation tối thiểu, test pass, refactor sau.
+6. Chạy targeted test/lint/typecheck cho phần vừa đổi.
+7. Chỉ chạy full release gate trước commit cuối và sau commit cuối khi task là release.
+8. Báo file đã sửa, lý do, lệnh verify và rủi ro còn lại.
 
-## An toàn dữ liệu
+## Lightweight Routing
 
-7. **Không sửa `.env`, secrets, tokens, API keys.**
-8. **Với MySQL/PostgreSQL:**
-   - Không `DROP TABLE`, `TRUNCATE`, `DELETE` hàng loạt nếu chưa được yêu cầu rõ.
-   - Luôn chạy `SELECT COUNT(*)` trước khi DELETE/UPDATE.
-   - Backup database trước migration lớn.
-9. **Không commit secrets**, kiểm tra `.gitignore` trước khi `git add`.
+- Task nhỏ, một module, tối đa 2 file: main/build agent, targeted search, targeted test. Không bắt buộc subagent.
+- Review đơn giản: đọc `git diff --stat`, rồi diff/file liên quan. Không bắt buộc Task tool.
+- Task nhiều layer hoặc contract FE/BE/DB: mới dùng `build-strong`.
+- BMAD chỉ dùng cho project mới, PRD/spec lớn, domain research hoặc nhiều milestone.
+- Không spawn agent chỉ vì có thể. Không tự chạy full research cho task cục bộ.
+- Không tạo `AI_HANDOFF.md`, report file hoặc checkpoint cho task nhỏ nếu chat đủ truyền đạt.
 
-## Quy trình làm việc
+## Power And Safe Modes
 
-10. **Sau khi sửa phải báo cáo:**
-    - File đã sửa
-    - Lý do sửa
-    - Test đã chạy (nếu có)
-11. **Ưu tiên sửa ít file nhất** có thể để hoàn thành task.
-12. **Chạy lint/typecheck** sau khi sửa code (nếu project có).
+- Power Mode cho phép read/edit/search/bash/task/skill bình thường trong project mà không tạo approval prompt.
+- Power Mode vẫn deny destructive commands, secret reads, external directories và doom loops.
+- Agent implementation phải kế thừa permission hiện hành; không hardcode `ask`.
+- Agent review/read-only giữ `edit: deny` và chỉ allow command đọc cần thiết.
+- Safe Mode có thể dùng `ask` cho edit/bash/task và không làm thay đổi model/provider/MCP/plugin.
+- Dùng `opk permissions doctor` để xem permission hiệu lực; không suy luận chỉ từ template.
 
-## Token saving
+## Search And Output Budget
 
-- Ưu tiên tiết kiệm token.
-- Không đọc toàn bộ repo nếu task chỉ liên quan một module.
-- Trước khi mở file lớn, dùng `rg`, `fd`, `sg`, `git diff --stat`.
-- Khi chạy lệnh terminal có output dài, ưu tiên dùng `rtk` nếu có.
-- Không mở `node_modules`, `dist`, `build`, `coverage`, `.git`.
+- Giới hạn phạm vi search và context lines; tránh output toàn repository.
+- Dùng `git diff --stat` trước diff chi tiết.
+- Không mở generated files hoặc binary.
+- Dùng compaction/pruning thay vì xóa capability.
+- Giữ tool output đủ để debug; chỉ cắt noise không liên quan.
 
-## Search workflow
+## Completion
 
-- Tìm text/code bằng `rg`.
-- Tìm file bằng `fd`.
-- Tìm pattern JS/TS bằng `sg`.
-- Xem thay đổi bằng `git diff --stat` trước, rồi mới xem diff chi tiết nếu cần.
-
-## Cleanup protocol
-
-- Cuối mỗi task phải chạy `git status --short`.
-- Nếu tạo file debug/test/temp/scratch/log thì phải dọn.
-- Không dùng `rm -rf`.
-- Ưu tiên dùng `trash-put` thay vì `rm`.
-- Trước khi xóa untracked files phải chạy `git clean -nd` để xem trước.
-
-## Full Auto Permission Mode (v1.6.0)
-
-**OpenCode được cấu hình với `"permission": "allow"`.** Agent có thể
-tự chạy tool, sửa file, tạo file, chạy bash/test/build mà **không hỏi
-lại permission**. Phù hợp máy/project cá nhân.
-
-### Safety rules — vẫn tuân thủ
-
-Dù `permission: allow`, agent vẫn phải tuân theo các safety rule sau
-(được enforce bằng instruction, không phải bằng OpenCode permission
-prompt):
-
-1. **Không tự `git push`** nếu user chưa yêu cầu rõ.
-2. **Không tự `git reset --hard`**, `git clean -fd`.
-3. **Không tự xóa file lớn/hàng loạt** nếu chưa cần.
-4. **Không tự sửa `.env`/secrets/token** nếu user chưa yêu cầu rõ.
-5. **Trước task lớn:** chạy `git status` và báo tóm tắt.
-6. **Sau task:** chạy `git diff --stat` và báo cáo bằng tiếng Việt.
-
-### Kế thừa agent frontmatter (backward compatible)
-
-Mỗi agent vẫn giữ `permission` frontmatter với `"*": "ask"` fallback
-và safe command allowlist. Khi copy template qua project mới, agent
-vẫn hoạt động an toàn — **Full Auto Permission Mode** là global
-config override cho phép agent bypass permission prompt.
-
----
-
-## Checkpoints
-
-- Trước khi sửa lớn, dùng `/checkpoint` để snapshot working tree ra
-  `.opk-checkpoints/<ts>.patch` + `.summary.md`.
-- Không `git reset --hard` để "undo" — restore từ patch bằng `git apply`.
-
----
-
-## Vietnamese Language Lock
-
-Đây là rule bắt buộc cho toàn bộ tương tác:
-
-1. **Mặc định trả lời user bằng tiếng Việt.** Toàn bộ kế hoạch, giải thích, báo cáo, kết luận phải bằng tiếng Việt.
-2. **Giữ tiếng Anh cho:** tên lệnh, slash command, tên agent, tên file/path, code, API, package name, error log, stacktrace, keyword kỹ thuật bắt buộc.
-3. **Không tự chuyển câu trả lời sang tiếng Anh.** Nếu user viết tiếng Việt thì agent trả lời tiếng Việt.
-4. **Code/comment trong repo giữ nguyên.** Không dịch code comment hay tài liệu có sẵn.
-5. **Nếu user yêu cầu tiếng Anh** thì mới dùng tiếng Anh.
-6. **Cuối task báo cáo bằng tiếng Việt** gồm: đã làm gì, file đã sửa, kiểm tra đã chạy, rủi ro còn lại.
-
----
-
-## Natural Language Auto Router (v1.3.3)
-
-User có thể nói tự nhiên, không cần nhớ slash command. Khi user nói
-một câu casual (tiếng Việt / tiếng Anh), agent tự suy ra workflow
-và chạy an toàn. Slash command luôn thắng auto-router.
-
-### 1. Bugfix intent
-
-Triggers: "fix lỗi", "sửa bug", "nó lỗi", "chạy không được",
-"doesn't work", "it's broken", "fix this".
-
-- Reproduce hoặc inspect lỗi trước.
-- Đọc đúng file liên quan.
-- Tìm root cause trước khi sửa.
-- Sửa nhỏ nhất có thể.
-- Chạy test/build/typecheck liên quan.
-- Không xóa file trừ khi user yêu cầu rõ.
-- Báo cáo: file sửa, nguyên nhân, fix, verification.
-
-### 2. Project health intent
-
-Triggers: "kiểm tra project", "scan all", "xem ổn chưa",
-"check the project", "is this healthy".
-
-- Inspect repo structure.
-- Detect stack + scripts.
-- Check `git status`.
-- Check lint / test / build commands.
-- Báo risks + next actions cụ thể.
-
-### 3. Feature intent
-
-Triggers: "làm tính năng", "thêm chức năng", "code fullstack",
-"build a feature", "add this feature".
-
-- Spec-lite → plan-work → build-slice → test-proof.
-- Viết acceptance criteria ngắn.
-- Chia thành vertical slices nhỏ.
-- Sửa đúng file cần.
-- Frontend / backend / API / DB contract phải khớp.
-- Verify bằng test hoặc manual proof.
-
-### 4. Token-smart intent
-
-Triggers: "tiết kiệm token", "đừng đọc lan man",
-"làm dài không ngắt", "save tokens", "keep it short".
-
-- Build compact repo map trước.
-- Đọc đúng file cần.
-- Giữ running handoff summary.
-- Patch nhỏ.
-- Update `AI_HANDOFF.md` sau khi xong việc lớn.
-
-### 5. Cleanup intent
-
-Triggers: "dọn rác", "xóa file bug tự tạo", "cleanup",
-"clean up the temp files".
-
-- Chạy `git status` trước.
-- Chỉ chạm untracked temp/debug/repro files.
-- Không xóa tracked file.
-- Move vào `.opk-trash/` thay vì `rm`.
-- Sinh `CLEANUP_REPORT.md` nếu cần.
-
-### Default behavior
-
-- Mơ hồ → inspect trước, hành động thận trọng.
-- Cấm `git reset --hard`, `git clean -fd`, `rm -rf`, force push.
-- Cấm in secret hoặc sửa `.env` secret.
-- Slash command luôn thắng auto-router.
+- Không nói pass/fixed/complete nếu chưa chạy command chứng minh trong lượt hiện tại.
+- Nếu không thể chạy test, nêu rõ test nào chưa chạy và lý do.
+- Cuối task luôn báo `git status --short` nếu đã thay đổi workspace.
