@@ -43,6 +43,10 @@ REPORT_FILE="$TARGET_DIR/opencode-power-install-report.md"
 BACKUP_DIR="$TARGET_DIR/.opencode-power-kit-backup-$(date +%Y%m%d%H%M%S)"
 BMAD_LOG="$TARGET_DIR/.opencode-power-bmad-install.log"
 BACKUP_NEEDED=false
+MERGE_ARGS=()
+for arg in "$@"; do
+	[[ "$arg" != --normalize-jsonc ]] || MERGE_ARGS+=(--normalize-jsonc)
+done
 
 # --- User name (env > git config > $USER > "User") ---
 # Để BMAD output ghi đúng tên người dùng. Không hardcode.
@@ -123,7 +127,7 @@ else
 		err "python3 không tìm thấy — cần thiết cho JSONC merge an toàn.
   Set OPK_CONFIG_MERGE_SKIP=1 để bỏ qua (không recommended)."
 	fi
-	if ! python3 "$KIT_DIR/scripts/merge-opk-project.py" --project-dir "$TARGET_DIR"; then
+	if ! python3 "$KIT_DIR/scripts/merge-opk-project.py" --project-dir "$TARGET_DIR" "${MERGE_ARGS[@]}"; then
 		err "merge-opk-project.py thất bại — kiểm tra lỗi ở trên.
   KHÔNG fallback copy thô để tránh ghi đè config user."
 	fi

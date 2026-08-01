@@ -20,10 +20,12 @@ OpenCode Power Kit v2.1.3 chỉ hỗ trợ Linux.
 | `scripts/integration-test.sh` | Kiểm thử cài đặt end-to-end offline |
 | `scripts/test-runtime-behavior.sh` | Behavioral regression suite |
 | `scripts/test-cli-contracts.sh` | Kiểm thử runtime contract của CLI, mode, safety plugin, integrations và checker |
-| `scripts/test-opk-mode.sh` | Kiểm thử detect mode và ghi config project-local có backup |
-| `scripts/merge-opk-project.py` | Merge root config, atomic write và migrate legacy config |
-| `scripts/install-global.py` | Merge `~/.config/opencode/opencode.json`, managed-copy assets và migrate RC marker |
-| `scripts/opk-permissions.py` | Đọc resolved config và báo effective permission mà không in secret |
+| `scripts/test-opk-mode.sh` | Kiểm thử exact cwd/nested monorepo, mode, auto gate và JSONC CLI |
+| `scripts/test-opk-permissions.sh` | Table-driven strict Power/Safe/Custom/Broken contract tests |
+| `scripts/test-agent-permission-contracts.sh` | Fixture tests cho quoted/unquoted/inline YAML permission |
+| `scripts/merge-opk-project.py` | Merge root config, fail closed JSONC, atomic write, rollback và migrate legacy |
+| `scripts/install-global.py` | Merge global config dưới installer lock, fail closed JSONC, managed assets và RC marker |
+| `scripts/opk-permissions.py` | Resolve đúng `--project-dir`, kiểm tra strict Power contract và không in secret |
 | `scripts/check-opencode-config-paths.py` | Chặn production code dùng legacy config như active path |
 | `scripts/check-agent-permission-contracts.py` | Validate agent ask/edit/bash contracts |
 | `scripts/test-global-installer.sh` | Test preservation, managed manifest, RC migration, idempotency và symlink rejection |

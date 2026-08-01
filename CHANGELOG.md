@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Global install no longer points `OPENCODE_CONFIG_DIR` at a mutable kit checkout.
 - Permission diagnostics capture large resolved configs without the OpenCode
   pipe truncation that previously produced a false BROKEN result.
+- Permission diagnostics and unattended wrappers now resolve exactly the current
+  working directory instead of substituting the Git top-level.
+- Power classification now requires the complete allow/deny/no-ask contract,
+  including agent overrides and deny rule precedence.
+- Project and global JSONC rewrites now fail closed unless
+  `--normalize-jsonc` is explicit; normalization creates a recovery backup.
+- Global installs now serialize through a config-directory `flock`.
 
 ### Changed
 
@@ -34,6 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `opk mode migrate` parses JSON/JSONC, backs up root and legacy configs,
   preserves custom keys, unions plugin/instruction lists, verifies root output,
   then archives legacy config under `.opk-trash/legacy-config-<timestamp>/`.
+- Commented JSONC is not rewritten by default. Explicit normalization backs up
+  the original, verifies the root output, and only then archives legacy config.
 - Global RC managed blocks retain `OPK_KIT_DIR` and PATH but remove the old
   managed `OPENCODE_CONFIG_DIR` export. Custom exports outside markers remain.
 

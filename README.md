@@ -190,7 +190,7 @@ Cho phép chuyển giữa **Power Mode** (agent tự động chạy) và **Safe 
 # Xem mode hiện tại
 opk mode show
 
-# Chuyển sang Power Mode (permission: allow — mặc định)
+# Chuyển sang Power Mode với allow/deny contract đầy đủ
 opk mode power
 
 # Chuyển sang Safe Mode (permission object — read/glob/grep/skill=allow, write/edit/bash/task=ask)
@@ -198,6 +198,9 @@ opk mode safe
 
 # Migrate config legacy có chủ đích
 opk mode migrate
+
+# JSONC có comment: explicit opt-in, backup trước khi normalize
+opk mode migrate --normalize-jsonc
 
 # Chẩn đoán config/permission đã resolve
 opk permissions doctor
@@ -215,11 +218,22 @@ Project config hiệu lực nằm ở root `opencode.json`. `opk mode power` và
 giữ nguyên. Trước khi atomic rename, lệnh reject symlink và tạo backup
 `opencode.json.opk-bak.<timestamp>` cùng project.
 
+Project runtime là chính thư mục hiện tại sau `pwd -P`. `opk mode show`,
+`opk permissions doctor`, `opk auto` và `opk run-auto` đều resolve OpenCode
+trong thư mục đó; OPK không tự đổi sang Git top-level. Vì vậy nested project
+trong monorepo dùng config riêng của nested directory.
+
 OpenCode `1.18.10` vẫn đọc `.opencode/opencode.json` để tương thích, nhưng OPK
 coi đây là legacy. `opk mode migrate` backup cả root/legacy, merge theo rule
 root-wins, union plugin/instructions, verify root rồi move legacy vào
 `.opk-trash/legacy-config-<timestamp>/`. Rollback bằng backup `.opk-bak.*` hoặc
 file đã archive, không cần xóa file.
+
+JSONC có line/block comment được giữ nguyên mặc định bằng cách fail closed trước
+mọi ghi hoặc archive. Dùng `--normalize-jsonc` là đồng ý rõ ràng cho việc bỏ
+comment/normalize formatting; OPK tạo backup trước, ghi atomic, verify output,
+rồi mới archive legacy config. Strings chứa `https://`, `//` hoặc `/* */` không
+được nhận nhầm là comment.
 
 | File | Mode | Mục đích |
 |------|------|----------|
@@ -258,6 +272,13 @@ Power Mode cho phép thao tác read/edit/search/bash/task/skill bình thường 
 project mà không tạo approval prompt. Đây không phải `allow` toàn bộ: secret
 reads, destructive commands, external directories và doom loops resolve thành
 `deny`.
+
+Một resolved config chỉ là POWER khi `read`, `edit`, bash wildcard, `task`,
+`skill`, `glob`, `grep`, `list` và `lsp` đều là `allow`; `webfetch`/`websearch`
+nếu OpenCode trả về thì cũng phải là `allow`; `external_directory` và
+`doom_loop` là `deny`; global/agent ask count đều bằng `0`; và toàn bộ deny rule
+secret/destructive bắt buộc vẫn thắng theo semantics "last matching rule wins"
+của OpenCode `1.18.10`. Nếu thiếu bất kỳ điều kiện nào, `opk auto` từ chối chạy.
 
 ### Cách hoạt động
 

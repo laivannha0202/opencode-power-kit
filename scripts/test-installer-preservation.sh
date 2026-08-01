@@ -113,7 +113,7 @@ print("OK2")
 PY
 [ "${PIPESTATUS[0]}" = "0" ] && check "custom keys still preserved after 2nd run" 0 || check "custom keys still preserved after 2nd run" 1
 
-# --- Legacy + root migration: root wins conflicts, lists union, JSONC is accepted. ---
+# --- Legacy + root migration: JSONC fails closed unless normalization is explicit. ---
 MIG="$TMP/migration-project"
 mkdir -p "$MIG/.opencode"
 printf '# migration fixture\n' >"$MIG/AGENTS.md"
@@ -134,7 +134,29 @@ cat >"$MIG/.opencode/opencode.json" <<'EOF'
   "instructions": ["LEGACY.md", "ROOT.md"]
 }
 EOF
-python3 "$MERGE" --project-dir "$MIG" >/dev/null 2>&1
+cp "$MIG/opencode.json" "$TMP/migration-root.before"
+cp "$MIG/.opencode/opencode.json" "$TMP/migration-legacy.before"
+if python3 "$MERGE" --project-dir "$MIG" >/dev/null 2>&1; then
+  check "legacy JSONC fails closed by default" 1
+else
+  check "legacy JSONC fails closed by default" 0
+fi
+if cmp -s "$MIG/opencode.json" "$TMP/migration-root.before" && \
+   cmp -s "$MIG/.opencode/opencode.json" "$TMP/migration-legacy.before"; then
+  check "failed JSONC migration leaves root and legacy byte-identical" 0
+else
+  check "failed JSONC migration leaves root and legacy byte-identical" 1
+fi
+shopt -s nullglob
+migration_archives=("$MIG"/.opk-trash/legacy-config-*/opencode.json)
+shopt -u nullglob
+if [ "${#migration_archives[@]}" -eq 0 ]; then
+  check "failed JSONC migration creates no archive" 0
+else
+  check "failed JSONC migration creates no archive" 1
+fi
+
+python3 "$MERGE" --project-dir "$MIG" --normalize-jsonc >/dev/null 2>&1
 python3 - "$MIG/opencode.json" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1], encoding="utf-8"))
@@ -152,6 +174,78 @@ legacy_backups=("$MIG/.opencode/opencode.json".opk-bak.*)
 shopt -u nullglob
 [ "${#migration_archives[@]}" -eq 1 ] && [ "${#root_backups[@]}" -eq 1 ] && [ "${#legacy_backups[@]}" -eq 1 ] && \
   check "migration archives legacy and backs up both configs" 0 || check "migration archives legacy and backs up both configs" 1
+
+# Comment-like text inside JSON strings is not treated as JSONC.
+LITERALS="$TMP/literal-project"
+mkdir -p "$LITERALS"
+printf '# literal fixture\n' >"$LITERALS/AGENTS.md"
+cat >"$LITERALS/opencode.json" <<'EOF'
+{
+  "url": "https://example.com/path",
+  "line": "text // not comment",
+  "block": "/* literal */"
+}
+EOF
+python3 "$MERGE" --project-dir "$LITERALS" --mode power >/dev/null 2>&1
+python3 - "$LITERALS/opencode.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+assert d["url"] == "https://example.com/path"
+assert d["line"] == "text // not comment"
+assert d["block"] == "/* literal */"
+PY
+check "JSON strings containing comment markers remain valid" "$?"
+
+# Root line/block comments both require explicit normalization and a byte-identical backup.
+for kind in line block; do
+  COMMENTED="$TMP/commented-$kind"
+  mkdir -p "$COMMENTED"
+  printf '# comment fixture\n' >"$COMMENTED/AGENTS.md"
+  if [ "$kind" = line ]; then
+    printf '{\n  // keep this comment\n  "model": "fixture/model"\n}\n' >"$COMMENTED/opencode.json"
+  else
+    printf '{\n  /* keep this block */\n  "model": "fixture/model"\n}\n' >"$COMMENTED/opencode.json"
+  fi
+  cp "$COMMENTED/opencode.json" "$TMP/commented-$kind.before"
+  if python3 "$MERGE" --project-dir "$COMMENTED" --mode power >/dev/null 2>&1; then
+    check "root $kind comment fails closed" 1
+  else
+    check "root $kind comment fails closed" 0
+  fi
+  cmp -s "$COMMENTED/opencode.json" "$TMP/commented-$kind.before"
+  check "root $kind comment remains byte-identical" "$?"
+  python3 "$MERGE" --project-dir "$COMMENTED" --mode power --normalize-jsonc >/dev/null 2>&1
+  shopt -s nullglob
+  comment_backups=("$COMMENTED/opencode.json".opk-bak.*)
+  shopt -u nullglob
+  backup_match=false
+  for comment_backup in "${comment_backups[@]}"; do
+    cmp -s "$comment_backup" "$TMP/commented-$kind.before" && backup_match=true
+  done
+  [ "$backup_match" = true ]
+  check "root $kind normalization creates exact backup" "$?"
+done
+
+# Archive failure is detected before publishing a merged root config.
+ROLLBACK="$TMP/archive-failure"
+mkdir -p "$ROLLBACK/.opencode"
+printf '# rollback fixture\n' >"$ROLLBACK/AGENTS.md"
+printf '{"model":"root/original"}\n' >"$ROLLBACK/opencode.json"
+printf '{"provider":{"legacy":{}}}\n' >"$ROLLBACK/.opencode/opencode.json"
+printf 'not a directory\n' >"$ROLLBACK/.opk-trash"
+cp "$ROLLBACK/opencode.json" "$TMP/archive-failure-root.before"
+cp "$ROLLBACK/.opencode/opencode.json" "$TMP/archive-failure-legacy.before"
+if python3 "$MERGE" --project-dir "$ROLLBACK" --migrate-only >/dev/null 2>&1; then
+  check "archive preflight failure exits nonzero" 1
+else
+  check "archive preflight failure exits nonzero" 0
+fi
+if cmp -s "$ROLLBACK/opencode.json" "$TMP/archive-failure-root.before" && \
+   cmp -s "$ROLLBACK/.opencode/opencode.json" "$TMP/archive-failure-legacy.before"; then
+  check "archive failure preserves root and legacy" 0
+else
+  check "archive failure preserves root and legacy" 1
+fi
 
 echo ""
 if [ "$FAIL" -gt 0 ]; then

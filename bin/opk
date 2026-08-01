@@ -26,8 +26,14 @@ path_has_symlink(){
   return 1
 }
 mode_command(){
-  (($# <= 1)) || err 'mode: use exactly one of show|power|safe|migrate'
-  local action="${1:-show}" project target legacy
+  local action="${1:-show}" project target legacy option
+  local -a normalize_args=()
+  (($# == 0)) || shift
+  for option in "$@"; do
+    [[ "$option" == --normalize-jsonc && "$action" != show ]] || \
+      err 'mode: use show|power|safe|migrate [--normalize-jsonc]'
+    normalize_args=(--normalize-jsonc)
+  done
   project="$(pwd -P)" || err 'cannot resolve current project'
   target="$project/opencode.json"
   legacy="$project/.opencode/opencode.json"
@@ -38,18 +44,18 @@ mode_command(){
   case "$action" in
     show)
       need "$KIT_DIR/scripts/opk-permissions.py"
-      exec python3 "$KIT_DIR/scripts/opk-permissions.py"
+      exec python3 "$KIT_DIR/scripts/opk-permissions.py" --project-dir "$project"
       ;;
     power|safe)
       safe_opencode_project || err 'run inside a safe project with a project marker'
       [[ ! -e "$legacy" ]] || err 'mode: legacy config exists; run opk mode migrate first'
       need "$KIT_DIR/scripts/merge-opk-project.py"
-      exec python3 "$KIT_DIR/scripts/merge-opk-project.py" --project-dir "$project" --mode "$action"
+      exec python3 "$KIT_DIR/scripts/merge-opk-project.py" --project-dir "$project" --mode "$action" "${normalize_args[@]}"
       ;;
     migrate)
       safe_opencode_project || err 'run inside a safe project with a project marker'
       need "$KIT_DIR/scripts/merge-opk-project.py"
-      exec python3 "$KIT_DIR/scripts/merge-opk-project.py" --project-dir "$project" --migrate-only
+      exec python3 "$KIT_DIR/scripts/merge-opk-project.py" --project-dir "$project" --migrate-only "${normalize_args[@]}"
       ;;
     *) err 'mode: use show|power|safe|migrate' ;;
   esac
@@ -57,10 +63,10 @@ mode_command(){
 require_power_mode(){
   safe_opencode_project || err 'run inside a safe project with a project marker'
   need "$KIT_DIR/scripts/opk-permissions.py"
-  local report mode
-  report="$(python3 "$KIT_DIR/scripts/opk-permissions.py" --json)" || err 'cannot resolve OpenCode permissions'
-  mode="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["mode"])' <<<"$report")"
-  [[ "$mode" == POWER ]] || err 'effective mode is not POWER; run: opk mode power'
+  local project
+  project="$(pwd -P)" || err 'cannot resolve current project'
+  python3 "$KIT_DIR/scripts/opk-permissions.py" --project-dir "$project" --require-power || \
+    err 'effective Power contract failed; run: opk permissions doctor'
 }
 opencode_has_auto(){ command -v opencode >/dev/null 2>&1 && opencode --help 2>&1 | grep -q -- '--auto'; }
 trash_known(){
@@ -125,7 +131,7 @@ Core:
   opk global | install | fullstack | verify | doctor | one | all
   opk update [--dry-run] [--yes] [--clean] [--profile auto|none|node-nest-react-mysql]
   opk update-all [--dry-run] [--yes] [--with-gsd] [--with-optional] [--refresh-superpowers]
-  opk mode [show|power|safe|migrate]
+  opk mode [show|power|safe|migrate] [--normalize-jsonc]
   opk permissions doctor
   opk auto [opencode args...]
   opk run-auto "prompt"
@@ -151,7 +157,8 @@ HELP
     sub="${1:-doctor}"; shift || true
     [[ "$sub" == doctor && $# -eq 0 ]] || err 'permissions: use doctor'
     need "$KIT_DIR/scripts/opk-permissions.py"
-    exec python3 "$KIT_DIR/scripts/opk-permissions.py"
+    project="$(pwd -P)" || err 'cannot resolve current project'
+    exec python3 "$KIT_DIR/scripts/opk-permissions.py" --project-dir "$project"
     ;;
   auto)
     require_power_mode

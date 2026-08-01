@@ -334,6 +334,12 @@ echo "--- Shell Tests ---"
 run_cmd "test-opk-mode" \
   "bash $KIT_DIR/scripts/test-opk-mode.sh"
 
+run_cmd "test-opk-permissions" \
+  "bash $KIT_DIR/scripts/test-opk-permissions.sh"
+
+run_cmd "test-agent-permission-contracts" \
+  "bash $KIT_DIR/scripts/test-agent-permission-contracts.sh"
+
 run_cmd "test-cli-contracts" \
   "bash $KIT_DIR/scripts/test-cli-contracts.sh"
 

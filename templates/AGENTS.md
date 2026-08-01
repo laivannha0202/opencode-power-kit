@@ -46,12 +46,15 @@ OpenCode permissions chặn thẳng secret reads, destructive commands, external
 
 ## Power And Safe Modes
 
+- Runtime project là chính thư mục `pwd -P`; không thay bằng Git top-level.
 - Power Mode cho phép read/edit/search/bash/task/skill bình thường trong project mà không tạo approval prompt.
 - Power Mode vẫn deny destructive commands, secret reads, external directories và doom loops.
+- POWER chỉ hợp lệ khi read/edit/bash/task/skill/glob/grep/list/lsp đều allow, không có global/agent ask, và deny contract đầy đủ.
 - Agent implementation phải kế thừa permission hiện hành; không hardcode `ask`.
 - Agent review/read-only giữ `edit: deny` và chỉ allow command đọc cần thiết.
 - Safe Mode có thể dùng `ask` cho edit/bash/task và không làm thay đổi model/provider/MCP/plugin.
 - Dùng `opk permissions doctor` để xem permission hiệu lực; không suy luận chỉ từ template.
+- JSONC comment fail closed mặc định; chỉ normalize khi có `--normalize-jsonc` explicit và backup.
 
 ## Search And Output Budget
 

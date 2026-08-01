@@ -103,4 +103,88 @@ if HOME="$LINK_HOME" SHELL=/bin/bash bash "$KIT_DIR/install-global.sh" --yes --m
 fi
 grep -q '^\{"sentinel":"unchanged"\}$' "$TMP/outside-global/opencode.json"
 
+# JSONC comments fail closed by default and normalize only with an explicit flag.
+JSONC_HOME="$TMP/jsonc-home"
+mkdir -p "$JSONC_HOME/.config/opencode"
+cat >"$JSONC_HOME/.config/opencode/opencode.json" <<'EOF'
+{
+  // user model comment
+  "model": "fixture/model",
+  "url": "https://example.com/path",
+  "literal": "/* not a comment */"
+}
+EOF
+cp "$JSONC_HOME/.config/opencode/opencode.json" "$TMP/global-jsonc.before"
+if HOME="$JSONC_HOME" SHELL=/bin/bash bash "$KIT_DIR/install-global.sh" --yes --mode power >/dev/null 2>&1; then
+  echo 'global JSONC was normalized without explicit consent' >&2
+  exit 1
+fi
+cmp -s "$JSONC_HOME/.config/opencode/opencode.json" "$TMP/global-jsonc.before"
+HOME="$JSONC_HOME" SHELL=/bin/bash bash "$KIT_DIR/install-global.sh" --yes --mode power --normalize-jsonc >/dev/null
+python3 - "$JSONC_HOME/.config/opencode/opencode.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+assert d["model"] == "fixture/model"
+assert d["url"] == "https://example.com/path"
+assert d["literal"] == "/* not a comment */"
+assert d["permission"]["edit"] == "allow"
+PY
+shopt -s nullglob
+jsonc_backups=("$JSONC_HOME"/.opencode-power-kit-backup-*/.config/opencode/opencode.json)
+shopt -u nullglob
+jsonc_backup_match=false
+for jsonc_backup in "${jsonc_backups[@]}"; do
+  cmp -s "$jsonc_backup" "$TMP/global-jsonc.before" && jsonc_backup_match=true
+done
+[[ "$jsonc_backup_match" == true ]]
+
+# Concurrent installers serialize all config, asset, manifest, RC, and shim writes.
+CONCURRENT_HOME="$TMP/concurrent-home"
+mkdir -p "$CONCURRENT_HOME"
+HOME="$CONCURRENT_HOME" SHELL=/bin/bash bash "$KIT_DIR/install-global.sh" --yes --mode power >/dev/null & first_pid=$!
+HOME="$CONCURRENT_HOME" SHELL=/bin/bash bash "$KIT_DIR/install-global.sh" --yes --mode power >/dev/null & second_pid=$!
+first_rc=0; wait "$first_pid" || first_rc=$?
+second_rc=0; wait "$second_pid" || second_rc=$?
+[[ "$first_rc:$second_rc" == "0:0" ]]
+python3 - "$CONCURRENT_HOME/.config/opencode/.opk-managed-assets.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+assert d["version"] == 1 and isinstance(d["assets"], dict) and d["assets"]
+PY
+[[ -f "$CONCURRENT_HOME/.config/opencode/.opk-install.lock" ]]
+[[ ! -L "$CONCURRENT_HOME/.config/opencode/.opk-install.lock" ]]
+[[ "$(grep -c '^# >>> opencode-power-kit-global$' "$CONCURRENT_HOME/.bashrc")" -eq 1 ]]
+if compgen -G "$CONCURRENT_HOME/.config/opencode/.*.tmp.*" >/dev/null; then
+  echo 'concurrent installer left temporary files' >&2
+  exit 1
+fi
+
+# Dry-run is read-only even when the target config directory does not exist.
+DRY_HOME="$TMP/dry-home"
+mkdir -p "$DRY_HOME"
+HOME="$DRY_HOME" SHELL=/bin/bash bash "$KIT_DIR/install-global.sh" --dry-run --mode power >/dev/null
+[[ ! -e "$DRY_HOME/.config" ]]
+
+# A late RC failure rolls back config/assets/manifest/shim while retaining recovery backups.
+ROLLBACK_HOME="$TMP/rollback-home"
+mkdir -p "$ROLLBACK_HOME/.config/opencode"
+printf '{"model":"fixture/original","custom":"keep"}\n' >"$ROLLBACK_HOME/.config/opencode/opencode.json"
+printf '# >>> opencode-power-kit-global\nmalformed marker\n' >"$ROLLBACK_HOME/.bashrc"
+cp "$ROLLBACK_HOME/.config/opencode/opencode.json" "$TMP/rollback-config.before"
+cp "$ROLLBACK_HOME/.bashrc" "$TMP/rollback-bashrc.before"
+if HOME="$ROLLBACK_HOME" SHELL=/bin/bash bash "$KIT_DIR/install-global.sh" --yes --mode power >/dev/null 2>&1; then
+  echo 'late RC failure unexpectedly succeeded' >&2
+  exit 1
+fi
+cmp -s "$ROLLBACK_HOME/.config/opencode/opencode.json" "$TMP/rollback-config.before"
+cmp -s "$ROLLBACK_HOME/.bashrc" "$TMP/rollback-bashrc.before"
+[[ ! -e "$ROLLBACK_HOME/.config/opencode/.opk-managed-assets.json" ]]
+[[ ! -e "$ROLLBACK_HOME/.local/bin/opk" ]]
+shopt -s nullglob
+rollback_assets=("$ROLLBACK_HOME/.config/opencode/agents/"*.md)
+rollback_backups=("$ROLLBACK_HOME"/.opencode-power-kit-backup-*)
+shopt -u nullglob
+[[ "${#rollback_assets[@]}" -eq 0 ]]
+[[ "${#rollback_backups[@]}" -ge 1 ]]
+
 printf 'test-global-installer: OK\n'

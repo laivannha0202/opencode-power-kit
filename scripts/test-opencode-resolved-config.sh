@@ -74,4 +74,46 @@ assert resolved["agent"]["build-strong"].get("permission", {}) == {}
 PY
 
 [[ ! -e "$TEST_PROJECT/.opencode/opencode.json" ]]
+
+# Permission doctor follows the same cwd and honors effective environment overrides.
+env -u OPENCODE_CONFIG -u OPENCODE_CONFIG_DIR -u OPENCODE_CONFIG_CONTENT \
+  HOME="$TEST_HOME" python3 "$KIT_DIR/scripts/opk-permissions.py" \
+  --project-dir "$TEST_PROJECT" --require-power
+
+SAFE_CONTENT="$(tr -d '\n' <"$KIT_DIR/templates/opencode.safe.json")"
+if OPENCODE_CONFIG_CONTENT="$SAFE_CONTENT" HOME="$TEST_HOME" \
+  python3 "$KIT_DIR/scripts/opk-permissions.py" --project-dir "$TEST_PROJECT" --require-power >/dev/null 2>&1; then
+  echo 'OPENCODE_CONFIG_CONTENT Safe override was accepted as Power' >&2
+  exit 1
+fi
+OPENCODE_CONFIG_CONTENT="$SAFE_CONTENT" HOME="$TEST_HOME" \
+  python3 "$KIT_DIR/scripts/opk-permissions.py" --project-dir "$TEST_PROJECT" --json >"$TEST_ROOT/override-report.json"
+python3 - "$TEST_ROOT/override-report.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+assert d["mode"] == "SAFE"
+assert d["environment"]["OPENCODE_CONFIG_CONTENT"] == "set"
+assert "fixture/model" not in json.dumps(d["environment"])
+PY
+
+OVERRIDE_PROJECT="$TEST_ROOT/override-project"
+OVERRIDE_DIR="$TEST_ROOT/override-dir"
+mkdir -p "$OVERRIDE_PROJECT" "$OVERRIDE_DIR"
+printf '# override fixture\n' >"$OVERRIDE_PROJECT/AGENTS.md"
+cp "$KIT_DIR/templates/opencode.safe.json" "$TEST_ROOT/override-safe.json"
+cp "$KIT_DIR/templates/opencode.safe.json" "$OVERRIDE_DIR/opencode.json"
+OPENCODE_CONFIG="$TEST_ROOT/override-safe.json" HOME="$TEST_HOME" \
+  python3 "$KIT_DIR/scripts/opk-permissions.py" --project-dir "$OVERRIDE_PROJECT" --json >"$TEST_ROOT/config-report.json"
+OPENCODE_CONFIG_DIR="$OVERRIDE_DIR" HOME="$TEST_HOME" \
+  python3 "$KIT_DIR/scripts/opk-permissions.py" --project-dir "$OVERRIDE_PROJECT" --json >"$TEST_ROOT/config-dir-report.json"
+OPENCODE_CONFIG="$TEST_ROOT/override-safe.json" OPENCODE_CONFIG_DIR="$OVERRIDE_DIR" \
+  OPENCODE_CONFIG_CONTENT="$SAFE_CONTENT" HOME="$TEST_HOME" \
+  python3 "$KIT_DIR/scripts/opk-permissions.py" --project-dir "$OVERRIDE_PROJECT" --json >"$TEST_ROOT/all-overrides-report.json"
+python3 - "$TEST_ROOT/config-report.json" "$TEST_ROOT/config-dir-report.json" "$TEST_ROOT/all-overrides-report.json" <<'PY'
+import json, sys
+for path in sys.argv[1:]:
+    d = json.load(open(path, encoding="utf-8"))
+    assert d["mode"] == "SAFE", (path, d["mode"])
+PY
+
 printf 'test-opencode-resolved-config: OK (OpenCode %s)\n' "$($OPENCODE_BIN --version)"

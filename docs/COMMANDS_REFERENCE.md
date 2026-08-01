@@ -125,14 +125,14 @@
 | `opk version` | Hiển thị phiên bản |
 | `opk doctor` | Chẩn đoán (read-only) |
 | `opk verify` | Kiểm tra project sẵn sàng chưa |
-| `opk global [--mode power\|safe]` | Merge global config và managed-copy agents/commands/skills; không flag thì giữ mode cũ, config mới dùng Safe |
-| `opk install` | Cài vào project hiện tại |
+| `opk global [--mode power\|safe] [--normalize-jsonc]` | Merge global config và managed-copy agents/commands/skills; JSONC comment fail closed nếu không opt-in |
+| `opk install [--normalize-jsonc]` | Cài vào project hiện tại; chỉ normalize JSONC comment khi flag explicit |
 | `opk fullstack` | Cài full-stack profile (Node/Nest/React/MySQL) |
 | `opk path` | Hiển thị đường dẫn kit |
 | `opk update` | Cập nhật kit từ git origin |
-| `opk mode show\|power\|safe\|migrate` | Xem resolved mode, merge profile vào root `opencode.json`, hoặc migrate legacy config có backup |
-| `opk permissions doctor` | Chẩn đoán read-only config paths, env override, effective permission, agent conflict và hỗ trợ `--auto` |
-| `opk auto [args...]` | Chạy `opencode --auto` sau khi xác minh effective mode là POWER |
+| `opk mode show\|power\|safe\|migrate [--normalize-jsonc]` | Dùng chính `pwd -P`, không đổi sang Git root; xem resolved mode, merge profile hoặc migrate legacy có backup |
+| `opk permissions doctor` | Resolve một lần trong chính `pwd -P`; báo config source, env override đã redact, effective permission và agent conflict |
+| `opk auto [args...]` | Chạy `opencode --auto` chỉ sau khi toàn bộ Power contract PASS trong cùng cwd |
 | `opk run-auto "prompt"` | Chạy `opencode run --auto` với prompt literal, không `eval` |
 | `opk safety-plugin status\|install` | Kiểm tra hoặc cài safety plugin vào project hiện tại |
 | `opk hermes audit [--dry-run\|--check\|--write\|--help]` | Audit Hermes-lite; mặc định `--check` read-only, chỉ `--write` ghi `docs/HERMES_AUDIT.md` |
@@ -150,3 +150,9 @@ manifest đã biết không bị động tới.
 LSP của project. `opk mode migrate` chỉ archive legacy config sau khi root
 config parse và verify thành công. Approval `always` chỉ sống trong session;
 Power profile trong `opencode.json` mới là cấu hình persistent.
+
+Power contract yêu cầu allow cho read/edit/bash wildcard/task/skill/glob/grep/list/lsp,
+không có global hoặc agent `ask`, deny cho `external_directory`/`doom_loop`, và
+đủ deny rule secret/destructive theo thứ tự OpenCode last-match-wins. `--auto`
+chỉ tác động session; deny vẫn có hiệu lực. Behavior này được kiểm tra với
+OpenCode `1.18.10`.

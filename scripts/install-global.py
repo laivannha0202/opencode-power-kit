@@ -4,12 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
 import shutil
+import stat
 import sys
-import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -21,10 +22,20 @@ PATH_MARKER = "opencode-power-kit-path"
 ASSET_DIRS = ("agents", "commands", "skills", "plugins")
 
 
-def strip_jsonc(text: str) -> str:
+def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON key: {key}")
+        result[key] = value
+    return result
+
+
+def scan_jsonc(text: str) -> tuple[str, bool]:
     result: list[str] = []
     index = 0
     in_string = in_line = in_block = False
+    has_comments = False
     while index < len(text):
         char = text[index]
         following = text[index + 1] if index + 1 < len(text) else ""
@@ -54,26 +65,43 @@ def strip_jsonc(text: str) -> str:
             index += 1
         elif char == "/" and following == "/":
             in_line = True
+            has_comments = True
             index += 2
         elif char == "/" and following == "*":
             in_block = True
+            has_comments = True
             index += 2
         else:
             result.append(char)
             index += 1
     if in_string or in_block:
         raise ValueError("unterminated JSONC string or comment")
-    return "".join(result)
+    return "".join(result), has_comments
+
+
+def strip_jsonc(text: str) -> str:
+    return scan_jsonc(text)[0]
 
 
 def parse_json(path: Path) -> dict[str, Any]:
     try:
-        value = json.loads(strip_jsonc(path.read_text(encoding="utf-8")))
+        value = json.loads(strip_jsonc(path.read_text(encoding="utf-8")), object_pairs_hook=reject_duplicate_keys)
     except Exception as error:
         raise ValueError(f"cannot parse {path}: {error}") from error
     if not isinstance(value, dict):
         raise ValueError(f"JSON root must be an object: {path}")
     return value
+
+
+def parse_json_with_comments(path: Path) -> tuple[dict[str, Any], bool]:
+    try:
+        stripped, has_comments = scan_jsonc(path.read_text(encoding="utf-8"))
+        value = json.loads(stripped, object_pairs_hook=reject_duplicate_keys)
+    except Exception as error:
+        raise ValueError(f"cannot parse {path}: {error}") from error
+    if not isinstance(value, dict):
+        raise ValueError(f"JSON root must be an object: {path}")
+    return value, has_comments
 
 
 def dedupe(values: Any) -> list[Any]:
@@ -99,14 +127,17 @@ def sha256(path: Path) -> str:
 
 
 class Installer:
-    def __init__(self, kit: Path, home: Path, mode: str | None, dry_run: bool) -> None:
+    def __init__(self, kit: Path, home: Path, mode: str | None, dry_run: bool, normalize_jsonc: bool) -> None:
         self.kit = kit
         self.home = home
         self.mode = mode
         self.dry_run = dry_run
+        self.normalize_jsonc = normalize_jsonc
         self.config_dir = home / ".config" / "opencode"
         self.backup_dir = home / f".opencode-power-kit-backup-{self.stamp()}"
         self.backup_created = False
+        self.originals: dict[Path, tuple[bytes | None, int]] = {}
+        self.rolling_back = False
 
     @staticmethod
     def stamp() -> str:
@@ -163,41 +194,120 @@ class Installer:
             raise ValueError(f"refusing non-regular target: {path}")
         if self.dry_run:
             return
+        if not self.rolling_back and path not in self.originals:
+            if path.exists():
+                metadata = path.stat(follow_symlinks=False)
+                if not stat.S_ISREG(metadata.st_mode):
+                    raise ValueError(f"refusing non-regular target before journal: {path}")
+                self.originals[path] = (path.read_bytes(), stat.S_IMODE(metadata.st_mode))
+            else:
+                self.originals[path] = (None, mode)
         descriptor = -1
         temporary = ""
+        directory_fd = -1
         try:
-            descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.tmp.", dir=path.parent)
-            os.fchmod(descriptor, mode)
+            directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+            parent_stat = os.stat(path.parent, follow_symlinks=False)
+            opened_stat = os.fstat(directory_fd)
+            if (parent_stat.st_dev, parent_stat.st_ino) != (opened_stat.st_dev, opened_stat.st_ino):
+                raise ValueError(f"target parent changed before publish: {path.parent}")
+            for attempt in range(100):
+                temporary = f".{path.name}.tmp.{os.getpid()}.{time.time_ns()}.{attempt}"
+                try:
+                    descriptor = os.open(
+                        temporary,
+                        os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
+                        mode,
+                        dir_fd=directory_fd,
+                    )
+                    break
+                except FileExistsError:
+                    continue
+            else:
+                raise FileExistsError(f"cannot reserve temporary file for {path}")
             with os.fdopen(descriptor, "wb") as handle:
                 descriptor = -1
                 handle.write(content)
                 handle.flush()
                 os.fsync(handle.fileno())
-            os.replace(temporary, path)
-            temporary = ""
-            directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+            current_parent = os.stat(path.parent, follow_symlinks=False)
+            if (current_parent.st_dev, current_parent.st_ino) != (opened_stat.st_dev, opened_stat.st_ino):
+                raise ValueError(f"target parent changed during publish: {path.parent}")
             try:
-                os.fsync(directory_fd)
-            finally:
-                os.close(directory_fd)
+                target_stat = os.stat(path.name, dir_fd=directory_fd, follow_symlinks=False)
+            except FileNotFoundError:
+                target_stat = None
+            if target_stat is not None and not stat.S_ISREG(target_stat.st_mode):
+                raise ValueError(f"refusing non-regular target at publish: {path}")
+            os.replace(temporary, path.name, src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
+            temporary = ""
+            os.fsync(directory_fd)
         finally:
             if descriptor >= 0:
                 os.close(descriptor)
-            if temporary:
+            if temporary and directory_fd >= 0:
                 try:
-                    os.unlink(temporary)
+                    os.unlink(temporary, dir_fd=directory_fd)
                 except FileNotFoundError:
                     pass
+            if directory_fd >= 0:
+                os.close(directory_fd)
+
+    def rollback(self) -> None:
+        failures: list[str] = []
+        self.rolling_back = True
+        try:
+            for path, (content, mode) in reversed(self.originals.items()):
+                try:
+                    if content is None:
+                        directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+                        try:
+                            os.unlink(path.name, dir_fd=directory_fd)
+                            os.fsync(directory_fd)
+                        except FileNotFoundError:
+                            pass
+                        finally:
+                            os.close(directory_fd)
+                    else:
+                        self.atomic_bytes(path, content, mode)
+                        if path.read_bytes() != content:
+                            raise RuntimeError("byte verification failed")
+                except Exception as error:
+                    failures.append(f"{path}: {error}")
+        finally:
+            self.rolling_back = False
+        if failures:
+            raise RuntimeError("installer rollback failed: " + "; ".join(failures))
 
     def atomic_text(self, path: Path, content: str, mode: int = 0o644) -> None:
         self.atomic_bytes(path, content.encode("utf-8"), mode)
 
+    def acquire_lock(self) -> int:
+        lock_path = self.config_dir / ".opk-install.lock"
+        self.validate_target(lock_path)
+        flags = os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC
+        descriptor = os.open(lock_path, flags, 0o600)
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            os.close(descriptor)
+            raise ValueError(f"installer lock is not a regular file: {lock_path}")
+        os.fchmod(descriptor, 0o600)
+        deadline = time.monotonic() + 30
+        while True:
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return descriptor
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    os.close(descriptor)
+                    raise TimeoutError(f"timed out waiting for installer lock: {lock_path}")
+                time.sleep(0.05)
+
     def merge_config(self) -> None:
         target = self.config_dir / "opencode.json"
         self.validate_target(target)
-        if target.exists() and not target.is_file():
+        if target.is_symlink() or (target.exists() and not target.is_file()):
             raise ValueError(f"global config is not a regular file: {target}")
-        current = parse_json(target) if target.exists() else {}
+        current, has_comments = parse_json_with_comments(target) if target.exists() else ({}, False)
         profile_name = self.mode or "safe"
         profile = parse_json(self.kit / "templates" / f"opencode.{profile_name}.json")
         merged = dict(current)
@@ -221,13 +331,24 @@ class Installer:
         serialized = json.dumps(merged, indent=2, ensure_ascii=False) + "\n"
         if target.exists() and target.read_text(encoding="utf-8") == serialized:
             return
+        if has_comments and not self.normalize_jsonc:
+            raise ValueError(
+                f"JSONC comments require explicit --normalize-jsonc before rewriting: {target}"
+            )
+        if has_comments:
+            print("WARN: --normalize-jsonc removes comments and normalizes formatting")
         self.backup(target)
         self.atomic_text(target, serialized)
+        if not self.dry_run and parse_json(target) != merged:
+            raise RuntimeError(f"global config verification failed after atomic write: {target}")
 
     def load_manifest(self) -> dict[str, str]:
         path = self.config_dir / MANIFEST_NAME
+        self.validate_target(path)
         if not path.exists():
             return {}
+        if path.is_symlink() or not path.is_file():
+            raise ValueError(f"invalid managed asset manifest target: {path}")
         data = parse_json(path)
         assets = data.get("assets", {})
         if not isinstance(assets, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in assets.items()):
@@ -238,14 +359,18 @@ class Installer:
         previous = self.load_manifest()
         managed = dict(previous)
         source_root = self.kit / "opencode-global"
+        seen: set[str] = set()
         for directory in ASSET_DIRS:
             source_dir = source_root / directory
             if not source_dir.is_dir():
                 continue
+            if source_dir.is_symlink() or source_dir.resolve(strict=True).parent != source_root.resolve(strict=True):
+                raise ValueError(f"refusing unsafe OPK asset directory: {source_dir}")
             for source in sorted(path for path in source_dir.rglob("*") if path.is_file()):
                 if source.is_symlink() or source.resolve(strict=True) != source:
                     raise ValueError(f"refusing symlinked OPK asset: {source}")
                 relative = source.relative_to(source_root).as_posix()
+                seen.add(relative)
                 destination = self.config_dir / relative
                 self.validate_target(destination)
                 source_hash = sha256(source)
@@ -266,6 +391,10 @@ class Installer:
                 self.atomic_bytes(destination, source.read_bytes(), source.stat().st_mode & 0o777)
                 managed[relative] = source_hash
 
+        for relative in sorted(set(previous) - seen):
+            print(f"WARN: source asset removed; preserving installed file and dropping manifest entry: {relative}")
+            managed.pop(relative, None)
+
         manifest = self.config_dir / MANIFEST_NAME
         content = json.dumps({"version": 1, "assets": dict(sorted(managed.items()))}, indent=2) + "\n"
         if manifest.exists() and manifest.read_text(encoding="utf-8") == content:
@@ -274,24 +403,25 @@ class Installer:
         self.atomic_text(manifest, content)
 
     @staticmethod
-    def marker_block(name: str, content: str) -> str:
-        return f"# >>> {name}\n{content}\n# <<< {name}"
+    def marker_block(name: str, content: str, newline: str = "\n") -> str:
+        return f"# >>> {name}{newline}{content}{newline}# <<< {name}"
 
     def update_marker(self, path: Path, name: str, content: str) -> None:
         self.validate_target(path)
         existing = path.read_text(encoding="utf-8") if path.exists() else ""
         start = f"# >>> {name}"
         end = f"# <<< {name}"
-        block = self.marker_block(name, content)
-        if (start in existing) != (end in existing):
+        newline = "\r\n" if "\r\n" in existing else "\n"
+        block = self.marker_block(name, content, newline)
+        if existing.count(start) != existing.count(end) or existing.count(start) > 1:
             raise ValueError(f"malformed managed marker in {path}: {name}")
         if start in existing:
             before, remainder = existing.split(start, 1)
             _, after = remainder.split(end, 1)
             updated = before + block + after
         else:
-            separator = "" if not existing else ("" if existing.endswith("\n\n") else "\n")
-            updated = existing + separator + block + "\n"
+            separator = "" if not existing else ("" if existing.endswith(newline + newline) else newline)
+            updated = existing + separator + block + newline
         if updated == existing:
             return
         self.backup(path)
@@ -342,10 +472,28 @@ class Installer:
 
     def run(self) -> None:
         self.ensure_dir(self.config_dir)
-        self.merge_config()
-        self.install_assets()
-        self.update_shell_files()
-        self.install_shim()
+        if self.dry_run:
+            self.merge_config()
+            self.install_assets()
+            self.update_shell_files()
+            self.install_shim()
+        else:
+            lock_descriptor = self.acquire_lock()
+            try:
+                try:
+                    self.merge_config()
+                    self.install_assets()
+                    self.update_shell_files()
+                    self.install_shim()
+                except Exception as error:
+                    try:
+                        self.rollback()
+                    except Exception as rollback_error:
+                        raise RuntimeError(f"install failed: {error}; {rollback_error}") from error
+                    raise RuntimeError(f"install failed; published files restored: {error}") from error
+            finally:
+                os.close(lock_descriptor)
+        self.originals.clear()
         print(f"Global config: {self.config_dir / 'opencode.json'}")
         print(f"Managed assets: {self.config_dir / MANIFEST_NAME}")
         print("Optional UI skill: opk taste install")
@@ -361,13 +509,14 @@ def main() -> int:
     parser.add_argument("--mode", choices=("power", "safe"))
     parser.add_argument("--yes", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--normalize-jsonc", action="store_true")
     args = parser.parse_args()
     try:
         kit = Path(args.kit_dir).absolute()
         home = Path(os.environ["HOME"]).absolute()
         if kit.is_symlink() or kit.resolve(strict=True) != kit:
             raise ValueError(f"kit path contains a symlink: {kit}")
-        Installer(kit, home, args.mode, args.dry_run).run()
+        Installer(kit, home, args.mode, args.dry_run, args.normalize_jsonc).run()
     except Exception as error:
         print(f"install-global: ERROR: {error}", file=sys.stderr)
         return 1

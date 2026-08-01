@@ -177,7 +177,7 @@ cp "$KIT_DIR/templates/opencode.safe.json" "$TMP/safe-template.before"
 printf '{"$schema":"https://opencode.ai/config.json","share":"manual"}\n' >"$OPENCODE_CONFIG_DIR/opencode.json"
 
 pushd "$TEST_PROJECT" >/dev/null
-check "CLI mode show (initial)" "POWER" "$(show_mode)"
+check "CLI mode show rejects incomplete allow-only contract" "CUSTOM" "$(show_mode)"
 if "$OPK" mode safe; then
   check "CLI mode safe target" "SAFE" "$(python3 "$DETECT" "$PROJECT_CONFIG")"
 else
@@ -298,6 +298,55 @@ shopt -s nullglob
 mode_temps=("$CONCURRENT_PROJECT"/.opencode.json.tmp.*)
 shopt -u nullglob
 check "mode leaves no temporary config" "0" "${#mode_temps[@]}"
+
+# 12) Nested Git projects use the exact current directory, never the Git top-level.
+MONO="$TMP/monorepo"
+NESTED="$MONO/apps/web"
+mkdir -p "$NESTED"
+git -C "$MONO" init -q
+printf '# root fixture\n' >"$MONO/AGENTS.md"
+printf '# nested fixture\n' >"$NESTED/AGENTS.md"
+cp "$KIT_DIR/templates/opencode.power.json" "$MONO/opencode.json"
+cp "$KIT_DIR/templates/opencode.safe.json" "$NESTED/opencode.json"
+pushd "$NESTED" >/dev/null
+check "nested SAFE overrides root POWER for doctor" "SAFE" "$(show_mode)"
+if "$OPK" auto --help >/dev/null 2>&1; then
+  check "nested SAFE blocks auto" "nonzero" "zero"
+else
+  check "nested SAFE blocks auto" "nonzero" "nonzero"
+fi
+popd >/dev/null
+
+cp "$KIT_DIR/templates/opencode.safe.json" "$MONO/opencode.json"
+cp "$KIT_DIR/templates/opencode.power.json" "$NESTED/opencode.json"
+pushd "$NESTED" >/dev/null
+check "nested POWER overrides root SAFE for doctor" "POWER" "$(show_mode)"
+if "$OPK" auto --help >/dev/null 2>&1; then
+  check "nested POWER allows auto delegation" "zero" "zero"
+else
+  check "nested POWER allows auto delegation" "zero" "nonzero"
+fi
+popd >/dev/null
+
+# 13) CLI JSONC normalization requires the dedicated explicit flag.
+JSONC_PROJECT="$TMP/jsonc-project"
+mkdir -p "$JSONC_PROJECT"
+printf '# JSONC fixture\n' >"$JSONC_PROJECT/AGENTS.md"
+printf '{\n  // preserve by default\n  "model": "fixture/model"\n}\n' >"$JSONC_PROJECT/opencode.json"
+cp "$JSONC_PROJECT/opencode.json" "$TMP/jsonc-project.before"
+pushd "$JSONC_PROJECT" >/dev/null
+if "$OPK" mode power >/dev/null 2>&1; then
+  check "CLI mode refuses implicit JSONC normalization" "nonzero" "zero"
+else
+  check "CLI mode refuses implicit JSONC normalization" "nonzero" "nonzero"
+fi
+check "CLI mode leaves refused JSONC unchanged" "unchanged" "$(cmp -s "$JSONC_PROJECT/opencode.json" "$TMP/jsonc-project.before" && echo unchanged || echo changed)"
+if "$OPK" mode power --normalize-jsonc >/dev/null 2>&1; then
+  check "CLI mode accepts explicit JSONC normalization" "zero" "zero"
+else
+  check "CLI mode accepts explicit JSONC normalization" "zero" "nonzero"
+fi
+popd >/dev/null
 
 echo ""
 if [ "$FAIL" -gt 0 ]; then
