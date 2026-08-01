@@ -117,14 +117,14 @@ curated skills, separate from Superpowers.
 | Integration | **Install-time dependency** — `install.sh` runs `npx bmad-method@VERSION install` into the target project |
 | Source | https://github.com/bmad-code-org/BMAD-METHOD |
 | npm | `bmad-method` (published to npm registry) |
-| Version pin | `BMAD_METHOD_VERSION` env (default: 6.9.0) in `install.sh` and `update-bmad.sh` |
+| Version pin | CLI/update default: `OPK_BMAD_VERSION=6.10.0` in `scripts/upstream-versions.sh`; `BMAD_METHOD_VERSION` remains the explicit compatibility override |
 | Kit ships | Wrapper scripts that call the official npm installer |
 | Update path | `bash update-bmad.sh` / `opk update-bmad` — re-runs `npx bmad-method@... install` |
 | License | MIT (per upstream) |
 
 BMAD Method is installed into the **user's project** at install time, not
 bundled in the kit repo. There is no `_bmad/` directory in the kit source.
-The kit's `install.sh` and `update-bmad.sh` are thin wrappers that:
+The legacy direct installer keeps its independent compatibility default; CLI update paths use the central pin. `install.sh` and `update-bmad.sh` are thin wrappers that:
 
 1. Resolve `BMAD_METHOD_VERSION` (env override or default).
 2. Verify `node`, `npm`, `npx` are on PATH.

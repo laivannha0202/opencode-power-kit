@@ -1,7 +1,7 @@
 # OpenCode Power Kit
 
 [![Version](https://img.shields.io/badge/version-2.1.2-blue.svg)](./VERSION)
-[![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.9.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
+[![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.10.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
 [![Linux-only](https://img.shields.io/badge/platform-Linux--only-blue.svg)](#cài-nhanh)
@@ -569,7 +569,7 @@ Phù hợp nhất cho project dùng: NestJS backend, React/Vite frontend, MySQL 
 | Safety | CommonJS safety plugin, opk-command-guard, cleanup-safe | Instruction-based, not sandbox; depends on model compliance | `node scripts/test-safety-plugin.mjs` |
 | Build verification | 22 behavioral contracts, eval regression suite | Contracts verify workflow, not model output quality | `bash evals/run.sh` |
 | Linux-only runtime | Bash entrypoints, shared platform guard, portable timeout fallback | Chỉ hỗ trợ Linux; không ship Windows runtime | `bash scripts/release-gate.sh` |
-| Third-party integration | Superpowers v6.1.1, BMAD 6.9.0, GSD 1.6.1, ECC, Hermes, RAG, Headroom, AgentMemory | Opt-in only; no auto-enable; user installs per dependency | `python3 scripts/audit-upstreams.py --check` |
+| Third-party integration | Superpowers v6.1.1, BMAD updater pin 6.10.0, GSD 1.6.1, ECC, Hermes, RAG, Headroom, AgentMemory | Opt-in only; no auto-enable; user installs per dependency | `python3 scripts/audit-upstreams.py --check` |
 
 ---
 

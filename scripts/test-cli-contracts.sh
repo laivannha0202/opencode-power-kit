@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Runtime contract tests for the public opk CLI. Uses only temporary HOME/project state.
+# shellcheck disable=SC2016  # Child-shell snippets intentionally expand positional parameters there.
 set -euo pipefail
 
 SOURCE_KIT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CHECKER="$SOURCE_KIT_DIR/scripts/check-cli-file-references.py"
-REAL_PATH="$PATH"
 PASS=0
 FAIL=0
 LAST_OUTPUT=""
@@ -104,8 +104,7 @@ export OPENCODE_CONFIG_DIR="$HOME/.config/opencode"
 export OPK_KIT_DIR="$KIT_DIR"
 TEST_PROJECT="$TMP/project"
 PROJECT_CONFIG="$TEST_PROJECT/.opencode/opencode.json"
-FAKE_BIN="$TMP/bin"
-mkdir -p "$OPENCODE_CONFIG_DIR" "$TEST_PROJECT/.opencode" "$FAKE_BIN"
+mkdir -p "$OPENCODE_CONFIG_DIR" "$TEST_PROJECT/.opencode"
 printf '# CLI contract fixture\n' >"$TEST_PROJECT/AGENTS.md"
 
 ok() {
@@ -149,8 +148,8 @@ assert_nonzero() {
 
 
 snapshot_source_tree() {
-  local snapshot
-  if ! snapshot="$(python3 - "$SOURCE_KIT_DIR" <<'PY'
+  local root="${1:-$SOURCE_KIT_DIR}" snapshot
+  if ! snapshot="$(python3 - "$root" <<'PY'
 import hashlib
 import os
 import stat
@@ -283,6 +282,115 @@ safety_output="$LAST_OUTPUT"
 assert_contains "safety-plugin reports installed" "$safety_output" "INSTALLED"
 popd >/dev/null || exit 1
 
+SAFETY_CASE_ROOT="$TMP/safety-cases"
+SAFETY_OUTSIDE="$TMP/safety-outside"
+mkdir -p \
+  "$SAFETY_CASE_ROOT/opencode-link" \
+  "$SAFETY_CASE_ROOT/plugins-link/.opencode" \
+  "$SAFETY_CASE_ROOT/target-link/.opencode/plugins" \
+  "$SAFETY_CASE_ROOT/normal" \
+  "$SAFETY_CASE_ROOT/existing-opk/.opencode/plugins" \
+  "$SAFETY_CASE_ROOT/custom/.opencode/plugins" \
+  "$SAFETY_CASE_ROOT/copy-failure/.opencode/plugins" \
+  "$SAFETY_OUTSIDE/opencode-target" \
+  "$SAFETY_OUTSIDE/plugins-target"
+for project in "$SAFETY_CASE_ROOT"/*; do
+  printf '# safety installer fixture\n' >"$project/AGENTS.md"
+done
+printf 'outside opencode sentinel\n' >"$SAFETY_OUTSIDE/opencode-target/sentinel"
+printf 'outside plugins sentinel\n' >"$SAFETY_OUTSIDE/plugins-target/sentinel"
+printf '%s\n' '@opk-plugin opk-safety-guard' 'outside target sentinel' >"$SAFETY_OUTSIDE/plugin-target.js"
+ln -s "$SAFETY_OUTSIDE/opencode-target" "$SAFETY_CASE_ROOT/opencode-link/.opencode"
+ln -s "$SAFETY_OUTSIDE/plugins-target" "$SAFETY_CASE_ROOT/plugins-link/.opencode/plugins"
+ln -s "$SAFETY_OUTSIDE/plugin-target.js" "$SAFETY_CASE_ROOT/target-link/.opencode/plugins/opk-safety-guard.js"
+outside_snapshot_before="$(snapshot_source_tree "$SAFETY_OUTSIDE")"
+
+assert_nonzero ".opencode symlink is rejected" \
+  bash -c 'cd "$1" && bash "$2/scripts/install-safety-plugin.sh" --yes' _ \
+  "$SAFETY_CASE_ROOT/opencode-link" "$KIT_DIR"
+assert_nonzero ".opencode/plugins symlink is rejected" \
+  bash -c 'cd "$1" && bash "$2/scripts/install-safety-plugin.sh" --yes' _ \
+  "$SAFETY_CASE_ROOT/plugins-link" "$KIT_DIR"
+assert_nonzero "safety plugin target symlink is rejected" \
+  bash -c 'cd "$1" && bash "$2/scripts/install-safety-plugin.sh" --yes' _ \
+  "$SAFETY_CASE_ROOT/target-link" "$KIT_DIR"
+
+assert_success "normal project installs safety plugin" \
+  bash -c 'cd "$1" && bash "$2/scripts/install-safety-plugin.sh" --yes' _ \
+  "$SAFETY_CASE_ROOT/normal" "$KIT_DIR"
+if cmp -s \
+  "$SAFETY_CASE_ROOT/normal/.opencode/plugins/opk-safety-guard.js" \
+  "$KIT_DIR/templates/plugins/opk-safety-guard.js"; then
+  ok "normal safety plugin matches template"
+else
+  fail "normal safety plugin matches template"
+fi
+
+cp "$KIT_DIR/templates/plugins/opk-safety-guard.js" \
+  "$SAFETY_CASE_ROOT/existing-opk/.opencode/plugins/opk-safety-guard.js"
+printf '// previous OPK plugin fixture\n' \
+  >>"$SAFETY_CASE_ROOT/existing-opk/.opencode/plugins/opk-safety-guard.js"
+cp "$SAFETY_CASE_ROOT/existing-opk/.opencode/plugins/opk-safety-guard.js" \
+  "$TMP/existing-opk.before"
+assert_success "existing OPK safety plugin is replaced safely" \
+  bash -c 'cd "$1" && bash "$2/scripts/install-safety-plugin.sh" --yes' _ \
+  "$SAFETY_CASE_ROOT/existing-opk" "$KIT_DIR"
+shopt -s nullglob
+opk_backups=("$SAFETY_CASE_ROOT/existing-opk/.opencode/plugins/opk-safety-guard.js.bak."*)
+shopt -u nullglob
+if ((${#opk_backups[@]} == 1)) && cmp -s "${opk_backups[0]}" "$TMP/existing-opk.before"; then
+  ok "existing OPK safety plugin is backed up"
+else
+  fail "existing OPK safety plugin is backed up"
+fi
+if cmp -s \
+  "$SAFETY_CASE_ROOT/existing-opk/.opencode/plugins/opk-safety-guard.js" \
+  "$KIT_DIR/templates/plugins/opk-safety-guard.js"; then
+  ok "existing OPK safety plugin is replaced with current template"
+else
+  fail "existing OPK safety plugin is replaced with current template"
+fi
+
+printf 'custom safety plugin sentinel\n' \
+  >"$SAFETY_CASE_ROOT/custom/.opencode/plugins/opk-safety-guard.js"
+cp "$SAFETY_CASE_ROOT/custom/.opencode/plugins/opk-safety-guard.js" "$TMP/custom.before"
+assert_success "custom safety plugin is preserved" \
+  bash -c 'cd "$1" && bash "$2/scripts/install-safety-plugin.sh" --yes' _ \
+  "$SAFETY_CASE_ROOT/custom" "$KIT_DIR"
+if cmp -s "$SAFETY_CASE_ROOT/custom/.opencode/plugins/opk-safety-guard.js" "$TMP/custom.before"; then
+  ok "custom safety plugin is not overwritten"
+else
+  fail "custom safety plugin is not overwritten"
+fi
+
+FAILURE_INSTALLER="$KIT_DIR/scripts/install-safety-plugin-failure-fixture.sh"
+python3 - "$KIT_DIR/scripts/install-safety-plugin.sh" "$FAILURE_INSTALLER" <<'PY'
+from pathlib import Path
+import sys
+
+source = Path(sys.argv[1]).read_text()
+needle = "        link_fd_noreplace(temp_fd, target_name)"
+replacement = "        raise OSError(5, 'injected atomic publish failure')"
+if source.count(needle) != 1:
+    raise SystemExit("unexpected installer fixture shape")
+Path(sys.argv[2]).write_text(source.replace(needle, replacement))
+PY
+assert_nonzero "failed atomic publish is reported" \
+  bash -c 'cd "$1" && bash "$2" --yes' _ \
+  "$SAFETY_CASE_ROOT/copy-failure" "$FAILURE_INSTALLER"
+
+outside_snapshot_after="$(snapshot_source_tree "$SAFETY_OUTSIDE")"
+if [[ "$outside_snapshot_before" == "$outside_snapshot_after" ]]; then
+  ok "symlink attacks do not create or change files outside projects"
+else
+  fail "symlink attacks changed files outside projects"
+fi
+if compgen -G "$SAFETY_CASE_ROOT/*/.opencode/plugins/.opk-safety-guard.tmp.*" >/dev/null; then
+  fail "safety installer leaves no temporary files"
+else
+  ok "safety installer leaves no temporary files"
+fi
+
 assert_success "Hermes audit dry-run succeeds" "$OPK" hermes audit --dry-run
 hermes_output="$LAST_OUTPUT"
 assert_contains "Hermes dry-run reports plan" "$hermes_output" "Dry run complete"
@@ -297,16 +405,47 @@ assert_success "ECC status succeeds" "$OPK" ecc status
 ecc_output="$LAST_OUTPUT"
 assert_contains "ECC status emits summary" "$ecc_output" "=== Summary ==="
 
-cat >"$FAKE_BIN/npm" <<'EOF'
+SUPERMEMORY_ABSENT_BIN="$TMP/supermemory-absent-bin"
+SUPERMEMORY_PRESENT_BIN="$TMP/supermemory-present-bin"
+mkdir -p "$SUPERMEMORY_ABSENT_BIN" "$SUPERMEMORY_PRESENT_BIN"
+for tool in bash cat dirname uname; do
+  tool_path="$(command -v "$tool")"
+  ln -s "$tool_path" "$SUPERMEMORY_ABSENT_BIN/$tool"
+  ln -s "$tool_path" "$SUPERMEMORY_PRESENT_BIN/$tool"
+done
+for manager in npm npx; do
+  cat >"$SUPERMEMORY_ABSENT_BIN/$manager" <<'EOF'
 #!/usr/bin/env bash
-printf 'npm called: %s\n' "$*" >>"$HOME/npm-called.log"
+printf 'package manager called: %s %s\n' "${0##*/}" "$*" >>"$HOME/package-manager-called.log"
 exit 97
 EOF
-chmod +x "$FAKE_BIN/npm"
-PATH="$FAKE_BIN:$REAL_PATH" assert_success "supermemory init --help succeeds" "$OPK" supermemory init --help
+  chmod +x "$SUPERMEMORY_ABSENT_BIN/$manager"
+done
+
+PATH="$SUPERMEMORY_ABSENT_BIN" assert_success \
+  "supermemory init --help succeeds without Supermemory" "$OPK" supermemory init --help
 supermemory_output="$LAST_OUTPUT"
-assert_contains "supermemory init --help emits help" "$supermemory_output" "Usage:"
-if [[ ! -e "$HOME/npm-called.log" ]]; then ok "supermemory init --help does not download package"; else fail "supermemory init --help called npm"; fi
+assert_contains "missing Supermemory prints install guidance" "$supermemory_output" "Run: opk supermemory install"
+if [[ ! -e "$HOME/package-manager-called.log" ]]; then
+  ok "missing Supermemory does not call npm or npx"
+else
+  fail "missing Supermemory called a package manager"
+fi
+
+cat >"$SUPERMEMORY_PRESENT_BIN/supermemory" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >"$HOME/supermemory-called.log"
+printf 'fake Supermemory usage\n'
+EOF
+chmod +x "$SUPERMEMORY_PRESENT_BIN/supermemory"
+PATH="$SUPERMEMORY_PRESENT_BIN" assert_success \
+  "supermemory init --help delegates to installed executable" "$OPK" supermemory init --help
+assert_contains "fake Supermemory output is returned" "$LAST_OUTPUT" "fake Supermemory usage"
+if [[ "$(<"$HOME/supermemory-called.log")" == "init --help" ]]; then
+  ok "installed Supermemory receives init --help"
+else
+  fail "installed Supermemory receives init --help"
+fi
 
 assert_nonzero "unknown command exits nonzero" "$OPK" definitely-not-an-opk-command
 unknown_output="$LAST_OUTPUT"
