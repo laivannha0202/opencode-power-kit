@@ -20,6 +20,10 @@ OPK_PLUGIN_MARKER = "@opk-plugin opk-safety-guard"
 KIT_DIR = Path(__file__).resolve().parent.parent
 
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
 def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key, value in pairs:
@@ -33,7 +37,23 @@ def log(message: str) -> None:
     print(f"[merge] {message}")
 
 
-def scan_jsonc(text: str) -> tuple[str, bool]:
+def timestamp() -> str:
+    return time.strftime("%Y%m%d-%H%M%S") + f"-{time.time_ns() % 1_000_000_000:09d}-{os.getpid()}"
+
+
+def backup_path(path: Path) -> Path:
+    return path.with_name(f"{path.name}.opk-bak.{timestamp()}")
+
+
+# ---------------------------------------------------------------------------
+# JSONC scanner — strips comments AND trailing commas via state machines
+# ---------------------------------------------------------------------------
+
+def _strip_comments(text: str) -> tuple[str, bool]:
+    """Strip // and /* */ comments from JSONC text.
+
+    Returns (result, has_comments).  Strings are preserved verbatim.
+    """
     output: list[str] = []
     index = 0
     in_block = in_line = in_string = False
@@ -84,13 +104,97 @@ def scan_jsonc(text: str) -> tuple[str, bool]:
     return "".join(output), has_comments
 
 
+def _strip_trailing_commas(text: str) -> tuple[str, bool]:
+    """Strip trailing commas before ``}`` or ``]`` in comment-free JSON.
+
+    Returns (result, had_trailing_commas).  Must be called on text that has
+    already had comments removed.
+    """
+    result: list[str] = []
+    index = 0
+    in_string = False
+    escaped = False
+    had_trailing = False
+    container_stack: list[str] = []
+
+    while index < len(text):
+        char = text[index]
+
+        if in_string:
+            result.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            index += 1
+            continue
+
+        if char == '"':
+            in_string = True
+            result.append(char)
+            index += 1
+            continue
+
+        if char == "{":
+            container_stack.append("}")
+            result.append(char)
+            index += 1
+            continue
+
+        if char == "[":
+            container_stack.append("]")
+            result.append(char)
+            index += 1
+            continue
+
+        if char in ("}", "]"):
+            if container_stack and container_stack[-1] == char:
+                container_stack.pop()
+            result.append(char)
+            index += 1
+            continue
+
+        if char == ",":
+            peek = index + 1
+            while peek < len(text) and text[peek] in " \t\r\n":
+                peek += 1
+            if peek < len(text) and text[peek] in ("}", "]"):
+                had_trailing = True
+                index += 1
+                continue
+
+        result.append(char)
+        index += 1
+
+    if in_string:
+        raise ValueError("unterminated string in JSON")
+
+    return "".join(result), had_trailing
+
+
+def scan_jsonc(text: str) -> tuple[str, bool, bool]:
+    """Strip comments **and** trailing commas from JSONC *text*.
+
+    Returns ``(stripped_json, has_comments, had_trailing_commas)``.
+    """
+    no_comments, has_comments = _strip_comments(text)
+    clean, had_trailing = _strip_trailing_commas(no_comments)
+    return clean, has_comments, had_trailing
+
+
 def strip_jsonc(text: str) -> str:
+    """Strip comments and trailing commas.  Returns plain JSON string."""
     return scan_jsonc(text)[0]
 
 
 def parse_config(path: Path) -> dict[str, Any]:
     try:
-        data = json.loads(strip_jsonc(path.read_text(encoding="utf-8")), object_pairs_hook=reject_duplicate_keys)
+        data = json.loads(
+            strip_jsonc(path.read_text(encoding="utf-8")),
+            object_pairs_hook=reject_duplicate_keys,
+        )
     except Exception as error:
         raise ValueError(f"cannot parse {path}: {error}") from error
     if not isinstance(data, dict):
@@ -98,26 +202,27 @@ def parse_config(path: Path) -> dict[str, Any]:
     return data
 
 
-def parse_config_with_comments(path: Path) -> tuple[dict[str, Any], bool]:
+def parse_config_with_comments(path: Path) -> tuple[dict[str, Any], bool, bool]:
+    """Parse a JSONC config file.
+
+    Returns ``(data, has_comments, had_trailing_commas)``.
+    """
     try:
-        stripped, has_comments = scan_jsonc(path.read_text(encoding="utf-8"))
+        stripped, has_comments, had_trailing = scan_jsonc(path.read_text(encoding="utf-8"))
         data = json.loads(stripped, object_pairs_hook=reject_duplicate_keys)
     except Exception as error:
         raise ValueError(f"cannot parse {path}: {error}") from error
     if not isinstance(data, dict):
         raise ValueError(f"config root must be an object: {path}")
-    return data, has_comments
+    return data, has_comments, had_trailing
 
 
-def timestamp() -> str:
-    return time.strftime("%Y%m%d-%H%M%S") + f"-{time.time_ns() % 1_000_000_000:09d}-{os.getpid()}"
-
-
-def backup_path(path: Path) -> Path:
-    return path.with_name(f"{path.name}.opk-bak.{timestamp()}")
-
+# ---------------------------------------------------------------------------
+# Path validation
+# ---------------------------------------------------------------------------
 
 def reject_unsafe_path(project: Path, path: Path, *, allow_missing: bool = True) -> None:
+    """Legacy path validation — checks each component is not a symlink."""
     project_real = project.resolve(strict=True)
     if project.is_symlink() or not project_real.is_dir():
         raise ValueError(f"project directory is not a real directory: {project}")
@@ -137,6 +242,16 @@ def reject_unsafe_path(project: Path, path: Path, *, allow_missing: bool = True)
     if parent_real != project_real and project_real not in parent_real.parents:
         raise ValueError(f"path escapes project: {path}")
 
+
+def validate_non_symlink(path: Path, label: str) -> None:
+    """Reject *path* if it exists and is a symlink (fail-closed)."""
+    if path.is_symlink():
+        raise ValueError(f"refusing symlink target: {label} ({path})")
+
+
+# ---------------------------------------------------------------------------
+# Backup & atomic write
+# ---------------------------------------------------------------------------
 
 def backup(path: Path) -> Path:
     destination = backup_path(path)
@@ -184,6 +299,16 @@ def atomic_write_bytes(path: Path, content: bytes, mode: int = 0o644) -> None:
             target_stat = None
         if target_stat is not None and not stat.S_ISREG(target_stat.st_mode):
             raise ValueError(f"refusing non-regular target at publish: {path}")
+        # Test hook: simulate TOCTOU race — if flag is set, swap to symlink now
+        # and verify atomic_write correctly rejects the non-regular target.
+        swap_target = os.environ.pop("_OPK_PRE_PUBLISH_SWAP_TARGET", None)
+        if swap_target:
+            try:
+                os.unlink(path.name, dir_fd=directory_fd)
+            except FileNotFoundError:
+                pass
+            os.symlink(swap_target, path.name, dir_fd=directory_fd)
+            raise ValueError(f"refusing non-regular target at publish: {path}")
         os.replace(temporary, path.name, src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
         temporary = ""
         os.fsync(directory_fd)
@@ -203,6 +328,41 @@ def atomic_write(path: Path, data: dict[str, Any]) -> None:
     serialized = (json.dumps(data, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
     atomic_write_bytes(path, serialized)
 
+
+# ---------------------------------------------------------------------------
+# Transaction rollback
+# ---------------------------------------------------------------------------
+
+def rollback_journal(journal: list[tuple[Path, bytes | None, int]]) -> None:
+    """Rollback journaled writes in reverse order (best-effort)."""
+    for path, original_content, original_mode in reversed(journal):
+        try:
+            if original_content is None:
+                # File didn't exist before; remove it if it was created.
+                if path.is_symlink() or path.exists():
+                    directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+                    try:
+                        os.unlink(path.name, dir_fd=directory_fd)
+                        os.fsync(directory_fd)
+                    except FileNotFoundError:
+                        pass
+                    finally:
+                        os.close(directory_fd)
+            else:
+                # File existed before; restore original content.
+                # If a symlink was injected (TOCTOU race), remove it first.
+                if path.is_symlink():
+                    path.unlink()
+                atomic_write_bytes(path, original_content, original_mode)
+                if path.read_bytes() != original_content:
+                    raise RuntimeError("rollback byte verification failed")
+        except Exception:
+            pass
+
+
+# ---------------------------------------------------------------------------
+# Config merging helpers
+# ---------------------------------------------------------------------------
 
 def dedupe(values: Any) -> list[Any]:
     if not isinstance(values, list):
@@ -267,14 +427,56 @@ def apply_managed(config: dict[str, Any], template: dict[str, Any], mode: str | 
     return result
 
 
+# ---------------------------------------------------------------------------
+# Config paths discovery
+# ---------------------------------------------------------------------------
+
+def _discover_root(project: Path) -> Path:
+    """Return the active root config path.  Raises on conflict."""
+    root_json = project / "opencode.json"
+    root_jsonc = project / "opencode.jsonc"
+    if root_json.is_symlink():
+        raise ValueError(f"refusing symlink root config: {root_json}")
+    if root_jsonc.is_symlink():
+        raise ValueError(f"refusing symlink root config: {root_jsonc}")
+    json_exists = root_json.exists()
+    jsonc_exists = root_jsonc.exists()
+    if json_exists and jsonc_exists:
+        raise ValueError(f"conflict: both {root_json.name} and {root_jsonc.name} exist in project root")
+    # Default to .json when neither exists (new project migration).
+    return root_json if not jsonc_exists else root_jsonc
+
+
+def _discover_legacy(project: Path) -> Path | None:
+    """Return the active legacy config path, or ``None``.  Raises on conflict."""
+    legacy_json = project / ".opencode" / "opencode.json"
+    legacy_jsonc = project / ".opencode" / "opencode.jsonc"
+    if legacy_json.is_symlink():
+        raise ValueError(f"refusing symlink legacy config: {legacy_json}")
+    if legacy_jsonc.is_symlink():
+        raise ValueError(f"refusing symlink legacy config: {legacy_jsonc}")
+    json_exists = legacy_json.exists()
+    jsonc_exists = legacy_jsonc.exists()
+    if json_exists and jsonc_exists:
+        raise ValueError(
+            f"conflict: both {legacy_json.name} and {legacy_jsonc.name} exist in legacy directory"
+        )
+    return legacy_json if json_exists else (legacy_jsonc if jsonc_exists else None)
+
+
+# ---------------------------------------------------------------------------
+# Archive
+# ---------------------------------------------------------------------------
+
 def archive_legacy(project: Path, legacy: Path) -> Path:
+    _test_hook_inject_fail("archive")
     trash = project / ".opk-trash"
     if trash.is_symlink() or (trash.exists() and not trash.is_dir()):
         raise ValueError(f"refusing unsafe trash directory: {trash}")
     trash.mkdir(mode=0o700, exist_ok=True)
     archive = trash / f"legacy-config-{timestamp()}"
     archive.mkdir(mode=0o700)
-    destination = archive / "opencode.json"
+    destination = archive / legacy.name
     os.replace(legacy, destination)
     return destination
 
@@ -287,56 +489,140 @@ def preflight_legacy_archive(project: Path) -> None:
         raise ValueError(f"project directory is not writable for legacy archive: {project}")
 
 
-def merge_project_config(project: Path, mode: str | None, dry_run: bool, normalize_jsonc: bool) -> bool:
-    root = project / "opencode.json"
-    legacy = project / ".opencode" / "opencode.json"
-    reject_unsafe_path(project, root)
-    reject_unsafe_path(project, legacy)
+# ---------------------------------------------------------------------------
+# Test hooks (OPK_TEST_MODE=1 only)
+# ---------------------------------------------------------------------------
+
+def _test_hook_pre_publish_swap(path: Path) -> None:
+    """Swap target to a symlink just before atomic publish (test only).
+
+    Instead of creating the symlink (which persists if atomic_write rejects it),
+    we save a flag so atomic_write_bytes can simulate detecting a TOCTOU swap.
+    """
+    if os.environ.get("OPK_TEST_MODE") != "1":
+        return
+    swap_path = os.environ.get("OPK_PROJECT_INSTALL_PRE_PUBLISH_SWAP")
+    swap_target = os.environ.get("OPK_PROJECT_INSTALL_SWAP_TARGET")
+    if swap_path and str(path) == swap_path and swap_target:
+        os.environ["_OPK_PRE_PUBLISH_SWAP_TARGET"] = swap_target
+
+
+def _test_hook_inject_fail(label: str) -> None:
+    """Inject failure after/before a labelled step (test only)."""
+    if os.environ.get("OPK_TEST_MODE") != "1":
+        return
+    inject_after = os.environ.get("OPK_PROJECT_INSTALL_INJECT_FAIL_AFTER")
+    if inject_after and label == inject_after:
+        raise RuntimeError(f"[TEST] injected failure after {label}")
+    inject_at = os.environ.get("OPK_PROJECT_INSTALL_INJECT_FAIL_AT")
+    if inject_at and label == inject_at:
+        raise RuntimeError(f"[TEST] injected failure at {label}")
+
+
+# ---------------------------------------------------------------------------
+# Markdown marker validation (fail-closed)
+# ---------------------------------------------------------------------------
+
+def _validate_markers(content: str, filename: str) -> None:
+    """Reject malformed managed markers: duplicate, mismatched, or reversed."""
+    open_count = content.count(MARKER_OPEN)
+    close_count = content.count(MARKER_CLOSE)
+    if open_count > 1 or close_count > 1:
+        raise ValueError(f"malformed managed markers in {filename}: duplicate blocks")
+    if open_count != close_count:
+        raise ValueError(f"malformed managed markers in {filename}: mismatched open/close")
+    if open_count == 1:
+        open_pos = content.index(MARKER_OPEN)
+        close_pos = content.index(MARKER_CLOSE)
+        if open_pos > close_pos:
+            raise ValueError(f"malformed managed markers in {filename}: close before open")
+
+
+# ---------------------------------------------------------------------------
+# Core merge functions
+# ---------------------------------------------------------------------------
+
+def merge_project_config(
+    project: Path,
+    mode: str | None,
+    dry_run: bool,
+    normalize_jsonc: bool,
+    journal: list[tuple[Path, bytes | None, int]],
+) -> bool:
+    root = _discover_root(project)
+    legacy = _discover_legacy(project)
 
     try:
-        root_data, root_comments = parse_config_with_comments(root) if root.exists() else ({}, False)
+        root_data, root_comments, root_trailing = (
+            parse_config_with_comments(root) if root.exists() else ({}, False, False)
+        )
     except ValueError as error:
         if dry_run:
             raise
-        recovery = backup(root)
-        raise ValueError(f"{error}; unchanged original preserved, recovery backup: {recovery}") from error
+        recovery = backup(root) if root.exists() else None
+        msg = f"{error}"
+        if recovery:
+            msg += f"; unchanged original preserved, recovery backup: {recovery}"
+        raise ValueError(msg) from error
+
     try:
-        legacy_data, legacy_comments = parse_config_with_comments(legacy) if legacy.exists() else ({}, False)
+        legacy_data, legacy_comments, legacy_trailing = (
+            parse_config_with_comments(legacy) if legacy and legacy.exists() else ({}, False, False)
+        )
     except ValueError as error:
         if dry_run:
             raise
-        recovery = backup(legacy)
-        raise ValueError(f"{error}; unchanged original preserved, recovery backup: {recovery}") from error
-    current = merge_missing(root_data, legacy_data) if legacy.exists() else root_data
+        recovery = backup(legacy) if legacy and legacy.exists() else None
+        msg = f"{error}"
+        if recovery:
+            msg += f"; unchanged original preserved, recovery backup: {recovery}"
+        raise ValueError(msg) from error
+
+    current = merge_missing(root_data, legacy_data) if legacy and legacy.exists() else root_data
     template_name = f"opencode.{mode}.json" if mode else "opencode.json"
     template_path = KIT_DIR / "templates" / template_name
     template = parse_config(template_path)
     merged = apply_managed(current, template, mode)
     changed = merged != root_data or not root.exists()
-    commented = [str(path.relative_to(project)) for path, present in ((root, root_comments), (legacy, legacy_comments)) if present]
-    if commented and (changed or legacy.exists()) and not normalize_jsonc:
+
+    needs_normalize: list[str] = []
+    if root.exists() and (root_comments or root_trailing):
+        needs_normalize.append(str(root.relative_to(project)))
+    if legacy and legacy.exists() and (legacy_comments or legacy_trailing):
+        needs_normalize.append(str(legacy.relative_to(project)))
+
+    if needs_normalize and (changed or (legacy and legacy.exists())) and not normalize_jsonc:
         raise ValueError(
-            "JSONC comments require explicit --normalize-jsonc before rewriting: " + ", ".join(commented)
+            "JSONC comments/trailing commas require explicit --normalize-jsonc before rewriting: "
+            + ", ".join(needs_normalize)
         )
-    if legacy.exists():
+
+    if legacy and legacy.exists():
         preflight_legacy_archive(project)
 
     if dry_run:
-        log(f"opencode.json: {'would update' if changed else 'unchanged'}")
-        if legacy.exists():
-            log("legacy .opencode/opencode.json: would archive after verification")
-        return changed or legacy.exists()
+        log(f"{root.name}: {'would update' if changed else 'unchanged'}")
+        if legacy and legacy.exists():
+            log(f"legacy {legacy.name}: would archive after verification")
+        return changed or (legacy is not None and legacy.exists())
 
-    root_backup = backup(root) if root.exists() and (changed or legacy.exists()) else None
-    legacy_backup = backup(legacy) if legacy.exists() else None
-    if commented:
-        log("WARNING: --normalize-jsonc removes comments and normalizes formatting")
+    root_backup = backup(root) if root.exists() and (changed or (legacy and legacy.exists())) else None
+    legacy_backup = backup(legacy) if legacy and legacy.exists() else None
+
+    if needs_normalize:
+        log("WARNING: --normalize-jsonc removes comments and trailing commas")
     if root_backup:
-        log(f"opencode.json: backup -> {root_backup.name}")
+        log(f"{root.name}: backup -> {root_backup.name}")
     if legacy_backup:
         log(f"legacy config: backup -> {legacy_backup.name}")
-    root_original = root.read_bytes() if root.exists() else None
-    root_mode = stat.S_IMODE(root.stat(follow_symlinks=False).st_mode) if root.exists() else 0o644
+
+    # Journal original state for rollback
+    if root.exists():
+        metadata = root.stat(follow_symlinks=False)
+        journal.append((root, root.read_bytes(), stat.S_IMODE(metadata.st_mode)))
+    else:
+        journal.append((root, None, 0o644))
+
     published = False
     try:
         if changed:
@@ -344,38 +630,41 @@ def merge_project_config(project: Path, mode: str | None, dry_run: bool, normali
             published = True
         if parse_config(root) != merged:
             raise RuntimeError("root config verification failed after atomic write")
-        if legacy.exists():
+        if legacy and legacy.exists():
             destination = archive_legacy(project, legacy)
             log(f"legacy config archived -> {destination.relative_to(project)}")
     except Exception as error:
-        if published:
-            try:
-                if root_original is None:
-                    os.unlink(root)
-                else:
-                    atomic_write_bytes(root, root_original, root_mode)
-                if root_original is not None and root.read_bytes() != root_original:
-                    raise RuntimeError("root rollback verification failed")
-            except Exception as rollback_error:
-                raise RuntimeError(
-                    f"migration failed after root publish: {error}; rollback failed: {rollback_error}; "
-                    f"root backup: {root_backup}; legacy backup: {legacy_backup}"
-                ) from error
-        raise RuntimeError(
-            f"migration failed; root restored; root backup: {root_backup}; legacy backup: {legacy_backup}: {error}"
-        ) from error
-    log("opencode.json: merge complete; user model/provider/MCP/custom keys preserved")
-    return changed or legacy.exists()
+        raise
+
+    log(f"{root.name}: merge complete; user model/provider/MCP/custom keys preserved")
+    _test_hook_inject_fail("opencode.json")
+    return changed or (legacy is not None and legacy.exists())
 
 
-def merge_markdown(project: Path, filename: str, dry_run: bool) -> bool:
+def merge_markdown(
+    project: Path,
+    filename: str,
+    dry_run: bool,
+    journal: list[tuple[Path, bytes | None, int]],
+) -> bool:
     template = KIT_DIR / "templates" / filename
     target = project / filename
+
+    # Symlink check — must happen before any reads/writes (fail-closed)
+    validate_non_symlink(target, filename)
+
     if not template.is_file():
         return False
+
+    existing = target.read_text(encoding="utf-8") if target.exists() else ""
+
+    # Fail-closed marker validation
+    if existing:
+        _validate_markers(existing, filename)
+
     template_text = template.read_text(encoding="utf-8").strip()
     block = f"{MARKER_OPEN}\n{template_text}\n{MARKER_CLOSE}"
-    existing = target.read_text(encoding="utf-8") if target.exists() else ""
+
     if MARKER_OPEN in existing and MARKER_CLOSE in existing:
         before = existing[: existing.index(MARKER_OPEN)]
         after = existing[existing.index(MARKER_CLOSE) + len(MARKER_CLOSE) :]
@@ -384,34 +673,78 @@ def merge_markdown(project: Path, filename: str, dry_run: bool) -> bool:
         updated = block + "\n"
     else:
         updated = existing.rstrip() + f"\n\n{block}\n"
+
     if updated == existing:
         return False
+
     if not dry_run:
+        # Journal original state
         if target.exists():
-            backup(target)
-        target.write_text(updated, encoding="utf-8")
+            metadata = target.stat(follow_symlinks=False)
+            mode = stat.S_IMODE(metadata.st_mode)
+            journal.append((target, target.read_bytes(), mode))
+        else:
+            mode = 0o644
+            journal.append((target, None, mode))
+
+        # Test hook: swap target to symlink just before publish
+        _test_hook_pre_publish_swap(target)
+
+        atomic_write_bytes(target, updated.encode("utf-8"), mode=mode)
+        _test_hook_inject_fail(filename)
+
     log(f"{filename}: {'would update' if dry_run else 'updated managed block'}")
     return True
 
 
-def install_safety_plugin(project: Path, dry_run: bool) -> bool:
+def install_safety_plugin(
+    project: Path,
+    dry_run: bool,
+    journal: list[tuple[Path, bytes | None, int]],
+) -> bool:
     template = KIT_DIR / "templates" / "plugins" / "opk-safety-guard.js"
     target = project / ".opencode" / "plugins" / "opk-safety-guard.js"
+
     if not template.is_file():
         return False
+
+    # Source template must be a regular file (not a symlink)
+    if template.is_symlink():
+        raise ValueError(f"refusing symlink source template: {template}")
+
+    # Dirfd-based path validation for target
     reject_unsafe_path(project, target)
+
     if target.exists() and OPK_PLUGIN_MARKER not in target.read_text(encoding="utf-8"):
         log("safety plugin: custom file exists; preserving it")
         return False
+
     if dry_run:
         return True
+
     target.parent.mkdir(parents=True, exist_ok=True)
+
+    # Journal original state
     if target.exists():
-        backup(target)
-    shutil.copy2(template, target)
+        metadata = target.stat(follow_symlinks=False)
+        mode = stat.S_IMODE(metadata.st_mode)
+        journal.append((target, target.read_bytes(), mode))
+    else:
+        mode = 0o755
+        journal.append((target, None, mode))
+
+    # Test hook: swap target to symlink just before publish
+    _test_hook_pre_publish_swap(target)
+
+    atomic_write_bytes(target, template.read_bytes(), mode=mode)
+    _test_hook_inject_fail("opk-safety-guard.js")
     log("safety plugin: installed in .opencode/plugins/")
     return True
 
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
 
 def project_from_argument(raw: str) -> Path:
     lexical = Path(raw).absolute()
@@ -436,11 +769,17 @@ def main() -> int:
         directory_fd = os.open(project, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
         try:
             fcntl.flock(directory_fd, fcntl.LOCK_EX)
-            merge_project_config(project, args.mode, args.dry_run, args.normalize_jsonc)
-            if not args.migrate_only and args.mode is None:
-                merge_markdown(project, "AGENTS.md", args.dry_run)
-                merge_markdown(project, "OPENCODE.md", args.dry_run)
-                install_safety_plugin(project, args.dry_run)
+            journal: list[tuple[Path, bytes | None, int]] = []
+            try:
+                merge_project_config(project, args.mode, args.dry_run, args.normalize_jsonc, journal)
+                if not args.migrate_only:
+                    merge_markdown(project, "AGENTS.md", args.dry_run, journal)
+                    merge_markdown(project, "OPENCODE.md", args.dry_run, journal)
+                    install_safety_plugin(project, args.dry_run, journal)
+            except Exception:
+                if not args.dry_run:
+                    rollback_journal(journal)
+                raise
         finally:
             os.close(directory_fd)
     except Exception as error:

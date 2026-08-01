@@ -31,7 +31,8 @@ def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
-def scan_jsonc(text: str) -> tuple[str, bool]:
+def _strip_comments(text: str) -> tuple[str, bool]:
+    """Strip // and /* */ comments. Returns (result, has_comments)."""
     result: list[str] = []
     index = 0
     in_string = in_line = in_block = False
@@ -79,6 +80,67 @@ def scan_jsonc(text: str) -> tuple[str, bool]:
     return "".join(result), has_comments
 
 
+def _strip_trailing_commas(text: str) -> tuple[str, bool]:
+    """Strip trailing commas before ``}`` or ``]`` in comment-free JSON."""
+    result: list[str] = []
+    index = 0
+    in_string = False
+    escaped = False
+    had_trailing = False
+    container_stack: list[str] = []
+    while index < len(text):
+        char = text[index]
+        if in_string:
+            result.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            index += 1
+            continue
+        if char == '"':
+            in_string = True
+            result.append(char)
+            index += 1
+            continue
+        if char == "{":
+            container_stack.append("}")
+            result.append(char)
+            index += 1
+            continue
+        if char == "[":
+            container_stack.append("]")
+            result.append(char)
+            index += 1
+            continue
+        if char in ("}", "]"):
+            if container_stack and container_stack[-1] == char:
+                container_stack.pop()
+            result.append(char)
+            index += 1
+            continue
+        if char == ",":
+            peek = index + 1
+            while peek < len(text) and text[peek] in " \t\r\n":
+                peek += 1
+            if peek < len(text) and text[peek] in ("}", "]"):
+                had_trailing = True
+                index += 1
+                continue
+        result.append(char)
+        index += 1
+    return "".join(result), had_trailing
+
+
+def scan_jsonc(text: str) -> tuple[str, bool, bool]:
+    """Strip comments and trailing commas. Returns (stripped, has_comments, had_trailing)."""
+    no_comments, has_comments = _strip_comments(text)
+    clean, had_trailing = _strip_trailing_commas(no_comments)
+    return clean, has_comments, had_trailing
+
+
 def strip_jsonc(text: str) -> str:
     return scan_jsonc(text)[0]
 
@@ -93,15 +155,16 @@ def parse_json(path: Path) -> dict[str, Any]:
     return value
 
 
-def parse_json_with_comments(path: Path) -> tuple[dict[str, Any], bool]:
+def parse_json_with_comments(path: Path) -> tuple[dict[str, Any], bool, bool]:
+    """Parse JSONC config. Returns (data, has_comments, had_trailing_commas)."""
     try:
-        stripped, has_comments = scan_jsonc(path.read_text(encoding="utf-8"))
+        stripped, has_comments, had_trailing = scan_jsonc(path.read_text(encoding="utf-8"))
         value = json.loads(stripped, object_pairs_hook=reject_duplicate_keys)
     except Exception as error:
         raise ValueError(f"cannot parse {path}: {error}") from error
     if not isinstance(value, dict):
         raise ValueError(f"JSON root must be an object: {path}")
-    return value, has_comments
+    return value, has_comments, had_trailing
 
 
 def dedupe(values: Any) -> list[Any]:
@@ -302,12 +365,29 @@ class Installer:
                     raise TimeoutError(f"timed out waiting for installer lock: {lock_path}")
                 time.sleep(0.05)
 
+    def _discover_global_config(self) -> Path | None:
+        """Discover active global config file. Raises on conflict."""
+        json_path = self.config_dir / "opencode.json"
+        jsonc_path = self.config_dir / "opencode.jsonc"
+        if json_path.is_symlink():
+            raise ValueError(f"refusing symlink global config: {json_path}")
+        if jsonc_path.is_symlink():
+            raise ValueError(f"refusing symlink global config: {jsonc_path}")
+        json_exists = json_path.exists()
+        jsonc_exists = jsonc_path.exists()
+        if json_exists and jsonc_exists:
+            raise ValueError(
+                f"conflict: both {json_path.name} and {jsonc_path.name} exist in {self.config_dir}"
+            )
+        return json_path if json_exists else (jsonc_path if jsonc_exists else None)
+
     def merge_config(self) -> None:
-        target = self.config_dir / "opencode.json"
+        active = self._discover_global_config()
+        target = active if active else self.config_dir / "opencode.json"
         self.validate_target(target)
         if target.is_symlink() or (target.exists() and not target.is_file()):
             raise ValueError(f"global config is not a regular file: {target}")
-        current, has_comments = parse_json_with_comments(target) if target.exists() else ({}, False)
+        current, has_comments, has_trailing = parse_json_with_comments(target) if target.exists() else ({}, False, False)
         profile_name = self.mode or "safe"
         profile = parse_json(self.kit / "templates" / f"opencode.{profile_name}.json")
         merged = dict(current)
@@ -331,12 +411,12 @@ class Installer:
         serialized = json.dumps(merged, indent=2, ensure_ascii=False) + "\n"
         if target.exists() and target.read_text(encoding="utf-8") == serialized:
             return
-        if has_comments and not self.normalize_jsonc:
+        if (has_comments or has_trailing) and not self.normalize_jsonc:
             raise ValueError(
-                f"JSONC comments require explicit --normalize-jsonc before rewriting: {target}"
+                f"JSONC comments/trailing commas require explicit --normalize-jsonc before rewriting: {target}"
             )
-        if has_comments:
-            print("WARN: --normalize-jsonc removes comments and normalizes formatting")
+        if has_comments or has_trailing:
+            print("WARN: --normalize-jsonc removes comments and trailing commas")
         self.backup(target)
         self.atomic_text(target, serialized)
         if not self.dry_run and parse_json(target) != merged:
@@ -494,7 +574,9 @@ class Installer:
             finally:
                 os.close(lock_descriptor)
         self.originals.clear()
-        print(f"Global config: {self.config_dir / 'opencode.json'}")
+        active = self._discover_global_config()
+        config_path = active if active else self.config_dir / "opencode.json"
+        print(f"Global config: {config_path}")
         print(f"Managed assets: {self.config_dir / MANIFEST_NAME}")
         print("Optional UI skill: opk taste install")
         if self.backup_created:

@@ -278,12 +278,16 @@ def opencode_version() -> str:
 
 
 def report(project: Path, descriptor: int, as_json: bool, require_power: bool) -> int:
-    root = project / "opencode.json"
+    root_json = project / "opencode.json"
+    root_jsonc = project / "opencode.jsonc"
     legacy = project / ".opencode" / "opencode.json"
-    if root.is_symlink() or legacy.is_symlink():
+    if root_json.is_symlink() or root_jsonc.is_symlink() or legacy.is_symlink():
         config, error = None, "config target is a symlink"
+    elif root_json.exists() and root_jsonc.exists():
+        config, error = None, "conflict: both opencode.json and opencode.jsonc exist"
     else:
         config, error = resolve_config(project, descriptor)
+    active_root = root_json if root_json.exists() and not root_jsonc.exists() else (root_jsonc if root_jsonc.exists() else root_json)
     permission = config.get("permission", {}) if config else {}
     mode, details, validation_error = classify(config, error)
     error = error or validation_error
@@ -297,8 +301,8 @@ def report(project: Path, descriptor: int, as_json: bool, require_power: bool) -
         "project_root": str(project),
         "git_root": git_root(project),
         "global_config": str(Path.home() / ".config" / "opencode" / "opencode.json"),
-        "project_config": str(root),
-        "project_config_exists": root.is_file() and not root.is_symlink(),
+        "project_config": str(active_root),
+        "project_config_exists": active_root.is_file() and not active_root.is_symlink(),
         "legacy_config": str(legacy),
         "legacy_config_exists": legacy.exists(),
         "effective_permission": permission,
@@ -334,7 +338,7 @@ def report(project: Path, descriptor: int, as_json: bool, require_power: bool) -
     print(f"OpenCode version: {data['opencode_version']}")
     print(f"Project root: {project}")
     print(f"Global config: {data['global_config']}")
-    print(f"Project config: {root} ({'present' if data['project_config_exists'] else 'missing'})")
+    print(f"Project config: {active_root} ({'present' if data['project_config_exists'] else 'missing'})")
     print(f"Legacy config: {legacy} ({'present' if data['legacy_config_exists'] else 'absent'})")
     for key, value in data["effective"].items():
         print(f"Effective {key}: {value}")

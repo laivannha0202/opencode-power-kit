@@ -26,21 +26,35 @@ path_has_symlink(){
   return 1
 }
 mode_command(){
-  local action="${1:-show}" project target legacy option
+  local action="${1:-show}" project target target_jsonc legacy option
   local -a normalize_args=()
+  local seen_normalize=0
   (($# == 0)) || shift
   for option in "$@"; do
-    [[ "$option" == --normalize-jsonc && "$action" != show ]] || \
+    [[ "$option" == --normalize-jsonc ]] || \
       err 'mode: use show|power|safe|migrate [--normalize-jsonc]'
+    if [[ "$action" == show ]]; then
+      err 'mode show: --normalize-jsonc is not allowed'
+    fi
+    if [[ $seen_normalize -eq 1 ]]; then
+      err 'mode: duplicate --normalize-jsonc'
+    fi
+    seen_normalize=1
     normalize_args=(--normalize-jsonc)
   done
   project="$(pwd -P)" || err 'cannot resolve current project'
   target="$project/opencode.json"
+  target_jsonc="$project/opencode.jsonc"
   legacy="$project/.opencode/opencode.json"
   [[ ! -L "$target" ]] || err 'mode: refusing symlink config target'
+  [[ ! -L "$target_jsonc" ]] || err 'mode: refusing symlink config target'
   [[ ! -e "$target" || -f "$target" ]] || err 'mode: config target is not a regular file'
+  [[ ! -e "$target_jsonc" || -f "$target_jsonc" ]] || err 'mode: config target is not a regular file'
   [[ ! -L "$legacy" ]] || err 'mode: refusing symlink legacy config'
   [[ ! -e "$legacy" || -f "$legacy" ]] || err 'mode: legacy config is not a regular file'
+  if [[ -e "$target" && -e "$target_jsonc" ]]; then
+    err 'mode: conflict: both opencode.json and opencode.jsonc exist'
+  fi
   case "$action" in
     show)
       need "$KIT_DIR/scripts/opk-permissions.py"

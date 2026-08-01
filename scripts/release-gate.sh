@@ -361,6 +361,15 @@ run_cmd "test-timeout" \
 run_cmd "test-runtime-behavior" \
   "bash $KIT_DIR/scripts/test-runtime-behavior.sh"
 
+# --- Path Safety & JSONC Tests ---
+echo ""
+echo "--- Path Safety & JSONC Tests ---"
+run_cmd "test-project-installer-path-safety" \
+  "bash $KIT_DIR/scripts/test-project-installer-path-safety.sh"
+
+run_cmd "test-opencode-jsonc-compatibility" \
+  "bash $KIT_DIR/scripts/test-opencode-jsonc-compatibility.sh"
+
 # --- Full Verification ---
 echo ""
 echo "--- Full Verification ---"
