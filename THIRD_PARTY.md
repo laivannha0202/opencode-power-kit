@@ -97,10 +97,11 @@ full-stack development. OpenCode itself must be installed separately.
 | Field | Value |
 |-------|-------|
 | Role | Agent skill library — loaded as an OpenCode plugin at runtime |
-| Integration | **Plugin reference** — `templates/opencode.json` contains `"plugin": ["superpowers@git+https://github.com/obra/superpowers.git"]` |
+| Integration | **Plugin reference** — project/global templates pin `superpowers@git+https://github.com/obra/superpowers.git#v6.2.0` |
 | Source | https://github.com/obra/superpowers |
 | Kit ships | Only a JSON reference; no source files from Superpowers are vendored |
 | License | MIT (per upstream) |
+| Version pin | `OPK_SUPERPOWERS_VERSION=6.2.0`; `audit-upstreams.py --check` rejects template drift |
 
 At OpenCode startup, the `opencode.json` plugin directive tells OpenCode to
 fetch Superpowers from GitHub. The kit does **not** bundle Superpowers skills
@@ -141,7 +142,7 @@ The legacy direct installer keeps its independent compatibility default; CLI upd
 | Integration | **Opt-in wrapper** — never vendored, calls official installer only on user request |
 | Source | https://github.com/open-gsd/gsd-core |
 | npm | `@opengsd/gsd-core` |
-| Installer | `npx @opengsd/gsd-core@1.6.1` |
+| Installer | `npx @opengsd/gsd-core@1.8.0` (reviewed central pin) |
 | Kit ships | `scripts/install-gsd-core.sh` — Linux wrapper |
 | Update path | `opk gsd` / `opk update-gsd` / `opk update-all --with-gsd` |
 | License | See npm package page |
@@ -149,7 +150,7 @@ The legacy direct installer keeps its independent compatibility default; CLI upd
 The kit does **not** bundle GSD Core. The wrapper scripts:
 
 1. Verify `node`, `npm`, and `npx` are on PATH.
-2. Print the planned `npx @opengsd/gsd-core@1.6.1` command.
+2. Print the planned `npx @opengsd/gsd-core@1.8.0` command.
 3. Ask for confirmation (or accept `--yes` / `-Y`).
 4. Forward to the official installer.
 
@@ -723,7 +724,7 @@ scaffolding, agents, and commands are designed for.
 
 ### Opt-in tools (GSD Core, MarkItDown, Supermemory, ECC-lite, Hermes-lite)
 
-- `opk gsd` / `opk update-gsd` — calls `npx @opengsd/gsd-core@1.6.1`.
+- `opk gsd` / `opk update-gsd` — calls `npx @opengsd/gsd-core@1.8.0`.
 - `opk update-all --with-gsd` — pulls kit + updates GSD.
 - `opk markitdown install` — re-runs `pipx install "markitdown[all]"`.
 - `opk supermemory install` — re-runs `npm install -g supermemory`.

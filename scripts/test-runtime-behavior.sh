@@ -4,6 +4,7 @@
 # Runs all behavioral/integration tests and reports results.
 # Exit 0 = all pass, exit 1 = any fail.
 # ============================================================================
+# shellcheck disable=SC2016
 set -uo pipefail
 
 SELF="${BASH_SOURCE[0]}"

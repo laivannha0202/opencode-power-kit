@@ -17,8 +17,8 @@ import sys
 from pathlib import Path
 
 
-def strip_jsonc(text: str) -> str:
-    """Loại bỏ comment // và /* */ (không hoàn hảo nhưng đủ cho config OPK)."""
+def _strip_comments(text: str) -> str:
+    """Strip // and /* */ comments from JSONC text."""
     out = []
     i = 0
     n = len(text)
@@ -67,6 +67,64 @@ def strip_jsonc(text: str) -> str:
         out.append(c)
         i += 1
     return "".join(out)
+
+
+def _strip_trailing_commas(text: str) -> str:
+    """Strip trailing commas before ``}`` or ``]`` in comment-free JSON."""
+    result: list[str] = []
+    i = 0
+    n = len(text)
+    in_string = False
+    escaped = False
+    container_stack: list[str] = []
+    while i < n:
+        c = text[i]
+        if in_string:
+            result.append(c)
+            if escaped:
+                escaped = False
+            elif c == "\\":
+                escaped = True
+            elif c == '"':
+                in_string = False
+            i += 1
+            continue
+        if c == '"':
+            in_string = True
+            result.append(c)
+            i += 1
+            continue
+        if c == "{":
+            container_stack.append("}")
+            result.append(c)
+            i += 1
+            continue
+        if c == "[":
+            container_stack.append("]")
+            result.append(c)
+            i += 1
+            continue
+        if c in ("}", "]"):
+            if container_stack and container_stack[-1] == c:
+                container_stack.pop()
+            result.append(c)
+            i += 1
+            continue
+        if c == ",":
+            peek = i + 1
+            while peek < n and text[peek] in " \t\r\n":
+                peek += 1
+            if peek < n and text[peek] in ("}", "]"):
+                i += 1
+                continue
+        result.append(c)
+        i += 1
+    return "".join(result)
+
+
+def strip_jsonc(text: str) -> str:
+    """Strip comments **and** trailing commas from JSONC text."""
+    return _strip_trailing_commas(_strip_comments(text))
 
 
 def mode_of(perm) -> str:

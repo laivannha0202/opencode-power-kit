@@ -125,12 +125,15 @@
 | `opk version` | Hiển thị phiên bản |
 | `opk doctor` | Chẩn đoán (read-only) |
 | `opk verify` | Kiểm tra project sẵn sàng chưa |
-| `opk global` | Cài đặt toàn cục (agents/commands/skills) |
-| `opk install` | Cài vào project hiện tại |
+| `opk global [--mode power\|safe] [--normalize-jsonc]` | Merge global config và managed-copy agents/commands/skills; JSONC comment fail closed nếu không opt-in |
+| `opk install [--normalize-jsonc]` | Cài vào project hiện tại; chỉ normalize JSONC comment khi flag explicit |
 | `opk fullstack` | Cài full-stack profile (Node/Nest/React/MySQL) |
 | `opk path` | Hiển thị đường dẫn kit |
 | `opk update` | Cập nhật kit từ git origin |
-| `opk mode show\|power\|safe` | Xem hoặc đổi mode trong `.opencode/opencode.json` của project hiện tại; backup config cũ, không sửa template mặc định |
+| `opk mode show\|power\|safe\|migrate [--normalize-jsonc]` | Dùng chính `pwd -P`, không đổi sang Git root; xem resolved mode, merge profile hoặc migrate legacy có backup |
+| `opk permissions doctor` | Resolve một lần trong chính `pwd -P`; báo config source, env override đã redact, effective permission và agent conflict |
+| `opk auto [args...]` | Chạy `opencode --auto` chỉ sau khi toàn bộ Power contract PASS trong cùng cwd |
+| `opk run-auto "prompt"` | Chạy `opencode run --auto` với prompt literal, không `eval` |
 | `opk safety-plugin status\|install` | Kiểm tra hoặc cài safety plugin vào project hiện tại |
 | `opk hermes audit [--dry-run\|--check\|--write\|--help]` | Audit Hermes-lite; mặc định `--check` read-only, chỉ `--write` ghi `docs/HERMES_AUDIT.md` |
 | `opk hermes status\|capsule\|off\|help` | Kiểm tra, tạo capsule, xem help hoặc move component Hermes đã biết vào config `.opk-trash/` |
@@ -142,3 +145,14 @@
 agent/command đã biết vào `.opk-trash/<integration>-<timestamp>/` bên trong
 OpenCode config để có thể khôi phục; file tùy chỉnh nằm ngoài các đường dẫn
 manifest đã biết không bị động tới.
+
+`opk mode power/safe` không thay model, provider, MCP, plugin, formatter hoặc
+LSP của project. `opk mode migrate` chỉ archive legacy config sau khi root
+config parse và verify thành công. Approval `always` chỉ sống trong session;
+Power profile trong `opencode.json` mới là cấu hình persistent.
+
+Power contract yêu cầu allow cho read/edit/bash wildcard/task/skill/glob/grep/list/lsp,
+không có global hoặc agent `ask`, deny cho `external_directory`/`doom_loop`, và
+đủ deny rule secret/destructive theo thứ tự OpenCode last-match-wins. `--auto`
+chỉ tác động session; deny vẫn có hiệu lực. Behavior này được kiểm tra với
+OpenCode `1.18.10`.

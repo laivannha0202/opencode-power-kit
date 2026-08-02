@@ -17,7 +17,7 @@ while (($#)); do
 done
 VERSION="${BMAD_METHOD_VERSION:-$OPK_BMAD_VERSION}"
 TARGET="$(pwd -P)"
-[[ -f "$TARGET/.opencode/opencode.json" ]] || { echo 'ERROR: run opk install first' >&2; exit 1; }
+[[ -f "$TARGET/opencode.json" ]] || { echo 'ERROR: run opk install first or opk mode migrate' >&2; exit 1; }
 CMD=(npx --yes "bmad-method@$VERSION" install --modules bmm --tools opencode --user-name "${OPK_USER_NAME:-${USER:-User}}" --communication-language Vietnamese --document-output-language Vietnamese --directory "$TARGET" -y)
 printf 'BMAD plan:'; printf ' %q' "${CMD[@]}"; printf '\n'
 [[ "$MODE" == dry-run ]] && exit 0

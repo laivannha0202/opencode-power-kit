@@ -1,6 +1,6 @@
 # OpenCode Power Kit
 
-[![Version](https://img.shields.io/badge/version-2.1.2-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-2.1.3-blue.svg)](./VERSION)
 [![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.10.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
@@ -180,7 +180,7 @@ người dùng hiểu rõ ranh giới.
 
 ---
 
-## Power Mode vs Safe Mode Selection v1.6.4
+## Power Mode và Safe Mode v2.1.3
 
 Cho phép chuyển giữa **Power Mode** (agent tự động chạy) và **Safe Mode** (agent hỏi trước khi ghi file/bash).
 
@@ -190,23 +190,54 @@ Cho phép chuyển giữa **Power Mode** (agent tự động chạy) và **Safe 
 # Xem mode hiện tại
 opk mode show
 
-# Chuyển sang Power Mode (permission: allow — mặc định)
+# Chuyển sang Power Mode với allow/deny contract đầy đủ
 opk mode power
 
 # Chuyển sang Safe Mode (permission object — read/glob/grep/skill=allow, write/edit/bash/task=ask)
 opk mode safe
+
+# Migrate config legacy có chủ đích
+opk mode migrate
+
+# JSONC có comment: explicit opt-in, backup trước khi normalize
+opk mode migrate --normalize-jsonc
+
+# Chẩn đoán config/permission đã resolve
+opk permissions doctor
+
+# Phiên unattended; chỉ chạy khi effective mode là POWER
+opk auto
+opk run-auto "Hoàn thành task và chạy test liên quan"
 ```
 
 ### File config
 
-`opk mode power` và `opk mode safe` chỉ ghi `.opencode/opencode.json` trong
-project hiện tại. Lệnh không sửa `templates/opencode.json` hoặc config mặc định
-toàn cục. Nếu config project đã tồn tại, OPK tạo bản sao
-`.opencode/opencode.json.bak.<timestamp>` trước khi thay thế.
+Project config hiệu lực nằm ở root `opencode.json`. `opk mode power` và
+`opk mode safe` chỉ merge permission/compaction/watcher do OPK quản lý; các key
+`model`, `provider`, `mcp`, `plugin`, `formatter`, `lsp` và key tùy chỉnh được
+giữ nguyên. Trước khi atomic rename, lệnh reject symlink và tạo backup
+`opencode.json.opk-bak.<timestamp>` cùng project.
+
+Project runtime là chính thư mục hiện tại sau `pwd -P`. `opk mode show`,
+`opk permissions doctor`, `opk auto` và `opk run-auto` đều resolve OpenCode
+trong thư mục đó; OPK không tự đổi sang Git top-level. Vì vậy nested project
+trong monorepo dùng config riêng của nested directory.
+
+OpenCode `1.18.10` vẫn đọc `.opencode/opencode.json` để tương thích, nhưng OPK
+coi đây là legacy. `opk mode migrate` backup cả root/legacy, merge theo rule
+root-wins, union plugin/instructions, verify root rồi move legacy vào
+`.opk-trash/legacy-config-<timestamp>/`. Rollback bằng backup `.opk-bak.*` hoặc
+file đã archive, không cần xóa file.
+
+JSONC có line/block comment được giữ nguyên mặc định bằng cách fail closed trước
+mọi ghi hoặc archive. Dùng `--normalize-jsonc` là đồng ý rõ ràng cho việc bỏ
+comment/normalize formatting; OPK tạo backup trước, ghi atomic, verify output,
+rồi mới archive legacy config. Strings chứa `https://`, `//` hoặc `/* */` không
+được nhận nhầm là comment.
 
 | File | Mode | Mục đích |
 |------|------|----------|
-| `templates/opencode.json` | Power (`permission: allow`) | Backward compatible — mặc định |
+| `templates/opencode.json` | Power (granular allow + deny) | Project install mặc định |
 | `templates/opencode.power.json` | Power | Dùng cho `opk mode power` |
 | `templates/opencode.safe.json` | Safe (permission object) | Dùng cho `opk mode safe` |
 
@@ -235,43 +266,49 @@ không xóa và không di chuyển file tùy chỉnh nằm ngoài các đường
 
 ---
 
-## Full Auto Permission Mode v1.6.0
+## Permission runtime
 
-OpenCode được cấu hình với `"permission": "allow"` — agent tự động
-chạy tool, sửa file, tạo file, chạy bash/test/build mà **không hỏi
-lại**. Phù hợp máy/project cá nhân, workflow nhanh hơn, ít prompt hơn.
+Power Mode cho phép thao tác read/edit/search/bash/task/skill bình thường trong
+project mà không tạo approval prompt. Đây không phải `allow` toàn bộ: secret
+reads, destructive commands, external directories và doom loops resolve thành
+`deny`.
+
+Một resolved config chỉ là POWER khi `read`, `edit`, bash wildcard, `task`,
+`skill`, `glob`, `grep`, `list` và `lsp` đều là `allow`; `webfetch`/`websearch`
+nếu OpenCode trả về thì cũng phải là `allow`; `external_directory` và
+`doom_loop` là `deny`; global/agent ask count đều bằng `0`; và toàn bộ deny rule
+secret/destructive bắt buộc vẫn thắng theo semantics "last matching rule wins"
+của OpenCode `1.18.10`. Nếu thiếu bất kỳ điều kiện nào, `opk auto` từ chối chạy.
 
 ### Cách hoạt động
 
-- **`templates/opencode.json`** dùng `"permission": "allow"` thay vì
-  permission object safe-mode.
-- Agent không bị OpenCode permission prompt cho edit/bash/file ops.
-- Safety rules được enforce bằng **instruction rules** (không phải
-  permission prompt):
-  - Không tự `git push` nếu user chưa yêu cầu.
-  - Không tự `git reset --hard`, `git clean -fd`.
-  - Không tự xóa file lớn/hàng loạt.
-  - Không tự sửa `.env`/secrets/token.
-  - Trước task lớn: `git status` + báo tóm tắt.
-  - Sau task: `git diff --stat` + báo cáo tiếng Việt.
+- `once` trong approval UI chỉ duyệt request hiện tại.
+- `always` chỉ tồn tại trong OpenCode session hiện tại, không ghi config vĩnh viễn.
+- Power/Safe profile trong root `opencode.json` là cấu hình vĩnh viễn.
+- `--auto` là chế độ theo session, tự duyệt rule `ask`; explicit `deny` vẫn được giữ.
+- Agent implementation kế thừa mode, nên `build-strong` không đổi edit/bash về `ask`.
+- `external_directory` và `doom_loop` là `deny`, nên bị block thay vì hỏi.
 
 ### Phù hợp cho
 
 - **Dự án local tin cậy** — máy cá nhân, dev máy thật.
 - **Người dùng có kinh nghiệm** — hiểu rủi ro và tự chịu trách nhiệm.
 
-### Vẫn bị hạn chế (bởi agent rules, không phải permission prompt)
+### Vẫn bị deny bởi permission
 
 - Git ops nguy hiểm (`reset --hard`, `clean -fd`, force push)
 - DB destructive ops (`DROP TABLE`, `TRUNCATE`)
 - Truy cập secret/env
 - Tất cả safety rules trong `templates/AGENTS.md`
 
-### ⚠️ Lưu ý an toàn: templates/opencode.json
+### Trusted external path
 
-File `templates/opencode.json` dùng **Power Mode** (`"permission": "allow"`).
-Đây là cấu hình mặc định phù hợp cho **local project tin cậy** — agent tự động
-chạy tool, sửa file, chạy lệnh mà không hỏi lại.
+External path bị deny mặc định. Nếu cần một path tin cậy, user có thể thêm
+allowlist hẹp vào config cá nhân, không allow toàn bộ home:
+
+```json
+{"permission":{"external_directory":{"*":"deny","~/trusted-sdk/**":"allow"}}}
+```
 
 **Nếu cần safety cao nhất**, dùng Safe Mode:
 
@@ -281,10 +318,14 @@ opk mode safe
 
 | Mode | Permission | Dùng khi |
 |------|-----------|----------|
-| **Power** (default) | `allow` | Local project tin cậy, cần tốc độ |
+| **Power** (default project template) | granular allow + deny | Local project tin cậy, cần automation |
 | **Safe** | Object (`read=allow`, `write=ask`, ...) | Project nhạy cảm hoặc muốn kiểm soát từng bước |
 
-Full safety score = Safe Mode. Power Mode = nhanh/mạnh nhưng chỉ cho project tin cậy.
+`opk global` dùng `~/.config/opencode/opencode.json` và managed-copy assets vào
+`~/.config/opencode/{agents,commands,skills,plugins}`. Không flag sẽ giữ mode đã
+có; config mới mặc định Safe. Chỉ `opk global --mode power` bật Power toàn cục.
+Installer bỏ export `OPENCODE_CONFIG_DIR` cũ trong managed RC block nhưng giữ
+custom export ngoài marker và cảnh báo conflict.
 
 ---
 
@@ -569,7 +610,7 @@ Phù hợp nhất cho project dùng: NestJS backend, React/Vite frontend, MySQL 
 | Safety | CommonJS safety plugin, opk-command-guard, cleanup-safe | Instruction-based, not sandbox; depends on model compliance | `node scripts/test-safety-plugin.mjs` |
 | Build verification | 22 behavioral contracts, eval regression suite | Contracts verify workflow, not model output quality | `bash evals/run.sh` |
 | Linux-only runtime | Bash entrypoints, shared platform guard, portable timeout fallback | Chỉ hỗ trợ Linux; không ship Windows runtime | `bash scripts/release-gate.sh` |
-| Third-party integration | Superpowers v6.1.1, BMAD updater pin 6.10.0, GSD 1.6.1, ECC, Hermes, RAG, Headroom, AgentMemory | Opt-in only; no auto-enable; user installs per dependency | `python3 scripts/audit-upstreams.py --check` |
+| Third-party integration | Superpowers v6.2.0, BMAD updater pin 6.10.0, GSD 1.8.0, ECC, Hermes, RAG, Headroom, AgentMemory | Opt-in only; no auto-enable; user installs per dependency | `python3 scripts/audit-upstreams.py --check` |
 
 ---
 
@@ -1223,7 +1264,7 @@ tránh lỗi phổ biến (edit quá nhiều file, chạy lệnh destructive, pr
 ## Xử lý sự cố
 
 - **Release gate fail?** Chạy `bash scripts/release-gate.sh`, sửa command bị đánh dấu FAIL rồi chạy lại.
-- **Không phải Linux?** Bản v2.1.2 chỉ hỗ trợ Linux và trả exit code `126` trên nền tảng khác.
+- **Không phải Linux?** Bản v2.1.3 chỉ hỗ trợ Linux và trả exit code `126` trên nền tảng khác.
 - **Format validation fail?** Chạy `python3 scripts/validate-formatting.py` để biết chi tiết.
 - **Cần giúp đỡ?** Chạy `opk doctor` để chẩn đoán, hoặc xem [docs/](./docs/) để biết thêm chi tiết.
 

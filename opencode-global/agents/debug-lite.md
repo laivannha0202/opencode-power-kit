@@ -4,15 +4,15 @@ mode: subagent
 permission:
   edit: deny
   bash:
-    "*": ask
+    "*": deny
+    "pwd": allow
+    "ls *": allow
     "git status*": allow
     "git diff*": allow
     "git log*": allow
     "git show*": allow
     "rg *": allow
     "fd *": allow
-    "ls *": allow
-    "pwd": allow
     "which *": allow
 ---
 

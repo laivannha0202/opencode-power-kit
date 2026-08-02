@@ -133,7 +133,7 @@ print_next_steps() {
 	echo ""
 	if [ "$did_global" = true ]; then
 		info "Bước tiếp theo:"
-		info "  1) source ~/.bashrc          # nạp OPENCODE_CONFIG_DIR + PATH"
+		info "  1) source ~/.bashrc          # nạp OPK_KIT_DIR + PATH"
 		info "  2) opk help                  # xem lệnh opk CLI"
 		info "  3) opencode                  # mở OpenCode, thử /smart-scan"
 	else

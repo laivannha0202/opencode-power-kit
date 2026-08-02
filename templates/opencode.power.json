@@ -1,38 +1,32 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "plugin": [
-    "superpowers@git+https://github.com/obra/superpowers.git#v6.1.1"
-  ],
-  "instructions": [
-    "AGENTS.md",
-    "OPENCODE.md"
+    "superpowers@git+https://github.com/obra/superpowers.git#v6.2.0"
   ],
   "permission": {
     "*": "allow",
-    "read": "allow",
-    "grep": "allow",
-    "glob": "allow",
-    "skill": "allow",
-    "search": "allow",
-    "write": "allow",
+    "read": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      "*secret*": "deny",
+      "*private-key*": "deny",
+      "*.pem": "deny",
+      "*.key": "deny"
+    },
     "edit": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "list": "allow",
+    "skill": "allow",
+    "task": "allow",
+    "lsp": "allow",
+    "webfetch": "allow",
+    "websearch": "allow",
+    "external_directory": "deny",
+    "doom_loop": "deny",
     "bash": {
       "*": "allow",
-      "pwd": "allow",
-      "ls *": "allow",
-      "git status*": "allow",
-      "git diff*": "allow",
-      "git log*": "allow",
-      "rg *": "allow",
-      "fd *": "allow",
-      "cat *": "allow",
-      "npm test*": "allow",
-      "npm run test*": "allow",
-      "npm run lint*": "allow",
-      "npm run typecheck*": "allow",
-      "python3 scripts/validate-opencode-pack.py*": "allow",
-      "bash verify.sh*": "allow",
-      "bash doctor.sh*": "allow",
       "rm -rf*": "deny",
       "rm -fr*": "deny",
       "sudo rm -rf*": "deny",
@@ -42,11 +36,35 @@
       "git push --force*": "deny",
       "git push -f*": "deny",
       "*DROP TABLE*": "deny",
-      "*TRUNCATE TABLE*": "deny",
+      "*DROP DATABASE*": "deny",
+      "*TRUNCATE*": "deny",
       "*DELETE FROM*": "deny",
       "curl *| *sh*": "deny",
-      "wget *| *sh*": "deny"
-    },
-    "task": "allow"
+      "curl *| *bash*": "deny",
+      "wget *| *sh*": "deny",
+      "wget *| *bash*": "deny"
+    }
+  },
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "reserved": 10000
+  },
+  "watcher": {
+    "ignore": [
+      ".git/**",
+      "node_modules/**",
+      "dist/**",
+      "build/**",
+      "coverage/**",
+      ".next/**",
+      ".nuxt/**",
+      ".turbo/**",
+      ".cache/**",
+      "vendor/**",
+      "target/**",
+      ".opk-trash/**",
+      ".opk-checkpoints/**"
+    ]
   }
 }

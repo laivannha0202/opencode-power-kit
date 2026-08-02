@@ -72,9 +72,9 @@ esac
 validate_destination
 
 # --- Check project dir ---
-if [[ ! -f "$PROJECT_DIR/.opencode/opencode.json" && ! -f "$PROJECT_DIR/AGENTS.md" && ! -f "$PROJECT_DIR/OPENCODE.md" ]]; then
+if [[ ! -f "$PROJECT_DIR/opencode.json" && ! -f "$PROJECT_DIR/AGENTS.md" && ! -f "$PROJECT_DIR/OPENCODE.md" ]]; then
 	echo "install-safety-plugin: CẢNH BÁO — $PROJECT_DIR có vẻ không phải project OpenCode." >&2
-	echo "  (Không tìm thấy .opencode/opencode.json, AGENTS.md, hay OPENCODE.md)" >&2
+	echo "  (Không tìm thấy opencode.json, AGENTS.md, hay OPENCODE.md)" >&2
 	if [[ "$SKIP_CONFIRM" -eq 0 ]]; then
 		read -r -p "  Tiếp tục cài safety plugin? [y/N] " reply
 		case "$reply" in

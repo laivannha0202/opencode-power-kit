@@ -41,11 +41,11 @@ PROFILES_DIR = KIT_ROOT / "profiles"
 TEMPLATES_DIR = KIT_ROOT / "templates"
 
 # ─── version compliance constants ───────────────────────────────────
-EXPECTED_VERSION = "2.1.2"
+EXPECTED_VERSION = "2.1.3"
 
 AUTO_ROUTER_NEEDLES: tuple[tuple[str, str], ...] = (
-    ("templates/AGENTS.md", "Natural Language Auto Router"),
-    ("templates/OPENCODE.md", "Natural Language Auto Router"),
+    ("templates/AGENTS.md", "Lightweight Routing"),
+    ("templates/OPENCODE.md", "Runtime instructions live in root `AGENTS.md`"),
 )
 
 CHANGELOG_NEEDLES: tuple[str, ...] = (
@@ -130,7 +130,7 @@ def validate_cli_help_contract() -> list[str]:
         return [f"bin/opk help exited {result.returncode}: {detail}"]
 
     required_families = (
-        ("mode", r"\bopk\s+mode\s+\[show\s*\|\s*power\s*\|\s*safe\]"),
+        ("mode", r"\bopk\s+mode\s+\[show\s*\|\s*power\s*\|\s*safe\s*\|\s*migrate\]"),
         ("safety-plugin", r"\bopk\s+safety-plugin\s+status\s*\|\s*install\s+\[--yes\]"),
         ("bmad", r"\bopk\s+bmad\s+status\s*\|\s*update\s+\[--stable\s*\|\s*--next\s*\|\s*--version\s+X\.Y\.Z\]"),
         ("gsd", r"\bopk\s+gsd\s+\[status\s*\|\s*install\]"),
@@ -319,8 +319,8 @@ def validate_version() -> list[str]:
         else:
             print(f"  warn: missing optional file: {rel}")
 
-    # Natural Language Auto Router presence
-    print("[Natural Language Auto Router]")
+    # Lightweight router and single instruction-source contract.
+    print("[Lightweight Router]")
     for rel, needle in AUTO_ROUTER_NEEDLES:
         p = KIT_ROOT / rel
         if p.is_file() and needle in p.read_text(encoding="utf-8"):
@@ -368,13 +368,12 @@ def validate_version() -> list[str]:
     else:
         errors.append("templates/opencode.json missing")
 
-    # v1.6.0: Vietnamese Language Lock
-    print("[Vietnamese Language Lock]")
+    # Runtime language and instruction-source contract.
+    print("[Language And Instruction Source]")
     for rel, needle in (
-        ("templates/AGENTS.md", "Vietnamese Language Lock"),
-        ("templates/AGENTS.md", "Full Auto Permission Mode"),
-        ("templates/OPENCODE.md", "Vietnamese Language Lock"),
-        ("templates/OPENCODE.md", "Full Auto Permission Mode"),
+        ("templates/AGENTS.md", "## Language"),
+        ("templates/AGENTS.md", "## Power And Safe Modes"),
+        ("templates/OPENCODE.md", "intentionally not listed"),
     ):
         p = KIT_ROOT / rel
         if p.is_file() and needle in p.read_text(encoding="utf-8"):
@@ -593,7 +592,7 @@ def validate_version() -> list[str]:
         ("templates/opencode.json", "git clean -f"),
         ("templates/opencode.json", "git push --force"),
         ("templates/opencode.json", "DROP TABLE"),
-        ("templates/opencode.json", "TRUNCATE TABLE"),
+        ("templates/opencode.json", "TRUNCATE"),
         ("templates/opencode.power.json", "rm -rf"),
         ("templates/opencode.power.json", "git reset --hard"),
         ("templates/opencode.safe.json", "rm -rf"),
@@ -706,7 +705,7 @@ def validate_version() -> list[str]:
     # v2.0.0: install-global.sh has Taste suggestion hint
     print("[v2.0.0 Taste suggestion hint in install-global]")
     hint_checks = [
-        ("install-global.sh", "opk taste install"),
+        ("scripts/install-global.py", "opk taste install"),
     ]
     for rel, needle in hint_checks:
         p = KIT_ROOT / rel

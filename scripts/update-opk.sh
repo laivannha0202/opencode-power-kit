@@ -56,7 +56,10 @@ refresh_markitdown(){ local a=(--yes --upgrade); ((DRY_RUN)) && a=(--dry-run --u
 refresh_supermemory(){ local a=(--yes --upgrade); ((DRY_RUN)) && a=(--dry-run --upgrade); SUPERMEMORY_PACKAGE="$OPK_SUPERMEMORY_PACKAGE" bash "$KIT_DIR/scripts/install-supermemory.sh" "${a[@]}"; }
 refresh_ecc(){ local a=(--yes --refresh); ((DRY_RUN)) && a=(--dry-run --refresh); bash "$KIT_DIR/scripts/install-ecc-lite.sh" "${a[@]}"; }
 refresh_superpowers(){
-  local cache="$HOME/.cache/opencode/packages" trash="$KIT_DIR/.opk-trash/superpowers-$(date +%Y%m%d-%H%M%S)"; [[ -d "$cache" ]] || { log 'Superpowers cache absent'; return; }
+  local cache trash
+  cache="$HOME/.cache/opencode/packages"
+  trash="$KIT_DIR/.opk-trash/superpowers-$(date +%Y%m%d-%H%M%S)"
+  [[ -d "$cache" ]] || { log 'Superpowers cache absent'; return; }
   shopt -s nullglob; local paths=("$cache"/superpowers*); shopt -u nullglob; ((${#paths[@]})) || { log 'Superpowers cache absent'; return; }
   if ((DRY_RUN)); then for p in "${paths[@]}"; do log "DRY-RUN: move $p -> $trash/"; done; return; fi
   mkdir -p "$trash"; for p in "${paths[@]}"; do mv "$p" "$trash/"; done

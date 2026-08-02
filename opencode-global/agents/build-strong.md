@@ -1,20 +1,6 @@
 ---
 description: Fullstack autopilot — tự động spec → plan → build slice → verify, an toàn, kiểm soát contract FE/BE/DB
 mode: all
-permission:
-  edit: ask
-  bash:
-    "*": ask
-    "git status*": allow
-    "git diff*": allow
-    "git log*": allow
-    "git show*": allow
-    "rg *": allow
-    "fd *": allow
-    "ls *": allow
-    "pwd": allow
-    "which *": allow
-    "cat *": allow
 ---
 
 > **Vietnamese Language Lock:** Luôn trả lời user bằng tiếng Việt.
@@ -25,8 +11,9 @@ permission:
 >
 > Xem thêm: `templates/AGENTS.md` → Vietnamese Language Lock.
 
-Bạn là fullstack-autopilot agent. Tự động xử lý task full-stack từ đầu đến cuối.
-Luôn tuân thủ quy trình dưới đây cho MỌI task, không skip bước.
+Bạn là fullstack-autopilot agent cho task nhiều layer hoặc cross-module.
+Task một module và tối đa 2 file phải ở main/build agent với targeted test;
+không dùng pipeline này cho task nhỏ.
 
 ---
 

@@ -31,6 +31,7 @@ for arg in "$@"; do
       ;;
   esac
 done
+: "$VERSION" "$FIX_MODE"
 
 # --- Helpers ---
 pass()  { echo "  ✅ $*"; }
@@ -168,16 +169,24 @@ done
 
 # --- Section 6: Project state (if in a project) ---
 section "Project State (current dir)"
-if [ -f ".opencode/opencode.json" ]; then
-  pass ".opencode/opencode.json exists"
-  # Check permission mode
-  if python3 -c "import json,sys; d=json.load(sys.open('.opencode/opencode.json')); p=d.get('permission'); sys.exit(0 if p=='allow' else 1)" 2>/dev/null; then
+if [ -f "opencode.json" ] && [ ! -f "opencode.jsonc" ]; then
+  pass "opencode.json exists"
+  if python3 -c "import json,sys; d=json.load(sys.open('opencode.json')); p=d.get('permission'); sys.exit(0 if p=='allow' else 1)" 2>/dev/null; then
     info "Mode: POWER (permission: allow)"
-  elif [ -f ".opencode/opencode.json" ]; then
+  else
     info "Mode: SAFE or CUSTOM (permission object)"
   fi
+elif [ -f "opencode.jsonc" ] && [ ! -f "opencode.json" ]; then
+  pass "opencode.jsonc exists"
+  if python3 -c "import json,sys; sys.path.insert(0,'scripts'); from detect_mode import strip_jsonc; d=json.loads(strip_jsonc(open('opencode.jsonc').read())); p=d.get('permission'); sys.exit(0 if p=='allow' else 1)" 2>/dev/null; then
+    info "Mode: POWER (permission: allow)"
+  else
+    info "Mode: SAFE or CUSTOM (permission object)"
+  fi
+elif [ -f "opencode.json" ] && [ -f "opencode.jsonc" ]; then
+  warn "CONFLICT: both opencode.json and opencode.jsonc exist"
 else
-  info ".opencode/opencode.json not found (not in project?)"
+  info "No config found (not in project?)"
 fi
 
 if [ -f ".opencode/plugins/opk-safety-guard.js" ]; then

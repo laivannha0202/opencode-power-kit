@@ -103,7 +103,7 @@ export HOME="$TMP/home"
 export OPENCODE_CONFIG_DIR="$HOME/.config/opencode"
 export OPK_KIT_DIR="$KIT_DIR"
 TEST_PROJECT="$TMP/project"
-PROJECT_CONFIG="$TEST_PROJECT/.opencode/opencode.json"
+PROJECT_CONFIG="$TEST_PROJECT/opencode.json"
 mkdir -p "$OPENCODE_CONFIG_DIR" "$TEST_PROJECT/.opencode"
 printf '# CLI contract fixture\n' >"$TEST_PROJECT/AGENTS.md"
 
@@ -203,10 +203,10 @@ printf 'CLI contracts\n'
 source_snapshot_before="$(snapshot_source_tree)"
 
 version_output="$($OPK version 2>&1)"
-assert_contains "version is 2.1.2" "$version_output" "opk 2.1.2"
+assert_contains "version is 2.1.3" "$version_output" "opk 2.1.3"
 
 help_output="$($OPK help 2>&1)"
-for entry in "opk mode" "opk safety-plugin" "opk hermes" "opk ecc" "opk supermemory"; do
+for entry in "opk mode" "opk permissions" "opk auto" "opk run-auto" "opk safety-plugin" "opk hermes" "opk ecc" "opk supermemory"; do
   assert_contains "help lists $entry" "$help_output" "$entry"
 done
 
@@ -218,7 +218,7 @@ assert_nonzero "project safety denies /var/tmp tree" \
 cp "$KIT_DIR/templates/opencode.power.json" "$PROJECT_CONFIG"
 cp "$KIT_DIR/templates/opencode.power.json" "$TMP/power-template.before"
 cp "$KIT_DIR/templates/opencode.safe.json" "$TMP/safe-template.before"
-printf 'global config sentinel\n' >"$OPENCODE_CONFIG_DIR/opencode.json"
+printf '{"$schema":"https://opencode.ai/config.json","share":"manual"}\n' >"$OPENCODE_CONFIG_DIR/opencode.json"
 
 pushd "$TEST_PROJECT" >/dev/null || exit 1
 assert_success "mode show succeeds" "$OPK" mode show
@@ -231,7 +231,7 @@ else
   fail "mode safe installs project-local safe config"
 fi
 shopt -s nullglob
-mode_backups=("$PROJECT_CONFIG".bak.*)
+mode_backups=("$PROJECT_CONFIG".opk-bak.*)
 shopt -u nullglob
 if ((${#mode_backups[@]} >= 1)) && cmp -s "${mode_backups[0]}" "$KIT_DIR/templates/opencode.power.json"; then
   ok "mode safe backs up previous project-local config"
@@ -241,6 +241,10 @@ fi
 assert_success "mode show after safe succeeds" "$OPK" mode show
 mode_output="$LAST_OUTPUT"
 assert_contains "mode show reports SAFE" "$mode_output" "SAFE"
+assert_success "permissions doctor succeeds in Safe Mode" "$OPK" permissions doctor
+assert_contains "permissions doctor reports SAFE" "$LAST_OUTPUT" "Mode: SAFE"
+assert_contains "permissions doctor redacts inline config" "$LAST_OUTPUT" "OPENCODE_CONFIG_CONTENT: unset"
+assert_nonzero "opk auto refuses Safe Mode" "$OPK" auto --help
 sleep 1
 assert_success "mode power succeeds" "$OPK" mode power >/dev/null
 if cmp -s "$PROJECT_CONFIG" "$KIT_DIR/templates/opencode.power.json"; then
@@ -249,7 +253,7 @@ else
   fail "mode power installs project-local power config"
 fi
 shopt -s nullglob
-mode_backups=("$PROJECT_CONFIG".bak.*)
+mode_backups=("$PROJECT_CONFIG".opk-bak.*)
 shopt -u nullglob
 safe_backup=false
 for backup in "${mode_backups[@]}"; do
@@ -260,7 +264,31 @@ if ((${#mode_backups[@]} >= 2)) && [[ "$safe_backup" == true ]]; then
 else
   fail "mode power backs up project-local safe config"
 fi
-if [[ "$(cat "$OPENCODE_CONFIG_DIR/opencode.json")" == "global config sentinel" ]]; then
+assert_success "permissions doctor succeeds in Power Mode" "$OPK" permissions doctor
+assert_contains "permissions doctor reports POWER" "$LAST_OUTPUT" "Mode: POWER"
+assert_success "opk auto delegates supported --auto help" "$OPK" auto --help
+
+REAL_OPENCODE="$(command -v opencode)"
+FAKE_BIN="$TMP/fake-opencode-bin"
+AUTO_CAPTURE="$TMP/run-auto.args"
+mkdir -p "$FAKE_BIN"
+cat >"$FAKE_BIN/opencode" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+case "${1:-}" in
+  debug|--help|--version) exec "$REAL_OPENCODE" "$@" ;;
+esac
+printf '%s\n' "$@" >"$AUTO_CAPTURE"
+EOF
+chmod +x "$FAKE_BIN/opencode"
+export REAL_OPENCODE AUTO_CAPTURE
+assert_success "opk run-auto preserves prompt quoting" env PATH="$FAKE_BIN:$PATH" "$OPK" run-auto 'prompt; $(touch should-not-run)'
+if [[ "$(cat "$AUTO_CAPTURE")" == $'run\n--auto\nprompt; $(touch should-not-run)' && ! -e "$TEST_PROJECT/should-not-run" ]]; then
+  ok "opk run-auto passes literal prompt without eval"
+else
+  fail "opk run-auto changed or evaluated prompt"
+fi
+if [[ "$(cat "$OPENCODE_CONFIG_DIR/opencode.json")" == '{"$schema":"https://opencode.ai/config.json","share":"manual"}' ]]; then
   ok "mode commands ignore OPENCODE_CONFIG_DIR"
 else
   fail "mode commands ignore OPENCODE_CONFIG_DIR"
@@ -272,6 +300,10 @@ else
   fail "mode commands leave templates unchanged"
 fi
 
+# mode power installs the safety plugin as a side effect; remove it to test
+# the initial-status → install → installed-status flow cleanly.
+rm -f .opencode/plugins/opk-safety-guard.js
+rmdir .opencode/plugins 2>/dev/null || true
 assert_success "safety-plugin initial status succeeds" "$OPK" safety-plugin status
 safety_output="$LAST_OUTPUT"
 assert_contains "safety-plugin initially not installed" "$safety_output" "NOT_INSTALLED"

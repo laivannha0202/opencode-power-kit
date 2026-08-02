@@ -1,12 +1,12 @@
 # Danh sách Scripts
 
-OpenCode Power Kit v2.1.2 chỉ hỗ trợ Linux.
+OpenCode Power Kit v2.1.3 chỉ hỗ trợ Linux.
 
 | Script | Mục đích |
 |--------|----------|
 | `bootstrap.sh` | Cài đặt một lệnh cho Linux |
 | `setup.sh` | Menu và entrypoint setup đầy đủ |
-| `install-global.sh` | Cài agents, commands, skills và CLI toàn cục |
+| `install-global.sh` | Wrapper Linux cho global config/assets installer an toàn |
 | `install.sh` | Cài cấu hình OPK vào project hiện tại |
 | `verify.sh` | Kiểm tra cấu trúc, tính năng và validator |
 | `doctor.sh` | Chẩn đoán read-only |
@@ -20,7 +20,19 @@ OpenCode Power Kit v2.1.2 chỉ hỗ trợ Linux.
 | `scripts/integration-test.sh` | Kiểm thử cài đặt end-to-end offline |
 | `scripts/test-runtime-behavior.sh` | Behavioral regression suite |
 | `scripts/test-cli-contracts.sh` | Kiểm thử runtime contract của CLI, mode, safety plugin, integrations và checker |
-| `scripts/test-opk-mode.sh` | Kiểm thử detect mode và ghi config project-local có backup |
+| `scripts/test-opk-mode.sh` | Kiểm thử exact cwd/nested monorepo, mode, auto gate và JSONC CLI |
+| `scripts/test-opk-permissions.sh` | Table-driven strict Power/Safe/Custom/Broken contract tests |
+| `scripts/test-agent-permission-contracts.sh` | Fixture tests cho quoted/unquoted/inline YAML permission |
+| `scripts/merge-opk-project.py` | Merge root config, fail closed JSONC, atomic write, rollback và migrate legacy |
+| `scripts/test-project-installer-path-safety.sh` | Test path safety của project installer: symlink rejection, dirfd atomic write, TOCTOU race và transaction rollback |
+| `scripts/test-opencode-jsonc-compatibility.sh` | Test JSONC scanner (comment/trailing comma), conflict `.json`/`.jsonc`, `--normalize-jsonc` và CLI contracts |
+| `scripts/check-project-installer-path-safety.py` | Static validator: scan `merge-opk-project.py` chặn open/rmtree/makedirs/shell unsafe |
+| `scripts/install-global.py` | Merge global config dưới installer lock, fail closed JSONC, managed assets và RC marker |
+| `scripts/opk-permissions.py` | Resolve đúng `--project-dir`, kiểm tra strict Power contract và không in secret |
+| `scripts/check-opencode-config-paths.py` | Chặn production code dùng legacy config như active path |
+| `scripts/check-agent-permission-contracts.py` | Validate agent ask/edit/bash contracts |
+| `scripts/test-global-installer.sh` | Test preservation, managed manifest, RC migration, idempotency và symlink rejection |
+| `scripts/test-opencode-resolved-config.sh` | Integration test bằng OpenCode thật với HOME/project fixture |
 | `scripts/validate-formatting.py` | Kiểm tra format và Linux-only layout |
 | `scripts/validate-opencode-pack.py` | Kiểm tra agents, commands, skills và packaging |
 | `scripts/check-cli-file-references.py` | Kiểm tra các file literal mà `bin/opk` tham chiếu đều tồn tại hoặc được guard |

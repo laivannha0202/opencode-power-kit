@@ -26,7 +26,6 @@ pass()  { echo "  ✅ $*"; }
 warn()  { echo "  ⚠️  $*"; warnings=$((warnings + 1)); }
 fail()  { echo "  ❌ $*"; errors=$((errors + 1)); }
 info()  { echo "  ℹ️  $*"; }
-skip()  { echo "  ⏭️  $*"; }
 section() { echo ""; echo "=== $* ==="; }
 
 echo "Release Gate — checking readiness for v$VERSION"
@@ -145,8 +144,11 @@ fi
 
 # --- 6. Scripts ---
 section "6. Scripts"
-for s in detect-mode.py merge-opk-project.py validate-opencode-pack.py \
-         check-cli-file-references.py test-cli-contracts.sh audit-hermes.sh; do
+for s in detect-mode.py merge-opk-project.py install-global.py opk-permissions.py \
+         validate-opencode-pack.py check-cli-file-references.py \
+         check-opencode-config-paths.py check-agent-permission-contracts.py \
+         test-cli-contracts.sh test-global-installer.sh \
+         test-opencode-resolved-config.sh audit-hermes.sh; do
   if [ -f "$KIT_DIR/scripts/$s" ]; then
     pass "scripts/$s exists"
   else
@@ -197,7 +199,9 @@ fi
 
 # --- 9. Tests exist ---
 section "9. Test Coverage"
-for s in test-permission-rules.py test-safety-plugin.mjs test-opk-mode.sh test-installer-preservation.sh test-timeout.sh test-runtime-behavior.sh; do
+for s in test-permission-rules.py test-safety-plugin.mjs test-opk-mode.sh \
+         test-installer-preservation.sh test-global-installer.sh \
+         test-opencode-resolved-config.sh test-timeout.sh test-runtime-behavior.sh; do
   if [ -f "$KIT_DIR/scripts/$s" ]; then
     pass "scripts/$s exists"
   else
@@ -309,6 +313,12 @@ run_cmd "validate-opencode-pack" \
 run_cmd "check-cli-file-references" \
   "python3 $KIT_DIR/scripts/check-cli-file-references.py"
 
+run_cmd "check-opencode-config-paths" \
+  "python3 $KIT_DIR/scripts/check-opencode-config-paths.py"
+
+run_cmd "check-agent-permission-contracts" \
+  "python3 $KIT_DIR/scripts/check-agent-permission-contracts.py"
+
 # --- Permission & Safety Tests ---
 echo ""
 echo "--- Permission & Safety Tests ---"
@@ -324,6 +334,12 @@ echo "--- Shell Tests ---"
 run_cmd "test-opk-mode" \
   "bash $KIT_DIR/scripts/test-opk-mode.sh"
 
+run_cmd "test-opk-permissions" \
+  "bash $KIT_DIR/scripts/test-opk-permissions.sh"
+
+run_cmd "test-agent-permission-contracts" \
+  "bash $KIT_DIR/scripts/test-agent-permission-contracts.sh"
+
 run_cmd "test-cli-contracts" \
   "bash $KIT_DIR/scripts/test-cli-contracts.sh"
 
@@ -333,11 +349,29 @@ run_cmd "audit-hermes --check" \
 run_cmd "test-installer-preservation" \
   "bash $KIT_DIR/scripts/test-installer-preservation.sh"
 
+run_cmd "test-global-installer" \
+  "bash $KIT_DIR/scripts/test-global-installer.sh"
+
+run_cmd "test-opencode-resolved-config" \
+  "bash $KIT_DIR/scripts/test-opencode-resolved-config.sh"
+
 run_cmd "test-timeout" \
   "bash $KIT_DIR/scripts/test-timeout.sh"
 
 run_cmd "test-runtime-behavior" \
   "bash $KIT_DIR/scripts/test-runtime-behavior.sh"
+
+# --- Path Safety & JSONC Tests ---
+echo ""
+echo "--- Path Safety & JSONC Tests ---"
+run_cmd "test-project-installer-path-safety" \
+  "bash $KIT_DIR/scripts/test-project-installer-path-safety.sh"
+
+run_cmd "test-opencode-jsonc-compatibility" \
+  "bash $KIT_DIR/scripts/test-opencode-jsonc-compatibility.sh"
+
+run_cmd "check-project-installer-path-safety" \
+  "python3 $KIT_DIR/scripts/check-project-installer-path-safety.py"
 
 # --- Full Verification ---
 echo ""

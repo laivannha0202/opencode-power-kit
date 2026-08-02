@@ -5,6 +5,81 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.3] - 2026-08-01
+
+### Fixed
+
+- Project config is now installed and managed at root `opencode.json`, the
+  documented OpenCode project location.
+- Power-compatible agents no longer override edit/bash permissions with `ask`.
+- Global install no longer points `OPENCODE_CONFIG_DIR` at a mutable kit checkout.
+- Permission diagnostics capture large resolved configs without the OpenCode
+  pipe truncation that previously produced a false BROKEN result.
+- Permission diagnostics and unattended wrappers now resolve exactly the current
+  working directory instead of substituting the Git top-level.
+- Power classification now requires the complete allow/deny/no-ask contract,
+  including agent overrides and deny rule precedence.
+- Project and global JSONC rewrites now fail closed unless
+  `--normalize-jsonc` is explicit; normalization creates a recovery backup.
+- Global installs now serialize through a config-directory `flock`.
+- Project installer rejects symlinked config, template and plugin targets
+  before any read or write (fail closed).
+- All project config writes are atomic via directory-fd (`O_DIRECTORY` +
+  `O_NOFOLLOW`) with inode verification, temp reservation and `fsync`.
+- Project install is transactional: a journal records pre-write state and
+  rolls back in reverse order (restore bytes/mode or remove new files) on
+  any failure.
+- Managed Markdown blocks validate markers before writing (duplicate,
+  mismatched or reversed markers are rejected).
+- Active config discovery supports both `opencode.json` and `opencode.jsonc`;
+  conflict when both exist is rejected before mutation.
+- Legacy archive preserves the original filename under
+  `.opk-trash/legacy-config-<timestamp>/`.
+
+### Changed
+
+- Power Mode uses granular allow rules with explicit deny rules for secrets,
+  destructive commands, external directories and doom loops.
+- Global assets use managed copies under `~/.config/opencode/` with a manifest;
+  custom collisions are preserved.
+- `AGENTS.md` is the single auto-discovered runtime instruction source;
+  `OPENCODE.md` is a short reference and is not explicitly loaded.
+- Compaction pruning and noisy-directory watcher ignores are enabled.
+- Small tasks remain on the main/build agent; build-strong/BMAD/subagents are
+  reserved for larger scopes.
+- Superpowers runtime references now match the reviewed central `v6.2.0` pin.
+
+### Migration
+
+- `opk mode migrate` parses JSON/JSONC, backs up root and legacy configs,
+  preserves custom keys, unions plugin/instruction lists, verifies root output,
+  then archives legacy config under `.opk-trash/legacy-config-<timestamp>/`.
+- Commented JSONC is not rewritten by default. Explicit normalization backs up
+  the original, verifies the root output, and only then archives legacy config.
+- JSONC scanner (`_strip_comments` + `_strip_trailing_commas`) preserves strings
+  verbatim; `//` or `/* */` inside strings is not treated as a comment.
+- `--normalize-jsonc` is rejected on `mode show`, duplicated flags are rejected,
+  and unknown arguments are rejected on `mode power`.
+- Global RC managed blocks retain `OPK_KIT_DIR` and PATH but remove the old
+  managed `OPENCODE_CONFIG_DIR` export. Custom exports outside markers remain.
+
+### Compatibility
+
+- Linux-only, model-agnostic and provider-agnostic.
+- Existing model, provider, MCP, plugin, formatter, LSP and unknown keys are
+  preserved during merge; no OpenAI or Anthropic key is required.
+- Local Linux release validation remains authoritative; no GitHub Actions added.
+
+### Validation
+
+- Added real `opencode debug config` integration coverage, config-path and agent
+  permission validators, global installer contracts, migration race/symlink
+  tests, and auto-wrapper quoting tests.
+- New `test-project-installer-path-safety.sh` (46 checks) and
+  `test-opencode-jsonc-compatibility.sh` (55 checks) suites, plus the
+  `check-project-installer-path-safety.py` static validator wired into
+  `release-gate.sh` (target ≥26 checks).
+
 ## [2.1.2]
 
 ### Fixed
