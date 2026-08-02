@@ -24,6 +24,9 @@ OpenCode Power Kit v2.1.3 chỉ hỗ trợ Linux.
 | `scripts/test-opk-permissions.sh` | Table-driven strict Power/Safe/Custom/Broken contract tests |
 | `scripts/test-agent-permission-contracts.sh` | Fixture tests cho quoted/unquoted/inline YAML permission |
 | `scripts/merge-opk-project.py` | Merge root config, fail closed JSONC, atomic write, rollback và migrate legacy |
+| `scripts/test-project-installer-path-safety.sh` | Test path safety của project installer: symlink rejection, dirfd atomic write, TOCTOU race và transaction rollback |
+| `scripts/test-opencode-jsonc-compatibility.sh` | Test JSONC scanner (comment/trailing comma), conflict `.json`/`.jsonc`, `--normalize-jsonc` và CLI contracts |
+| `scripts/check-project-installer-path-safety.py` | Static validator: scan `merge-opk-project.py` chặn open/rmtree/makedirs/shell unsafe |
 | `scripts/install-global.py` | Merge global config dưới installer lock, fail closed JSONC, managed assets và RC marker |
 | `scripts/opk-permissions.py` | Resolve đúng `--project-dir`, kiểm tra strict Power contract và không in secret |
 | `scripts/check-opencode-config-paths.py` | Chặn production code dùng legacy config như active path |

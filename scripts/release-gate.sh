@@ -370,6 +370,9 @@ run_cmd "test-project-installer-path-safety" \
 run_cmd "test-opencode-jsonc-compatibility" \
   "bash $KIT_DIR/scripts/test-opencode-jsonc-compatibility.sh"
 
+run_cmd "check-project-installer-path-safety" \
+  "python3 $KIT_DIR/scripts/check-project-installer-path-safety.py"
+
 # --- Full Verification ---
 echo ""
 echo "--- Full Verification ---"

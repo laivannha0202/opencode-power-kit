@@ -22,6 +22,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Project and global JSONC rewrites now fail closed unless
   `--normalize-jsonc` is explicit; normalization creates a recovery backup.
 - Global installs now serialize through a config-directory `flock`.
+- Project installer rejects symlinked config, template and plugin targets
+  before any read or write (fail closed).
+- All project config writes are atomic via directory-fd (`O_DIRECTORY` +
+  `O_NOFOLLOW`) with inode verification, temp reservation and `fsync`.
+- Project install is transactional: a journal records pre-write state and
+  rolls back in reverse order (restore bytes/mode or remove new files) on
+  any failure.
+- Managed Markdown blocks validate markers before writing (duplicate,
+  mismatched or reversed markers are rejected).
+- Active config discovery supports both `opencode.json` and `opencode.jsonc`;
+  conflict when both exist is rejected before mutation.
+- Legacy archive preserves the original filename under
+  `.opk-trash/legacy-config-<timestamp>/`.
 
 ### Changed
 
@@ -43,6 +56,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   then archives legacy config under `.opk-trash/legacy-config-<timestamp>/`.
 - Commented JSONC is not rewritten by default. Explicit normalization backs up
   the original, verifies the root output, and only then archives legacy config.
+- JSONC scanner (`_strip_comments` + `_strip_trailing_commas`) preserves strings
+  verbatim; `//` or `/* */` inside strings is not treated as a comment.
+- `--normalize-jsonc` is rejected on `mode show`, duplicated flags are rejected,
+  and unknown arguments are rejected on `mode power`.
 - Global RC managed blocks retain `OPK_KIT_DIR` and PATH but remove the old
   managed `OPENCODE_CONFIG_DIR` export. Custom exports outside markers remain.
 
@@ -58,6 +75,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added real `opencode debug config` integration coverage, config-path and agent
   permission validators, global installer contracts, migration race/symlink
   tests, and auto-wrapper quoting tests.
+- New `test-project-installer-path-safety.sh` (46 checks) and
+  `test-opencode-jsonc-compatibility.sh` (55 checks) suites, plus the
+  `check-project-installer-path-safety.py` static validator wired into
+  `release-gate.sh` (target ≥26 checks).
 
 ## [2.1.2]
 
