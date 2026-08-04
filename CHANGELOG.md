@@ -5,7 +5,27 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.1.3] - 2026-08-01
+## [2.1.3] - 2026-08-03
+
+### Added
+
+- CLI split: `bin/opk` is now a thin command router; all business logic lives
+  in `scripts/opk-commands.sh` (`opk_*` functions), validated by the
+  `check-cli-file-references.py` checker against both files.
+- Write-ahead journal (`recover_wal`): a failed or interrupted config merge
+  now recovers atomically from `.opk-wal` on the next run instead of leaving
+  the project half-merged; stale journals are replayed before any write.
+- Legacy archive manifest: `opk mode migrate` archives the legacy config with
+  a `manifest.json` (schema `opk-legacy-archive/v1`, sha256, mode, timestamps)
+  instead of relying on filenames alone.
+- `opk recover-legacy` command restores the archived legacy config from the
+  `.opk-trash` archive with checksum verification and fail-closed tamper
+  protection.
+- Token guard plugin (`opk-token-guard.js`): blocks reads/writes of common
+  token stores and shell commands that dump secrets or inline credentials.
+- GitHub Actions CI: a single `ci.yml` runs the full release gate on Linux
+  with read-only permissions and no secrets; the local release contract
+  remains authoritative.
 
 ### Fixed
 
@@ -68,9 +88,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Linux-only, model-agnostic and provider-agnostic.
 - Existing model, provider, MCP, plugin, formatter, LSP and unknown keys are
   preserved during merge; no OpenAI or Anthropic key is required.
-- Local Linux release validation remains authoritative; no GitHub Actions added.
+- Local Linux release validation remains authoritative; the CI workflow runs
+  the same release gate with `contents: read` and no secrets.
 
 ### Validation
+
+- Added `test-wal-recovery.sh` (14 checks) for the write-ahead journal,
+  `test-legacy-recovery.sh` (28 checks) for the archive manifest and
+  `opk recover-legacy`, and `test-token-guard.mjs` (34 checks) for the token
+  guard plugin; all are wired into `release-gate.sh` and `verify.sh`.
+- `check-cli-file-references.py` now scans both `bin/opk` and
+  `scripts/opk-commands.sh`.
 
 - Added real `opencode debug config` integration coverage, config-path and agent
   permission validators, global installer contracts, migration race/symlink

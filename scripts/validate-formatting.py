@@ -55,12 +55,14 @@ def check_linux_only_layout() -> int:
     workflow_dir = REPO_ROOT / ".github" / "workflows"
     workflows = []
     if workflow_dir.is_dir():
-        workflows = sorted([*workflow_dir.glob("*.yml"), *workflow_dir.glob("*.yaml")])
+        workflows = sorted(
+            w.name for w in [*workflow_dir.glob("*.yml"), *workflow_dir.glob("*.yaml")] if w.name != "ci.yml"
+        )
     if workflows:
-        print("FAIL  GitHub Actions workflows must be disabled for local-only validation")
+        print(f"FAIL  Unexpected GitHub Actions workflows found: {', '.join(workflows)}")
         fails += 1
     else:
-        print("ok    GitHub Actions workflows disabled")
+        print("ok    only ci.yml present in .github/workflows")
 
     return fails
 

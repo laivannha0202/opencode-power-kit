@@ -672,7 +672,7 @@ def validate_version() -> list[str]:
     # v2.0.0: No rm -rf in taste off paths
     print("[v2.0.0 Taste safe removal]")
     taste_rm_checks = [
-        ("bin/opk", "taste-off)"),
+        ("scripts/opk-commands.sh", "opk_taste_off"),
     ]
     for rel, needle in taste_rm_checks:
         p = KIT_ROOT / rel
@@ -848,10 +848,23 @@ def validate_version() -> list[str]:
         action_workflows = sorted(
             [*workflow_dir.glob("*.yml"), *workflow_dir.glob("*.yaml")]
         )
+        action_workflows = [w.name for w in action_workflows if w.name != "ci.yml"]
     if action_workflows:
-        errors.append("GitHub Actions workflows must be disabled for local-only validation")
+        errors.append(
+            f"Unexpected GitHub Actions workflows found: {', '.join(action_workflows)}"
+        )
     else:
-        ok("GitHub Actions workflows disabled")
+        ok("only ci.yml present in .github/workflows")
+    ci_workflow = workflow_dir / "ci.yml" if workflow_dir.is_dir() else None
+    if ci_workflow is not None and ci_workflow.is_file():
+        ci_text = ci_workflow.read_text(encoding="utf-8")
+        for needle in ("permissions:", "contents: read", "release-gate.sh"):
+            if needle in ci_text:
+                ok(f".github/workflows/ci.yml contains: {needle}")
+            else:
+                errors.append(f".github/workflows/ci.yml missing needle: {needle}")
+    elif ci_workflow is not None:
+        errors.append(".github/workflows/ci.yml missing")
 
     # v2.1.0: OPK no longer ships a model-policy or provider-key control surface.
     print("[v2.1.0 Model policy surface removed]")
@@ -968,6 +981,36 @@ def main() -> int:
 
     # version compliance (VERSION, THIRD_PARTY, Auto Router, CHANGELOG needles, build-strong content)
     errors += validate_version()
+
+    # v2.1.3: CLI split, WAL, legacy archive, token guard, CI (release-gate parity)
+    print("[v2.1.3 CLI split & WAL & Legacy Archive & Token Guard & CI]")
+    for path, needle in (
+        ("bin/opk", "scripts/opk-commands.sh"),
+        ("scripts/opk-commands.sh", "opk_recover_legacy"),
+        ("scripts/merge-opk-project.py", "WAL_FILE_NAME"),
+        ("scripts/merge-opk-project.py", "recover_wal"),
+        ("scripts/merge-opk-project.py", "ARCHIVE_SCHEMA"),
+        ("scripts/merge-opk-project.py", "recover_legacy"),
+        ("templates/plugins/opk-token-guard.js", "@opk-plugin opk-token-guard"),
+        ("templates/plugins/opk-token-guard.js", "tool.execute.before"),
+        (".github/workflows/ci.yml", "bash scripts/release-gate.sh"),
+        ("CHANGELOG.md", "2.1.3"),
+    ):
+        target = KIT_ROOT / path
+        if target.is_file() and needle in target.read_text(encoding="utf-8"):
+            ok(f"{path} contains: {needle}")
+        else:
+            errors.append(f"{path} missing needle: {needle}")
+    for path in (
+        "scripts/test-wal-recovery.sh",
+        "scripts/test-legacy-recovery.sh",
+        "scripts/test-token-guard.mjs",
+    ):
+        target = KIT_ROOT / path
+        if target.is_file():
+            ok(f"{path} exists")
+        else:
+            errors.append(f"{path} missing")
 
     if errors:
         print("\nPack validation FAILED:", file=sys.stderr)

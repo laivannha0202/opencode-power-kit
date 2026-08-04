@@ -80,12 +80,23 @@
   },
   {
     "id": "contract-007",
-    "name": "GitHub Actions disabled",
-    "description": "Local Linux validation is authoritative",
+    "name": "GitHub Actions CI workflow present",
+    "description": "CI runs the release gate on Linux; single ci.yml only",
+    "check_type": "file_present",
+    "targets": [
+      ".github/workflows/ci.yml"
+    ],
+    "expected": "all_present"
+  },
+  {
+    "id": "contract-007b",
+    "name": "No extra GitHub Actions workflows",
+    "description": "verify.yml and other workflows are not shipped",
     "check_type": "file_absent",
     "targets": [
-      ".github/workflows/ci.yml",
-      ".github/workflows/verify.yml"
+      ".github/workflows/verify.yml",
+      ".github/workflows/test.yml",
+      ".github/workflows/release.yml"
     ],
     "expected": "all_absent"
   },

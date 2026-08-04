@@ -43,6 +43,8 @@ opencode
 | `opk clean` | Cleanup agent artifacts an toàn (mặc định dry-run) |
 | `opk up --clean` | Update + cleanup apply trong một lệnh |
 | `opk mode show\|power\|safe` | Xem hoặc đổi permission mode của project hiện tại |
+| `opk mode migrate` | Backup + merge legacy config, archive vào `.opk-trash/legacy-config-*` |
+| `opk recover-legacy` | Khôi phục legacy config từ archive (verify sha256) |
 | `opk safety-plugin status\|install` | Kiểm tra hoặc cài safety guard vào project |
 | `opk hermes audit\|status\|capsule\|off\|help` | Audit và quản lý Hermes-lite |
 | `opk ecc audit\|lite\|status\|update\|off` | Audit và quản lý ECC-lite (`ec`/`e` tương thích) |
@@ -202,6 +204,9 @@ opk mode migrate
 # JSONC có comment: explicit opt-in, backup trước khi normalize
 opk mode migrate --normalize-jsonc
 
+# Khôi phục legacy config đã archive (từ .opk-trash/legacy-config-<timestamp>/)
+opk recover-legacy
+
 # Chẩn đoán config/permission đã resolve
 opk permissions doctor
 
@@ -255,7 +260,7 @@ opk safety-plugin install
 opk safety-plugin status
 ```
 
-Tham khảo: `templates/plugins/opk-safety-guard.js`
+Tham khảo: `templates/plugins/opk-safety-guard.js`, `templates/plugins/opk-token-guard.js`
 
 ### Optional integration removal
 
@@ -538,7 +543,7 @@ opk verify
 ~/opencode-power-kit/
 ├── README.md
 ├── setup.sh                        # interactive + flags
-├── bin/opk                         # Linux CLI wrapper
+├── bin/opk                         # Linux CLI router (thin)
 ├── install.sh                      # per-project
 ├── bootstrap.sh                    # one-command installer
 ├── install-global.sh               # global install
@@ -547,6 +552,7 @@ opk verify
 ├── uninstall.sh                    # removal
 ├── update-bmad.sh                  # BMAD update
 ├── scripts/                       # install helpers
+├── scripts/opk-commands.sh        # opk_* business logic (CLI split)
 ├── opencode-global/               # agents, commands, skills
 ├── templates/                     # AGENTS.md, OPENCODE.md, configs
 └── docs/                          # workflow, prompts, safety

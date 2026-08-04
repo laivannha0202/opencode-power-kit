@@ -59,11 +59,11 @@ else
   pass "No tracked .ps1/.cmd/.bat runtime artifacts"
 fi
 
-ACTION_WORKFLOWS="$(find "$KIT_DIR/.github/workflows" -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) 2>/dev/null || true)"
-if [ -n "$ACTION_WORKFLOWS" ]; then
-  fail "GitHub Actions workflows must remain disabled for the local-only release contract"
+EXTRA_WORKFLOWS="$(find "$KIT_DIR/.github/workflows" -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) ! -name 'ci.yml' 2>/dev/null || true)"
+if [ -n "$EXTRA_WORKFLOWS" ]; then
+  fail "Unexpected GitHub Actions workflows found: $(echo "$EXTRA_WORKFLOWS" | tr '\n' ' ')"
 else
-  pass "GitHub Actions workflows disabled; local Linux validation is authoritative"
+  pass "only ci.yml present in .github/workflows"
 fi
 
 # --- 2. CHANGELOG ---
@@ -108,8 +108,8 @@ for tpl in opencode.json opencode.power.json opencode.safe.json; do
   fi
 done
 
-# --- 4. Safety Plugin ---
-section "4. Safety Plugin"
+# --- 4. Safety & Token Plugins ---
+section "4. Safety & Token Plugins"
 SP="$KIT_DIR/templates/plugins/opk-safety-guard.js"
 if [ -f "$SP" ]; then
   pass "Safety plugin exists"
@@ -125,6 +125,27 @@ if [ -f "$SP" ]; then
   fi
 else
   fail "Safety plugin missing"
+fi
+TP="$KIT_DIR/templates/plugins/opk-token-guard.js"
+if [ -f "$TP" ]; then
+  pass "Token-guard plugin exists"
+  if grep -q "tool.execute.before" "$TP"; then
+    pass "Uses tool.execute.before hook (CommonJS)"
+  else
+    fail "Missing tool.execute.before hook"
+  fi
+  if grep -q "throw new Error" "$TP"; then
+    pass "Uses throw new Error() for blocking"
+  else
+    fail "Missing throw new Error() pattern"
+  fi
+  if grep -q "@opk-plugin opk-token-guard" "$TP"; then
+    pass "Has @opk-plugin opk-token-guard marker"
+  else
+    fail "Missing @opk-plugin marker"
+  fi
+else
+  fail "Token-guard plugin missing"
 fi
 
 # --- 5. GSD Agents ---
@@ -199,9 +220,10 @@ fi
 
 # --- 9. Tests exist ---
 section "9. Test Coverage"
-for s in test-permission-rules.py test-safety-plugin.mjs test-opk-mode.sh \
-         test-installer-preservation.sh test-global-installer.sh \
-         test-opencode-resolved-config.sh test-timeout.sh test-runtime-behavior.sh; do
+for s in test-permission-rules.py test-safety-plugin.mjs test-token-guard.mjs \
+         test-opk-mode.sh test-installer-preservation.sh test-global-installer.sh \
+         test-opencode-resolved-config.sh test-timeout.sh test-runtime-behavior.sh \
+         test-wal-recovery.sh test-legacy-recovery.sh; do
   if [ -f "$KIT_DIR/scripts/$s" ]; then
     pass "scripts/$s exists"
   else
@@ -328,6 +350,9 @@ run_cmd "test-permission-rules" \
 run_cmd "test-safety-plugin" \
   "node $KIT_DIR/scripts/test-safety-plugin.mjs"
 
+run_cmd "test-token-guard" \
+  "node $KIT_DIR/scripts/test-token-guard.mjs"
+
 # --- Shell Tests ---
 echo ""
 echo "--- Shell Tests ---"
@@ -360,6 +385,12 @@ run_cmd "test-timeout" \
 
 run_cmd "test-runtime-behavior" \
   "bash $KIT_DIR/scripts/test-runtime-behavior.sh"
+
+run_cmd "test-wal-recovery" \
+  "bash $KIT_DIR/scripts/test-wal-recovery.sh"
+
+run_cmd "test-legacy-recovery" \
+  "bash $KIT_DIR/scripts/test-legacy-recovery.sh"
 
 # --- Path Safety & JSONC Tests ---
 echo ""

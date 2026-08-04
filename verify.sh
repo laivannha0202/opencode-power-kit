@@ -167,12 +167,18 @@ require_file "opencode-global/commands/verify-loop.md"
 require_file "opencode-global/commands/backend-route-review.md"
 require_file "opencode-global/commands/harness-audit.md"
 require_file "bin/opk"
+require_file "scripts/opk-commands.sh"
 require_file "templates/AGENTS.md"
 require_file "templates/OPENCODE.md"
 require_file "templates/AI_HANDOFF.md"
 require_file "templates/opencode.safe.json"
 require_file "templates/opencode.power.json"
 require_file "templates/plugins/opk-safety-guard.js"
+require_file "templates/plugins/opk-token-guard.js"
+require_file "scripts/test-wal-recovery.sh"
+require_file "scripts/test-legacy-recovery.sh"
+require_file "scripts/test-token-guard.mjs"
+require_file ".github/workflows/ci.yml"
 echo
 
 # ─── v2.1.0: Linux-only distribution ─────────────────────────────
@@ -187,15 +193,51 @@ if [[ -n "${WINDOWS_ARTIFACTS}" ]]; then
 else
 	ok "no .ps1/.cmd/.bat runtime artifacts"
 fi
-ACTION_WORKFLOWS="$(find .github/workflows -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) 2>/dev/null || true)"
+ACTION_WORKFLOWS="$(find .github/workflows -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) -not -name 'ci.yml' 2>/dev/null || true)"
 if [[ -n "${ACTION_WORKFLOWS}" ]]; then
-	fail "GitHub Actions workflows must be disabled for local-only validation"
+	fail "Unexpected GitHub Actions workflows found: ${ACTION_WORKFLOWS//$'\n'/, }"
 else
-	ok "GitHub Actions workflows disabled"
+	ok "only ci.yml present in .github/workflows"
 fi
+require_contains ".github/workflows/ci.yml" "permissions:"
+require_contains ".github/workflows/ci.yml" "contents: read"
+require_contains ".github/workflows/ci.yml" "release-gate.sh"
 for linux_entrypoint in bin/opk bootstrap.sh setup.sh install-global.sh install.sh doctor.sh verify.sh uninstall.sh update-bmad.sh scripts/release-gate.sh; do
 	require_contains "${linux_entrypoint}" "require-linux.sh"
 done
+echo
+
+# ─── v2.1.3: CLI split, WAL, legacy archive, token guard, CI ──────
+echo "[v2.1.3 CLI Split & WAL & Legacy Archive & Token Guard & CI]"
+# CLI separation: bin/opk is a thin router; business logic lives in scripts/opk-commands.sh
+require_contains "bin/opk" "scripts/opk-commands.sh"
+require_contains "scripts/opk-commands.sh" "opk_recover_legacy"
+require_contains "scripts/opk-commands.sh" "OPENCODE_CONFIG_DIR"
+# WAL (write-ahead journal) in the project merger
+require_contains "scripts/merge-opk-project.py" "WAL_FILE_NAME"
+require_contains "scripts/merge-opk-project.py" "recover_wal"
+require_contains "scripts/merge-opk-project.py" "atomic_write_bytes"
+# Legacy config archive manifest + recovery
+require_contains "scripts/merge-opk-project.py" "ARCHIVE_SCHEMA"
+require_contains "scripts/merge-opk-project.py" "MANIFEST_NAME"
+require_contains "scripts/merge-opk-project.py" "recover_legacy"
+require_contains "scripts/merge-opk-project.py" "sha256"
+# Token guard plugin
+require_contains "templates/plugins/opk-token-guard.js" "@opk-plugin opk-token-guard"
+require_contains "templates/plugins/opk-token-guard.js" "tool.execute.before"
+require_contains "templates/plugins/opk-token-guard.js" "printenv"
+# CI workflow
+require_contains ".github/workflows/ci.yml" "npm install -g opencode-ai"
+require_contains ".github/workflows/ci.yml" "bash scripts/release-gate.sh"
+# New test files
+require_contains "scripts/test-wal-recovery.sh" "recover_wal"
+require_contains "scripts/test-legacy-recovery.sh" "manifest"
+require_contains "scripts/test-token-guard.mjs" "opk-token-guard"
+# CHANGELOG
+require_contains "CHANGELOG.md" "2.1.3"
+require_contains "CHANGELOG.md" "write-ahead"
+require_contains "CHANGELOG.md" "legacy"
+require_contains "CHANGELOG.md" "token-guard"
 echo
 
 # ─── Required dirs ────────────────────────────────────────────────
@@ -445,7 +487,7 @@ require_contains "scripts/check-ecc-lite.sh" "OPENCODE_CONFIG_DIR"
 require_contains "opencode-global/agents/ecc-lite-strong.md" "ECC-lite"
 # Stable dispatcher token; public command wording is checked via local help below.
 require_contains "bin/opk" "ecc|ec|e|update-ecc)"
-require_contains "bin/opk" "OPENCODE_CONFIG_DIR"
+require_contains "scripts/opk-commands.sh" "OPENCODE_CONFIG_DIR"
 # README
 require_contains "README.md" "ECC-lite"
 require_contains "README.md" "ecc-lite-strong"
@@ -899,11 +941,14 @@ echo "[script sanity]"
 SCRIPTS_TO_CHECK=(
 	"scripts/cleanup-agent-artifacts.sh"
 	"scripts/opk-command-guard.sh"
+	"scripts/opk-commands.sh"
 	"scripts/install-gsd-core.sh"
 	"scripts/install-safety-plugin.sh"
 	"scripts/audit-ecc.sh"
 	"scripts/install-ecc-lite.sh"
 	"scripts/check-ecc-lite.sh"
+	"scripts/test-wal-recovery.sh"
+	"scripts/test-legacy-recovery.sh"
 	"verify.sh"
 )
 if [[ -x "bin/opk" ]]; then

@@ -67,7 +67,8 @@ Optional dependency → SKIP.
 | contract-004 | grep_present | Linux platform guard exists |
 | contract-005 | script_exec | Safety plugin test (node) |
 | contract-006 | script_exec | Permission ordering test (python3) |
-| contract-007 | file_absent | GitHub Actions workflows disabled |
+| contract-007 | file_present | CI workflow ci.yml exists |
+| contract-007b | file_absent | No extra GitHub Actions workflows |
 | contract-011 | grep_present | Writer/read-only reviewer policy |
 | contract-012 | grep_present | build-strong pipeline stages |
 | contract-013 | script_exec | Timeout helper exists and runs |

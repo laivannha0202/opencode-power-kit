@@ -33,7 +33,7 @@ SOURCE_DEST_COMMAND_RE = re.compile(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Validate literal KIT_DIR file references in bin/opk."
+        description="Validate literal KIT_DIR file references in the CLI files (bin/opk, scripts/opk-commands.sh)."
     )
     parser.add_argument("--root", type=Path, default=DEFAULT_ROOT)
     parser.add_argument("--cli", type=Path)
@@ -214,12 +214,19 @@ def check_references(root: Path, cli: Path) -> tuple[list[tuple[int, str]], int]
 def main() -> int:
     args = parse_args()
     root = args.root.resolve()
-    cli = args.cli.resolve() if args.cli else root / "bin" / "opk"
-    if not cli.is_file():
-        print(f"check-cli-file-references: missing CLI: {cli}", file=sys.stderr)
-        return 1
-
-    issues, checked = check_references(root, cli)
+    if args.cli:
+        cli_files = [args.cli.resolve()]
+    else:
+        cli_files = [root / "bin" / "opk", root / "scripts" / "opk-commands.sh"]
+    issues: list[tuple[int, str]] = []
+    checked = 0
+    for cli in cli_files:
+        if not cli.is_file():
+            print(f"check-cli-file-references: missing CLI: {cli}", file=sys.stderr)
+            return 1
+        cli_issues, cli_checked = check_references(root, cli)
+        issues.extend(cli_issues)
+        checked += cli_checked
     for line_number, issue in issues:
         print(
             f"check-cli-file-references: {issue} (line {line_number})",
