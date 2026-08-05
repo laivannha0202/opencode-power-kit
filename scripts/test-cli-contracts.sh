@@ -203,7 +203,7 @@ printf 'CLI contracts\n'
 source_snapshot_before="$(snapshot_source_tree)"
 
 version_output="$($OPK version 2>&1)"
-assert_contains "version is 2.1.3" "$version_output" "opk 2.1.3"
+assert_contains "version is $(cat "$SOURCE_KIT_DIR/VERSION")" "$version_output" "opk $(cat "$SOURCE_KIT_DIR/VERSION")"
 
 help_output="$($OPK help 2>&1)"
 for entry in "opk mode" "opk permissions" "opk auto" "opk run-auto" "opk safety-plugin" "opk hermes" "opk ecc" "opk supermemory"; do
