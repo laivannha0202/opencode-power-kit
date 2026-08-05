@@ -5,6 +5,59 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-08-05
+
+### Added
+
+- Safe-I/O layer (`scripts/opk_safe_io.py`): canonical root resolution with
+  `split_rel` path containment, directory-fd (`O_DIRECTORY` + `O_NOFOLLOW`)
+  writes, symlink/hardlink/`..` traversal refusal, and atomic replace with
+  `fsync`; 14-command CLI.
+- Transaction layer (`scripts/opk_tx.py`): `begin`/`stage`/`commit`/`rollback`/
+  `recover`; per-operation pre-content backups with sha256, `flock`
+  serialization, `MERGE_MARKER` idempotent blocks, journal + manifest under
+  `.opk-state/transactions/`, best-effort auto-rollback on staged failure, and
+  crash recovery; the test-only `OPK_TEST_FAIL_AFTER` injection is refused in
+  production.
+- `scripts/opk_tx.sh`: bash wrapper over the transaction CLI with fail-closed
+  exit codes (0 ok / 1 error / 2 unsafe / 3 missing).
+- `install.sh` now routes project writes through transactions: the
+  `.gitignore` merge (marker `gitignore-extra`), `knip.json`/`lefthook.yml`
+  creation (require-absent) and the install report rewrite each run as one
+  atomic transaction; pending transactions auto-recover on re-run and the
+  installer fails closed on transaction errors. The BMAD log stays a plain
+  redirect (log artifact, outside transaction scope).
+- `doctor.sh` mode detection is single-sourced through
+  `scripts/detect-mode.py` (POWER / SAFE / CUSTOM), replacing the two broken
+  inline Python blocks.
+- Release gate: new checks `detect-mode templates`, `test-safe-io`,
+  `test-tx` and `test-install-tx` plus existence asserts for the two new
+  scripts (34 checks total, previously 30).
+
+### Fixed
+
+- `scripts/opk-command-guard.sh`: removed the `OPK_GUARD_SKIP` environment
+  bypass — the guard can no longer be disabled by exporting one variable.
+- `verify.sh`: the ECC no-auto-enable negative asserts referenced
+  `scripts/bootstrap.sh` and `scripts/install-global.sh`, which do not exist
+  (the scripts live at the repo root), so the asserts were no-ops; they now
+  check the real files. Added a needle that fails if the guard bypass returns.
+- `doctor.sh` Section 6: replaced `json.load(sys.open(...))` and
+  `from detect_mode import` (wrong module name) with the canonical
+  `detect-mode.py` call; unknown mode output now warns instead of guessing.
+
+### Validation
+
+- `test-safe-io.sh` (39 checks): roundtrip, symlink matrix, escapes, hardlink
+  alias, atomicity, require-absent.
+- `test-tx.sh` (36 checks): happy path, rollback, marker idempotency, injected
+  failures, crash recovery, locking.
+- `test-install-tx.sh` (21 checks): user content preservation, marker
+  idempotency, report overwrite, crash → recovery; end-to-end `install.sh`
+  run on a sandbox with a fake npx passed with exit 0.
+- All three suites are wired into `release-gate.sh` (section 9 + 11) and
+  `verify.sh`; release gate: 34/34 PASS, 0 warnings; `verify.sh`: 481/481.
+
 ## [2.1.3] - 2026-08-03
 
 ### Added

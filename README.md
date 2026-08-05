@@ -1,6 +1,6 @@
 # OpenCode Power Kit
 
-[![Version](https://img.shields.io/badge/version-2.1.3-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](./VERSION)
 [![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.10.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
@@ -182,7 +182,7 @@ người dùng hiểu rõ ranh giới.
 
 ---
 
-## Power Mode và Safe Mode v2.1.3
+## Power Mode và Safe Mode v2.2.0
 
 Cho phép chuyển giữa **Power Mode** (agent tự động chạy) và **Safe Mode** (agent hỏi trước khi ghi file/bash).
 
@@ -1270,7 +1270,7 @@ tránh lỗi phổ biến (edit quá nhiều file, chạy lệnh destructive, pr
 ## Xử lý sự cố
 
 - **Release gate fail?** Chạy `bash scripts/release-gate.sh`, sửa command bị đánh dấu FAIL rồi chạy lại.
-- **Không phải Linux?** Bản v2.1.3 chỉ hỗ trợ Linux và trả exit code `126` trên nền tảng khác.
+- **Không phải Linux?** Bản v2.2.0 chỉ hỗ trợ Linux và trả exit code `126` trên nền tảng khác.
 - **Format validation fail?** Chạy `python3 scripts/validate-formatting.py` để biết chi tiết.
 - **Cần giúp đỡ?** Chạy `opk doctor` để chẩn đoán, hoặc xem [docs/](./docs/) để biết thêm chi tiết.
 

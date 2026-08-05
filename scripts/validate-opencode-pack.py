@@ -41,7 +41,7 @@ PROFILES_DIR = KIT_ROOT / "profiles"
 TEMPLATES_DIR = KIT_ROOT / "templates"
 
 # ─── version compliance constants ───────────────────────────────────
-EXPECTED_VERSION = "2.1.3"
+EXPECTED_VERSION = "2.2.0"
 
 AUTO_ROUTER_NEEDLES: tuple[tuple[str, str], ...] = (
     ("templates/AGENTS.md", "Lightweight Routing"),
@@ -1011,6 +1011,29 @@ def main() -> int:
             ok(f"{path} exists")
         else:
             errors.append(f"{path} missing")
+
+    # v2.2.0: safe-I/O + transaction layers, tx install, single-source mode, guard bypass removal
+    print("[v2.2.0 Safe-I/O & Transactions & Mode single-source & Guard]")
+    for path, needle in (
+        ("scripts/opk_safe_io.py", "O_NOFOLLOW"),
+        ("scripts/opk_safe_io.py", "split_rel"),
+        ("scripts/opk_tx.py", "OPK_TEST_FAIL_AFTER"),
+        ("scripts/opk_tx.py", "recover"),
+        ("scripts/opk_tx.sh", "opk_tx.py"),
+        ("install.sh", "opk_tx begin"),
+        ("doctor.sh", "detect-mode.py"),
+        ("CHANGELOG.md", "2.2.0"),
+    ):
+        target = KIT_ROOT / path
+        if target.is_file() and needle in target.read_text(encoding="utf-8"):
+            ok(f"{path} contains: {needle}")
+        else:
+            errors.append(f"{path} missing needle: {needle}")
+    guard = KIT_ROOT / "scripts/opk-command-guard.sh"
+    if guard.is_file() and "OPK_GUARD_SKIP" in guard.read_text(encoding="utf-8"):
+        errors.append("scripts/opk-command-guard.sh must NOT contain OPK_GUARD_SKIP")
+    else:
+        ok("scripts/opk-command-guard.sh has no OPK_GUARD_SKIP bypass")
 
     if errors:
         print("\nPack validation FAILED:", file=sys.stderr)

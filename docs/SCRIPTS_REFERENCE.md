@@ -1,6 +1,6 @@
 # Danh sách Scripts
 
-OpenCode Power Kit v2.1.3 chỉ hỗ trợ Linux.
+OpenCode Power Kit v2.2.0 chỉ hỗ trợ Linux.
 
 | Script | Mục đích |
 |--------|----------|
@@ -39,7 +39,13 @@ OpenCode Power Kit v2.1.3 chỉ hỗ trợ Linux.
 | `scripts/install-fullstack-profile.sh` | Cài profile Node/Nest/React/MySQL |
 | `scripts/install-taste-skill.sh` | Cài Taste Skill qua npx |
 | `scripts/check-taste-skill.sh` | Kiểm tra Taste Skill không gọi network |
-| `scripts/opk-command-guard.sh` | Cảnh báo/chặn lệnh shell nguy hiểm |
+| `scripts/opk-command-guard.sh` | Cảnh báo/chặn lệnh shell nguy hiểm (không có bypass env) |
+| `scripts/opk_safe_io.py` | Safe-I/O layer: canonical root, split_rel containment, dirfd + O_NOFOLLOW writes, từ chối symlink/hardlink/`..`, atomic replace kèm fsync; CLI 14 lệnh |
+| `scripts/opk_tx.py` | Transaction layer: begin/stage/commit/rollback/recover; backup + sha256 từng op, flock, MERGE_MARKER idempotent, journal + manifest `.opk-state/transactions/`, auto-rollback và crash recovery; từ chối `OPK_TEST_FAIL_AFTER` ngoài test mode |
+| `scripts/opk_tx.sh` | Bash wrapper cho transaction CLI; exit code fail-closed 0/1/2/3 |
+| `scripts/test-safe-io.sh` | Test safe-I/O: roundtrip, symlink matrix, escape, hardlink alias, atomicity, require-absent (39 checks) |
+| `scripts/test-tx.sh` | Test transaction: happy path, rollback, marker idempotency, injected failures, crash recovery, locking (36 checks) |
+| `scripts/test-install-tx.sh` | Test install.sh qua transaction: giữ nội dung user, marker idempotent, report ghi đè, crash → recovery (21 checks) |
 | `scripts/cleanup-agent-artifacts.sh` | Dọn artifact bằng cơ chế move-to-trash |
 | `scripts/audit-ecc.sh` | Audit ECC read-only |
 | `scripts/install-ecc-lite.sh` | Cài ECC-lite |
