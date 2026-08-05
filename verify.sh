@@ -150,6 +150,9 @@ require_file "opencode-global/commands/power-build.md"
 require_file "opencode-global/commands/tooling-doctor.md"
 require_file "scripts/cleanup-agent-artifacts.sh"
 require_file "scripts/opk-command-guard.sh"
+if rg -q "OPK_GUARD_SKIP" "scripts/opk-command-guard.sh" >/dev/null 2>&1; then
+	fail "opk-command-guard.sh must NOT contain OPK_GUARD_SKIP bypass"
+fi
 require_file "scripts/validate-opencode-pack.py"
 require_file "scripts/test-cli-contracts.sh"
 require_file "scripts/install-gsd-core.sh"
@@ -514,10 +517,10 @@ require_contains "scripts/audit-ecc.sh" "--help"
 require_contains "scripts/install-ecc-lite.sh" "--help"
 require_contains "scripts/check-ecc-lite.sh" "--help"
 # No auto-enable in bootstrap / install-global
-if rg -q "ecc" "scripts/bootstrap.sh" 2>/dev/null; then
+if rg -q "ecc" "bootstrap.sh" 2>/dev/null; then
 	fail "bootstrap.sh must NOT auto-enable ECC"
 fi
-if rg -q "ecc" "scripts/install-global.sh" 2>/dev/null; then
+if rg -q "ecc" "install-global.sh" 2>/dev/null; then
 	fail "install-global.sh must NOT auto-enable ECC"
 fi
 # THIRD_PARTY

@@ -18,7 +18,7 @@
 set -euo pipefail
 
 # ─── Config ──────────────────────────────────────────────────────
-OPK_GUARD_SKIP="${OPK_GUARD_SKIP:-}" # set to "1" to bypass all guards
+# (no bypass env var — guard must not be trivially disableable)
 
 # Allowlist patterns (these are considered safe)
 ALLOWLIST_PATTERNS=(
@@ -57,11 +57,6 @@ _fatal() {
 # ─── Check if a command string is dangerous ────────────────────────
 opk_guard_check() {
 	local cmd="$1"
-
-	# If bypass is set, allow everything
-	if [[ "${OPK_GUARD_SKIP}" == "1" ]]; then
-		return 0
-	fi
 
 	# Check allowlist first
 	for pattern in "${ALLOWLIST_PATTERNS[@]}"; do
@@ -133,8 +128,7 @@ opk_guard() {
 		echo "Command: ${YELLOW}${cmd}${RESET}" >&2
 		echo "" >&2
 		echo "Options:" >&2
-		echo "  1) Skip this guard:   export OPK_GUARD_SKIP=1" >&2
-		echo "  2) Rerun the command manually if you're sure." >&2
+		echo "  1) Rerun the command manually if you're sure." >&2
 		echo "" >&2
 		exit 1
 	fi
@@ -149,7 +143,6 @@ if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
 		if [[ -n "$lastcmd" ]]; then
 			if ! opk_guard_check "$lastcmd" >/dev/null 2>&1; then
 				_warn "Last command was dangerous: ${lastcmd}"
-				echo "  Run 'export OPK_GUARD_SKIP=1' to bypass, then re-run." >&2
 			fi
 		fi
 	}
