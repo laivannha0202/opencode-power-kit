@@ -48,6 +48,45 @@ for arg in "$@"; do
 	[[ "$arg" != --normalize-jsonc ]] || MERGE_ARGS+=(--normalize-jsonc)
 done
 
+# --- Transaction layer ---
+# Mọi file install.sh ghi vào project đi qua opk_tx.sh (journal + backup +
+# rollback). Fail-closed: lỗi tx -> dừng install, hướng dẫn recover.
+TX_SH="$KIT_DIR/scripts/opk_tx.sh"
+
+opk_tx() {
+	# begin prints tx_id on stdout (needed); các lệnh khác chỉ cần rc, ẩn JSON.
+	if [ "$1" = "begin" ]; then
+		"$TX_SH" "$@" || err "opk_tx.sh $* thất bại.
+  Khôi phục: $TX_SH recover --root \"$TARGET_DIR\" --all --yes"
+	else
+		"$TX_SH" "$@" >/dev/null || err "opk_tx.sh $* thất bại.
+  Khôi phục: $TX_SH recover --root \"$TARGET_DIR\" --all --yes"
+	fi
+}
+
+tx_id_of() {
+	python3 -c 'import json,sys;print(json.load(sys.stdin)["tx_id"])'
+}
+
+# Khôi phục giao dịch dở dang từ lần install bị gián đoạn (Ctrl-C / crash).
+# Chỉ chạm vào .opk-state/ và các file do chính tx trước ghi.
+recover_pending_tx() {
+	local pending
+	pending="$("$TX_SH" status --root "$TARGET_DIR" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    txs = json.load(sys.stdin)
+except Exception:
+    txs = []
+print(sum(1 for t in txs if t.get("status") in ("prepared", "applying", "failed")))
+' 2>/dev/null || echo 0)"
+	pending="${pending:-0}"
+	if [ "$pending" -gt 0 ] 2>/dev/null; then
+		warn "Có $pending giao dịch dở dang từ lần install trước — đang khôi phục..."
+		"$TX_SH" recover --root "$TARGET_DIR" --all --yes
+	fi
+}
+
 # --- User name (env > git config > $USER > "User") ---
 # Để BMAD output ghi đúng tên người dùng. Không hardcode.
 OPK_USER_NAME="${OPK_USER_NAME:-$(git config user.name 2>/dev/null || true)}"
@@ -99,6 +138,8 @@ if is_bad_project_dir; then
 	err "Không chạy install.sh trong $TARGET_DIR."
 fi
 
+recover_pending_tx
+
 if [ ! -d "$KIT_DIR/templates" ]; then
 	err "Không tìm thấy thư mục templates/ trong $KIT_DIR"
 fi
@@ -136,36 +177,35 @@ else
 	ok "Safety plugin: .opencode/plugins/opk-safety-guard.js"
 fi
 
-# --- Merge gitignore-extra ---
-if [ -f "$TARGET_DIR/.gitignore" ]; then
-	MARKER="# >>> opencode-power-kit"
-	if ! grep -qF "$MARKER" "$TARGET_DIR/.gitignore" 2>/dev/null; then
-		{
-			echo ""
-			echo "$MARKER"
-			cat "$KIT_DIR/templates/gitignore-extra.txt"
-			echo "# <<< opencode-power-kit"
-		} >>"$TARGET_DIR/.gitignore"
-		ok "Đã merge gitignore-extra vào .gitignore"
-	else
-		warn ".gitignore đã có nội dung Power Kit, bỏ qua."
-	fi
-else
-	cp "$KIT_DIR/templates/gitignore-extra.txt" "$TARGET_DIR/.gitignore"
-	ok "Tạo mới .gitignore"
-fi
+# --- Merge gitignore-extra + knip.json + lefthook.yml trong MỘT giao dịch ---
+# Atomic: nếu bất kỳ op nào thất bại (hoặc install bị gián đoạn), toàn bộ
+# file được khôi phục về trạng thái trước khi chạy.
+TX_ID="$(opk_tx begin --root "$TARGET_DIR" --reason "install.sh: gitignore/knip/lefthook" | tx_id_of)"
 
-# --- Copy knip.json (chưa có thì copy) ---
+# .gitignore: MERGE_MARKER idempotent — file mới được tạo, file có sẵn được
+# thêm/được thay block managed marker (không ghi đè nội dung user khác).
+opk_tx stage --txid "$TX_ID" --root "$TARGET_DIR" --kind MERGE_MARKER \
+	--rel .gitignore --marker gitignore-extra \
+	--text "$(cat "$KIT_DIR/templates/gitignore-extra.txt")"
+ok "Đã merge gitignore-extra vào .gitignore"
+
+# knip.json / lefthook.yml: chỉ tạo khi chưa tồn tại (require-absent, fail-closed).
 if [ ! -f "$TARGET_DIR/knip.json" ]; then
-	cp "$KIT_DIR/templates/knip.json" "$TARGET_DIR/knip.json"
+	opk_tx stage --txid "$TX_ID" --root "$TARGET_DIR" --kind CREATE \
+		--rel knip.json --file "$KIT_DIR/templates/knip.json" --require-absent
 	ok "knip.json"
+else
+	warn "knip.json đã có, bỏ qua."
+fi
+if [ ! -f "$TARGET_DIR/lefthook.yml" ]; then
+	opk_tx stage --txid "$TX_ID" --root "$TARGET_DIR" --kind CREATE \
+		--rel lefthook.yml --file "$KIT_DIR/templates/lefthook.yml" --require-absent
+	ok "lefthook.yml"
+else
+	warn "lefthook.yml đã có, bỏ qua."
 fi
 
-# --- Copy lefthook.yml (chưa có thì copy) ---
-if [ ! -f "$TARGET_DIR/lefthook.yml" ]; then
-	cp "$KIT_DIR/templates/lefthook.yml" "$TARGET_DIR/lefthook.yml"
-	ok "lefthook.yml"
-fi
+opk_tx commit --txid "$TX_ID" --root "$TARGET_DIR"
 
 # --- Install BMAD Method ---
 info "Cài đặt BMAD Method v${BMAD_METHOD_VERSION} (module bmm, user: $OPK_USER_NAME)..."
@@ -206,8 +246,9 @@ if [ -f "$TARGET_DIR/package.json" ] && [ -f "$TARGET_DIR/lefthook.yml" ]; then
 	npx lefthook install || warn "lefthook install thất bại, bỏ qua."
 fi
 
-# --- Generate report ---
-cat >"$REPORT_FILE" <<EOF
+# --- Generate report (qua transaction layer: REPLACE có backup/rollback) ---
+REPORT_TMP="$(mktemp "${TMPDIR:-/tmp}/opk-report.XXXXXX")"
+cat >"$REPORT_TMP" <<EOF
 # OpenCode Power Kit - Install Report
 
 - **Thời gian:** $(date '+%Y-%m-%d %H:%M:%S')
@@ -246,6 +287,12 @@ $([ "$BACKUP_NEEDED" = true ] && echo "- Backup tại: $BACKUP_DIR" || echo "- K
 2. Chạy \`opk verify\` để kiểm tra.
 3. Commit: \`git add . && git commit -m "chore: init opencode power kit"\`
 EOF
+
+TX_R="$(opk_tx begin --root "$TARGET_DIR" --reason "install.sh: report" | tx_id_of)"
+opk_tx stage --txid "$TX_R" --root "$TARGET_DIR" --kind REPLACE \
+	--rel opencode-power-install-report.md --file "$REPORT_TMP"
+rm -f "$REPORT_TMP"
+opk_tx commit --txid "$TX_R" --root "$TARGET_DIR"
 
 ok "Tạo report: $REPORT_FILE"
 
