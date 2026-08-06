@@ -954,6 +954,11 @@ if command -v node >/dev/null 2>&1; then
 	else
 		fail "scripts/sync-guard-bashrc.sh --stdout failed to generate the fragment"
 	fi
+	if bash scripts/test-guard-no-env-bypass.sh; then
+		ok "test-guard-no-env-bypass.sh: no env bypass possible"
+	else
+		fail "test-guard-no-env-bypass.sh: env bypass detected"
+	fi
 else
 	warn "node not found — skipping JS guard parity checks"
 fi

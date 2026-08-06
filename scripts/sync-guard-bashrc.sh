@@ -42,8 +42,7 @@ mkdir -p "$(dirname "$OUT")"
 #   2. Interactive (blocks typed commands before running them):
 #        source "$HOME/.config/opencode-power-kit/guard/opk-guard-bashrc"
 #
-# Context variables (NO bypass variable — run blocked commands by hand):
-#   OPK_GUARD_STRICT  block (default) | warn
+# Context variables:
 #   OPK_GUARD_ROOT    project root used in messages (default: $PWD)
 #   OPK_GUARD_SILENT  1 = suppress the reason text, verdict only
 #
@@ -76,12 +75,8 @@ _opk_guard_debug() {
   esac
   OPK_GUARD_SILENT=1 opk_guard_scan "$c" "${OPK_GUARD_ROOT:-$PWD}" || rc=1
   if [[ $rc -eq 1 ]]; then
-    echo "opk-guard: BLOCKED — $c (OPK_GUARD_STRICT=${OPK_GUARD_STRICT:-block}; run it by hand if you are sure)" >&2
-    if [[ "${OPK_GUARD_STRICT:-block}" == "warn" ]]; then
-      rc=0
-    else
-      shopt -s extdebug 2>/dev/null || true
-    fi
+    echo "opk-guard: BLOCKED — $c (run it by hand if you are sure)" >&2
+    shopt -s extdebug 2>/dev/null || true
   fi
   return $rc
 }

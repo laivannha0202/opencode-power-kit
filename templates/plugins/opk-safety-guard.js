@@ -84,7 +84,7 @@ const RM_RF_RE = /\brm\b[^|;&]*(-[a-z]*[rR][a-z]*\s+-[a-z]*[fF][a-z]*|-[rR][fF]|
 // git ... supports an optional `-C <path>` (matched once or more) so
 // `git -C /srv/app reset --hard HEAD` is caught like `git reset --hard`.
 const GIT_RESET_RE = /\bgit\b(?:\s+-C\s+\S+)*\s+reset\s+--hard\b/;
-const GIT_CLEAN_RE = /\bgit\b(?:\s+-C\s+\S+)*\s+clean\s+-f/;
+const GIT_CLEAN_RE = /\bgit\b(?:\s+-C\s+\S+)*\s+clean\s+-[a-zA-Z]*[fF][a-zA-Z]*/;
 // Matches: git push --force, git push -f, git push ... --force, git push ... --force-with-lease
 const GIT_PUSH_FORCE_RE = /\bgit\b(?:\s+-C\s+\S+)*\s+push\b[^|;&]*(--force|-[a-zA-Z]*f[a-zA-Z]*|--force-with-lease)\b/;
 const SQL_RE = /\b(DROP\s+TABLE|TRUNCATE\s+TABLE|TRUNCATE\s+)\b/i;

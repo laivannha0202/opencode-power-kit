@@ -13,8 +13,7 @@
 #   2. Interactive (blocks typed commands before running them):
 #        source "$HOME/.config/opencode-power-kit/guard/opk-guard-bashrc"
 #
-# Context variables (NO bypass variable — run blocked commands by hand):
-#   OPK_GUARD_STRICT  block (default) | warn
+# Context variables:
 #   OPK_GUARD_ROOT    project root used in messages (default: $PWD)
 #   OPK_GUARD_SILENT  1 = suppress the reason text, verdict only
 #
@@ -37,11 +36,13 @@
 #
 # Context variables:
 #   OPK_GUARD_ROOT     project root for messages (default: $PWD)
-#   OPK_GUARD_STRICT   block (default) | warn
 #   OPK_GUARD_SILENT   set -> no stderr noise, verdict only
 #
 # Design notes:
-#   - NO bypass env var. NO allowlist: an allowlist is what enabled the
+#   - No environment variable may change a block verdict to allow. The
+#     guard is fail-closed: if opk_guard_scan returns dangerous, the
+#     command is always blocked regardless of any env var state.
+#   - NO allowlist: an allowlist is what enabled the
 #     `rm -rf ./node_modules/../../etc` traversal bypass in the old guard.
 #     Use `rm -r` (non-recursive-force) or `git clean -n` instead.
 #   - Quote-stripping mirrors the JS plugin so docs containing literal
@@ -104,7 +105,7 @@ _opk_guard_split_segments() {
 # NOTE: no token may consume a char a following [[:space:]]+ also needs.
 _OPK_RM_RF='(^|[^a-zA-Z0-9_])rm([^a-zA-Z0-9_]|$)[^|;&]*(-[a-zA-Z]*[rR][a-zA-Z]*[[:space:]]+-[a-zA-Z]*[fF][a-zA-Z]*|-[rR][fF]|-[fF][rR]|--recursive[[:space:]]+--force|--force[[:space:]]+--recursive)'
 _OPK_GIT_RESET='(^|[^a-zA-Z0-9_])git([[:space:]]+-C[[:space:]]+[^[:space:]]+)*[[:space:]]+reset[[:space:]]+--hard([^a-zA-Z0-9_]|$)'
-_OPK_GIT_CLEAN='(^|[^a-zA-Z0-9_])git([[:space:]]+-C[[:space:]]+[^[:space:]]+)*[[:space:]]+clean[[:space:]]+-f'
+_OPK_GIT_CLEAN='(^|[^a-zA-Z0-9_])git([[:space:]]+-C[[:space:]]+[^[:space:]]+)*[[:space:]]+clean[[:space:]]+-[a-zA-Z]*[fF][a-zA-Z]*'
 _OPK_GIT_PUSH_FORCE='(^|[^a-zA-Z0-9_])git([[:space:]]+-C[[:space:]]+[^[:space:]]+)*[[:space:]]+push([^a-zA-Z0-9_]|$)[^|;&]*(--force|-[a-zA-Z]*f[a-zA-Z]*|--force-with-lease)'
 _OPK_PIPE_SHELL='\|[[:space:]]*(sudo[[:space:]]+|env[[:space:]]+)?(ba)?sh([^a-zA-Z0-9_]|$)|\|[[:space:]]*zsh([^a-zA-Z0-9_]|$)'
 _OPK_SHELL_C='(^|[^a-zA-Z0-9_])(ba)?sh[[:space:]]+-c[[:space:]]+["'"'"'][^"'"'"']*["'"'"']'
@@ -276,12 +277,8 @@ _opk_guard_debug() {
   esac
   OPK_GUARD_SILENT=1 opk_guard_scan "$c" "${OPK_GUARD_ROOT:-$PWD}" || rc=1
   if [[ $rc -eq 1 ]]; then
-    echo "opk-guard: BLOCKED — $c (OPK_GUARD_STRICT=${OPK_GUARD_STRICT:-block}; run it by hand if you are sure)" >&2
-    if [[ "${OPK_GUARD_STRICT:-block}" == "warn" ]]; then
-      rc=0
-    else
-      shopt -s extdebug 2>/dev/null || true
-    fi
+    echo "opk-guard: BLOCKED — $c (run it by hand if you are sure)" >&2
+    shopt -s extdebug 2>/dev/null || true
   fi
   return $rc
 }
