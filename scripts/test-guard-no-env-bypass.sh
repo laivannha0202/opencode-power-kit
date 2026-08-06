@@ -65,19 +65,23 @@ DESTRUCTIVE_CMDS=(
 
 # --- Helper: run a command under production BASH_ENV guard ---
 # Args: $1=command string, $2=env_var_value ("UNSET"|"EMPTY"|"value")
-# Sets OUTPUT and RC globals.
+# Sets OUTPUT, STDERR, RC globals.
 run_guarded() {
   local cmd="$1"
   local env_val="$2"
+  local stderr_file
+  stderr_file="$(mktemp)"
   set +e
   if [[ "$env_val" == "UNSET" ]]; then
-    OUTPUT="$(env -u OPK_GUARD_STRICT BASH_ENV="$GUARD_PATH" bash --noprofile --norc -c "$cmd" 2>&1)"
+    OUTPUT="$(env -u OPK_GUARD_STRICT BASH_ENV="$GUARD_PATH" bash --noprofile --norc -c "$cmd" 2>"$stderr_file")"
   elif [[ "$env_val" == "EMPTY" ]]; then
-    OUTPUT="$(env OPK_GUARD_STRICT= BASH_ENV="$GUARD_PATH" bash --noprofile --norc -c "$cmd" 2>&1)"
+    OUTPUT="$(env OPK_GUARD_STRICT= BASH_ENV="$GUARD_PATH" bash --noprofile --norc -c "$cmd" 2>"$stderr_file")"
   else
-    OUTPUT="$(env "OPK_GUARD_STRICT=$env_val" BASH_ENV="$GUARD_PATH" bash --noprofile --norc -c "$cmd" 2>&1)"
+    OUTPUT="$(env "OPK_GUARD_STRICT=$env_val" BASH_ENV="$GUARD_PATH" bash --noprofile --norc -c "$cmd" 2>"$stderr_file")"
   fi
   RC=$?
+  STDERR="$(cat "$stderr_file")"
+  rm -f "$stderr_file"
   set -e
 }
 
@@ -104,10 +108,11 @@ setup_mock_git() {
   mkdir -p "$bin_dir"
   cat > "$bin_dir/git" <<'MOCKGIT'
 #!/usr/bin/env bash
-# Mock git: record if force push was actually executed
-MARKER_FILE="__FORCE_PUSH_MARKER__"
+# Mock git: record if force push was actually executed.
+# Uses absolute marker path from OPK_FORCE_PUSH_MARKER env var.
+MARKER_FILE="${OPK_FORCE_PUSH_MARKER:?OPK_FORCE_PUSH_MARKER not set}"
 if [[ "$*" == *"--force"* && "$*" == *"push"* ]]; then
-  echo "force-push-executed" > "$MARKER_FILE"
+  printf '%s\n' force-push-executed > "$MARKER_FILE"
   echo "fatal: mock: refusing force push" >&2
   exit 1
 fi
@@ -121,6 +126,38 @@ MOCKGIT
 E2E_TOTAL=0
 E2E_PASS=0
 E2E_FAIL=0
+
+# --- Mock git self-check: prove marker mechanism works ---
+echo
+echo "  === Mock git self-check ==="
+MOCK_SELFCHECK_DIR="$TMP_ROOT/mock-selfcheck"
+MOCK_SELFCHECK_MARKER="$MOCK_SELFCHECK_DIR/marker.txt"
+rm -f "$MOCK_SELFCHECK_MARKER"
+mkdir -p "$MOCK_SELFCHECK_DIR"
+setup_mock_git "$MOCK_SELFCHECK_DIR"
+
+set +e
+OPK_FORCE_PUSH_MARKER="$MOCK_SELFCHECK_MARKER" "$MOCK_SELFCHECK_DIR/git" push --force origin main >/dev/null 2>&1
+MOCK_RC=$?
+set -e
+
+mock_invoked=0
+if [[ $MOCK_RC -eq 97 || $MOCK_RC -eq 1 ]]; then mock_invoked=1; fi
+marker_created=0
+if [[ -f "$MOCK_SELFCHECK_MARKER" ]]; then marker_created=1; fi
+marker_content=""
+if [[ $marker_created -eq 1 ]]; then marker_content="$(cat "$MOCK_SELFCHECK_MARKER")"; fi
+
+echo "  MOCK SELF-CHECK:"
+echo "    mock invoked: $mock_invoked"
+echo "    marker created: $marker_created"
+echo "    result: $marker_content"
+
+if [[ $mock_invoked -eq 1 && $marker_created -eq 1 && "$marker_content" == "force-push-executed" ]]; then
+  ok "mock git self-check: marker mechanism works"
+else
+  fail "mock git self-check: invoked=$mock_invoked created=$marker_created content=$marker_content"
+fi
 
 for cmd in "${DESTRUCTIVE_CMDS[@]}"; do
   for env_spec in "${ENV_VALUES[@]}"; do
@@ -141,7 +178,7 @@ for cmd in "${DESTRUCTIVE_CMDS[@]}"; do
         AFTER="$(cat "$TEST_REPO/file.txt")"
 
         blocked=0
-        if echo "$OUTPUT" | grep -q "BLOCKED"; then blocked=1; fi
+        if grep -q '^opk-guard: BLOCKED' <<< "$STDERR"; then blocked=1; fi
         preserved=0
         if [[ "$BEFORE" == "$AFTER" ]]; then preserved=1; fi
 
@@ -172,7 +209,7 @@ for cmd in "${DESTRUCTIVE_CMDS[@]}"; do
         UDIR_AFTER="$(cat "$TEST_REPO/untracked_dir/sentinel.txt" 2>/dev/null || echo "DELETED")"
 
         blocked=0
-        if echo "$OUTPUT" | grep -q "BLOCKED"; then blocked=1; fi
+        if grep -q '^opk-guard: BLOCKED' <<< "$STDERR"; then blocked=1; fi
         preserved=0
         if [[ "$UF_BEFORE" == "$UF_AFTER" && "$UDIR_BEFORE" == "$UDIR_AFTER" ]]; then preserved=1; fi
 
@@ -194,7 +231,7 @@ for cmd in "${DESTRUCTIVE_CMDS[@]}"; do
         SENT_AFTER="$(cat "$TEST_DIR/target/sentinel.txt" 2>/dev/null || echo "DELETED")"
 
         blocked=0
-        if echo "$OUTPUT" | grep -q "BLOCKED"; then blocked=1; fi
+        if grep -q '^opk-guard: BLOCKED' <<< "$STDERR"; then blocked=1; fi
         preserved=0
         if [[ "$SENT_BEFORE" == "$SENT_AFTER" ]]; then preserved=1; fi
 
@@ -210,7 +247,7 @@ for cmd in "${DESTRUCTIVE_CMDS[@]}"; do
 
       "git push --force origin main")
         MOCK_DIR="$TMP_ROOT/mock-bin-$env_name"
-        MARKER="$MOCK_DIR/__FORCE_PUSH_MARKER__"
+        MARKER="$MOCK_DIR/force-push-executed"
         rm -f "$MARKER"
         setup_mock_git "$MOCK_DIR"
 
@@ -218,18 +255,21 @@ for cmd in "${DESTRUCTIVE_CMDS[@]}"; do
         setup_temp_repo "$TEST_REPO"
 
         set +e
+        PUSH_STDERR_FILE="$(mktemp)"
         if [[ "$env_val" == "UNSET" ]]; then
-          OUTPUT="$(cd "$TEST_REPO" && env -u OPK_GUARD_STRICT BASH_ENV="$GUARD_PATH" PATH="$MOCK_DIR:$PATH" bash --noprofile --norc -c "git push --force origin main" 2>&1)"
+          OUTPUT="$(cd "$TEST_REPO" && env -u OPK_GUARD_STRICT OPK_FORCE_PUSH_MARKER="$MARKER" BASH_ENV="$GUARD_PATH" PATH="$MOCK_DIR:$PATH" bash --noprofile --norc -c "git push --force origin main" 2>"$PUSH_STDERR_FILE")"
         elif [[ "$env_val" == "EMPTY" ]]; then
-          OUTPUT="$(cd "$TEST_REPO" && env OPK_GUARD_STRICT= BASH_ENV="$GUARD_PATH" PATH="$MOCK_DIR:$PATH" bash --noprofile --norc -c "git push --force origin main" 2>&1)"
+          OUTPUT="$(cd "$TEST_REPO" && env OPK_GUARD_STRICT= OPK_FORCE_PUSH_MARKER="$MARKER" BASH_ENV="$GUARD_PATH" PATH="$MOCK_DIR:$PATH" bash --noprofile --norc -c "git push --force origin main" 2>"$PUSH_STDERR_FILE")"
         else
-          OUTPUT="$(cd "$TEST_REPO" && env "OPK_GUARD_STRICT=$env_val" BASH_ENV="$GUARD_PATH" PATH="$MOCK_DIR:$PATH" bash --noprofile --norc -c "git push --force origin main" 2>&1)"
+          OUTPUT="$(cd "$TEST_REPO" && env "OPK_GUARD_STRICT=$env_val" OPK_FORCE_PUSH_MARKER="$MARKER" BASH_ENV="$GUARD_PATH" PATH="$MOCK_DIR:$PATH" bash --noprofile --norc -c "git push --force origin main" 2>"$PUSH_STDERR_FILE")"
         fi
         RC=$?
+        PUSH_STDERR="$(cat "$PUSH_STDERR_FILE")"
+        rm -f "$PUSH_STDERR_FILE"
         set -e
 
         blocked=0
-        if echo "$OUTPUT" | grep -q "BLOCKED"; then blocked=1; fi
+        if grep -q '^opk-guard: BLOCKED' <<< "$PUSH_STDERR"; then blocked=1; fi
         mock_called=0
         if [[ -f "$MARKER" ]]; then mock_called=1; fi
 
@@ -257,6 +297,7 @@ echo "  === Benign commands (must pass through production BASH_ENV) ==="
 
 BENIGN_CMDS=(
   "git status --short"
+  "git diff"
   "git clean -n"
   "git clean --dry-run"
   "printf 'safe\n'"
@@ -266,23 +307,70 @@ BENIGN_PASS=0
 BENIGN_FAIL=0
 
 for cmd in "${BENIGN_CMDS[@]}"; do
+  stdout_file="$TMP_ROOT/benign-stdout"
+  stderr_file="$TMP_ROOT/benign-stderr"
+  rm -f "$stdout_file" "$stderr_file"
+
   set +e
-  OUTPUT="$(BASH_ENV="$GUARD_PATH" bash --noprofile --norc -c "$cmd" 2>&1)"
+  BASH_ENV="$GUARD_PATH" bash --noprofile --norc -c "$cmd" \
+    >"$stdout_file" 2>"$stderr_file"
   RC=$?
   set -e
 
-  blocked=0
-  if echo "$OUTPUT" | grep -q "BLOCKED"; then blocked=1; fi
+  # Guard diagnostic is determined ONLY from stderr with anchored prefix.
+  guard_blocked=0
+  if grep -q '^opk-guard: BLOCKED' "$stderr_file" 2>/dev/null; then guard_blocked=1; fi
 
-  if [[ $RC -eq 0 && $blocked -eq 0 ]]; then
-    ok "benign [$cmd] -> allowed (exit=0, no BLOCKED)"
+  if [[ $RC -eq 0 && $guard_blocked -eq 0 ]]; then
+    ok "benign [$cmd] -> allowed (exit=0, no guard diagnostic in stderr)"
     BENIGN_PASS=$((BENIGN_PASS + 1))
   else
-    fail "benign [$cmd] -> RC=$RC blocked=$blocked"
-    echo "    OUTPUT: $OUTPUT"
+    fail "benign [$cmd] -> RC=$RC guard_blocked=$guard_blocked"
+    echo "    stdout: $(cat "$stdout_file")"
+    echo "    stderr: $(cat "$stderr_file")"
     BENIGN_FAIL=$((BENIGN_FAIL + 1))
   fi
 done
+
+# --- Adversarial: git diff whose stdout contains literal "BLOCKED" ---
+echo
+echo "  === Adversarial benign: git diff with BLOCKED in content ==="
+
+ADVERSARIAL_DIR="$TMP_ROOT/adversarial-diff"
+mkdir -p "$ADVERSARIAL_DIR"
+git init -q "$ADVERSARIAL_DIR"
+git -C "$ADVERSARIAL_DIR" config user.name test
+git -C "$ADVERSARIAL_DIR" config user.email test@example.invalid
+printf 'committed\n' > "$ADVERSARIAL_DIR/file.txt"
+git -C "$ADVERSARIAL_DIR" add file.txt
+git -C "$ADVERSARIAL_DIR" commit -qm initial
+# Create a diff that contains literal "BLOCKED" and "opk-guard: BLOCKED"
+printf 'BLOCKED\nopk-guard: BLOCKED — malicious content\n' > "$ADVERSARIAL_DIR/file.txt"
+
+ADV_STDOUT="$TMP_ROOT/adversarial-stdout"
+ADV_STDERR="$TMP_ROOT/adversarial-stderr"
+rm -f "$ADV_STDOUT" "$ADV_STDERR"
+
+set +e
+cd "$ADVERSARIAL_DIR" && BASH_ENV="$GUARD_PATH" bash --noprofile --norc -c "git diff" \
+  >"$ADV_STDOUT" 2>"$ADV_STDERR"
+ADV_RC=$?
+set -e
+
+adv_stdout_has_blocked=0
+if grep -q "BLOCKED" "$ADV_STDOUT" 2>/dev/null; then adv_stdout_has_blocked=1; fi
+adv_stderr_guard=0
+if grep -q '^opk-guard: BLOCKED' "$ADV_STDERR" 2>/dev/null; then adv_stderr_guard=1; fi
+
+if [[ $ADV_RC -eq 0 && $adv_stdout_has_blocked -eq 1 && $adv_stderr_guard -eq 0 ]]; then
+  ok "adversarial git diff -> exit=0, stdout has BLOCKED, no false-positive guard in stderr"
+  BENIGN_PASS=$((BENIGN_PASS + 1))
+else
+  fail "adversarial git diff -> rc=$ADV_RC stdout_blocked=$adv_stdout_has_blocked stderr_guard=$adv_stderr_guard"
+  echo "    stdout: $(cat "$ADV_STDOUT")"
+  echo "    stderr: $(cat "$ADV_STDERR")"
+  BENIGN_FAIL=$((BENIGN_FAIL + 1))
+fi
 
 # ======================================================================
 # SECTION 3: Mutation test — prove E2E catches old warn bypass
@@ -341,8 +429,11 @@ printf 'user-dirty-change\n' > "$MUT_REPO/file.txt"
 
 MUT_BEFORE="$(cat "$MUT_REPO/file.txt")"
 set +e
-OUTPUT="$(cd "$MUT_REPO" && env OPK_GUARD_STRICT=warn BASH_ENV="$MUTATED" bash --noprofile --norc -c "git reset --hard HEAD" 2>&1)"
+MUT_STDERR_FILE="$(mktemp)"
+OUTPUT="$(cd "$MUT_REPO" && env OPK_GUARD_STRICT=warn BASH_ENV="$MUTATED" bash --noprofile --norc -c "git reset --hard HEAD" 2>"$MUT_STDERR_FILE")"
 MUT_RC=$?
+MUT_STDERR="$(cat "$MUT_STDERR_FILE")"
+rm -f "$MUT_STDERR_FILE"
 set -e
 MUT_AFTER="$(cat "$MUT_REPO/file.txt")"
 
@@ -351,7 +442,7 @@ if [[ "$MUT_BEFORE" != "$MUT_AFTER" ]]; then
   # Mutated guard let the command through — test catches this
   mutation_caught=1
 fi
-if [[ $MUT_RC -eq 0 ]] && ! echo "$OUTPUT" | grep -q "BLOCKED"; then
+if [[ $MUT_RC -eq 0 ]] && ! grep -q '^opk-guard: BLOCKED' <<< "$MUT_STDERR"; then
   # Mutated guard returned 0 and didn't block — test catches this
   mutation_caught=1
 fi

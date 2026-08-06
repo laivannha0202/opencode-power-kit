@@ -261,12 +261,15 @@ opk_guard_scan() {
 # === END ENGINE ===
 
 # ─── DEBUG-trap glue: check BEFORE the command runs ────────────────────────
-# When a dangerous command is detected, the trap prints BLOCKED and exits
-# the shell with code 1 — the command never executes.  A non-zero DEBUG-
-# trap return alone does NOT guarantee a non-zero process exit (bash only
-# skips the command when extdebug is on, but the shell still exits 0).
-# Using exit 1 directly ensures fail-closed: blocked commands always
-# produce a non-zero exit code.
+# When a dangerous command is detected, the trap prints BLOCKED to stderr
+# and prevents execution.  Behavior differs by shell mode:
+#
+#   Non-interactive (bash -c, BASH_ENV subprocesses):
+#     exit 1 — terminates the process with nonzero status.
+#
+#   Interactive (source into a live shell):
+#     return 1 with extdebug — skips the current command; shell survives.
+#     The next command typed by the user runs normally.
 _opk_guard_debug() {
   # Re-entry guard: DEBUG fires for every simple command, including those
   # inside this very function; the local shadows the flag for nested traps.
@@ -281,7 +284,14 @@ _opk_guard_debug() {
   if ! OPK_GUARD_SILENT=1 opk_guard_scan "$c" "${OPK_GUARD_ROOT:-$PWD}"; then
     echo "opk-guard: BLOCKED — $c (run it by hand if you are sure)" >&2
     _opk_guard_active=0
-    exit 1
+    if [[ "$-" == *i* ]]; then
+      # Interactive shell: skip the command but keep the shell alive.
+      shopt -s extdebug 2>/dev/null || true
+      return 1
+    else
+      # Non-interactive: terminate the process with nonzero.
+      exit 1
+    fi
   fi
   _opk_guard_active=0
   return 0

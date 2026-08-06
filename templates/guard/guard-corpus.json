@@ -197,6 +197,11 @@
       "note": "clean dry-run without -f"
     },
     {
+      "cmd": "git clean --dry-run",
+      "verdict": "allow",
+      "note": "clean long dry-run without force"
+    },
+    {
       "cmd": "git diff",
       "verdict": "allow",
       "note": "plain diff"

@@ -41,16 +41,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   guard-file invariants. Bash guard tests now run in `verify.sh`
   regardless of Node availability; missing Node is a hard `fail` for
   JS parity.
-- `templates/guard/guard-corpus.json`: added `git clean -df` and
-  `git clean -dfn` combined-flag cases (55 total).
+- `templates/guard/guard-corpus.json`: added `git clean -df`,
+  `git clean -dfn`, and `git clean --dry-run` cases (56 total).
+- `scripts/test-guard-interactive.sh`: E2E tests proving interactive
+  Bash shells survive blocked commands. Tests `git reset --hard`,
+  `git clean -df`, `rm --recursive --force`, and `git push --force`
+  (with mock) — all blocked, shell stays alive, safe commands after
+  block still execute. Also verifies explicit `exit 0` behavior.
 
 ### Fixed
 
-- `templates/guard/opk-guard-bashrc` DEBUG trap: replaced `extdebug`-based
-  blocking with `exit 1` directly in the handler, fixing the bug where
-  `OPK_GUARD_STRICT=warn` allowed blocked commands to exit 0 and the
-  shell continued executing the guarded command. Blocked commands now
-  always produce exit code 1 in all environments and modes.
+- `templates/guard/opk-guard-bashrc` DEBUG trap: replaced unconditional
+  `exit 1` with shell-mode-aware behavior — interactive shells
+  (`[[ $- == *i* ]]`) use `return 1` with extdebug to skip the
+  dangerous command while keeping the shell alive; non-interactive
+  shells use `exit 1` to terminate the process with nonzero. This
+  prevents the regression where sourcing the guard in an interactive
+  terminal killed the shell on a blocked command.
+- `scripts/test-guard-no-env-bypass.sh`: benign detection now captures
+  stdout and stderr separately, using anchored prefix
+  (`^opk-guard: BLOCKED`) on stderr only — eliminates false-positives
+  when command output contains literal "BLOCKED". Added adversarial
+  `git diff` test proving a diff with "BLOCKED" in content passes
+  without triggering the guard. `git diff` restored as benign
+  production-BASH_ENV control.
+- `scripts/test-guard-no-env-bypass.sh`: force-push mock git now uses
+  absolute marker path via `OPK_FORCE_PUSH_MARKER` env var with
+  self-check proving the marker mechanism works before E2E runs.
 - Redirect/tee target extraction in both engines: quote stripping now uses
   three separate substitutions (`${tok//\"/}`, `${tok//\'/}`, `${tok//\`/}`)
   — the previous combined pattern consumed following characters and turned
