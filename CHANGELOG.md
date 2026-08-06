@@ -5,6 +5,43 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Shared guard rule engine (`scripts/guard-rules.sh`): a single source of
+  truth for dangerous-command patterns (rm -rf, `git reset --hard`,
+  `git clean -f`, `git push --force/-f`, curl/wget pipe-to-shell, SQL
+  DROP/TRUNCATE/DELETE-without-WHERE, redirect/tee into sensitive files like
+  `.env`, secrets and private keys). All git patterns support `git -C <dir>`
+  prefixed invocations.
+- `scripts/opk-command-guard.sh` rewritten as a thin wrapper (v2.2.0) over
+  the shared engine: keeps the `opk_guard_check` / `opk_guard` /
+  `opk_guard_prompt` API, no bypass variable and no allowlist.
+- `scripts/sync-guard-bashrc.sh` generates the self-contained BASH_ENV
+  fragment `templates/guard/opk-guard-bashrc` (DEBUG-trap guard for
+  non-interactive bash children); `--stdout` mode for read-only checks.
+- Shared verdict corpus `templates/guard/guard-corpus.json` (53 cases)
+  driving parity tests for both engines: `scripts/test-command-guard.sh`
+  (Bash) and `scripts/test-safety-plugin.mjs` (JS plugin
+  `templates/plugins/opk-safety-guard.js`, which now also detects
+  redirect/tee into sensitive files).
+- `scripts/install-guard.sh`: idempotent installer for the BASH_ENV guard
+  (fragment to `~/.config/opencode-power-kit/guard/`, marked block in
+  `~/.bashrc`) with `--check`/`--uninstall`/`--yes`; refuses stale or
+  bypass/allowlist-bearing fragments, atomic writes, symlink refusal.
+  Wired into the CLI as `opk guard status|install|uninstall`.
+- `verify.sh` guard-parity section: runs both corpus tests, asserts the
+  template fragment is in sync with the engine, and rejects
+  `OPK_GUARD_SKIP` / `ALLOWLIST_PATTERNS` anywhere in the guard.
+
+### Fixed
+
+- Redirect/tee target extraction in both engines: quote stripping now uses
+  three separate substitutions (`${tok//\"/}`, `${tok//\'/}`, `${tok//\`/}`)
+  — the previous combined pattern consumed following characters and turned
+  `.env` into `.`, so `echo x >> .env` slipped past the Bash engine.
+
 ## [2.2.0] - 2026-08-05
 
 ### Added

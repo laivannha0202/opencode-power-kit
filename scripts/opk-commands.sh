@@ -134,6 +134,24 @@ opk_safety_plugin_status(){
   echo AVAILABLE_NOT_INSTALLED
 }
 
+# --- BASH_ENV guard (opk guard status|install|uninstall) -------------------
+
+opk_guard_status(){
+  local installed=0 wired=0
+  local frag="${OPK_GUARD_DIR:-$HOME/.config/opencode-power-kit/guard}/opk-guard-bashrc"
+  [[ -f "$frag" && ! -L "$frag" ]] && grep -qF 'OPK_GUARD_LOADED' "$frag" 2>/dev/null && installed=1
+  if [[ -f "$HOME/.bashrc" ]]; then
+    grep -qF '# >>> opencode-power-kit guard (opk guard install) >>>' "$HOME/.bashrc" 2>/dev/null && \
+    grep -qF '# <<< opencode-power-kit guard <<<' "$HOME/.bashrc" 2>/dev/null && wired=1
+  fi
+  if [[ $installed -eq 1 && $wired -eq 1 ]]; then
+    echo INSTALLED
+    return 0
+  fi
+  echo "PARTIAL (fragment=$installed bashrc=$wired) — run: opk guard install"
+}
+
+
 # --- BMAD ------------------------------------------------------------------
 
 opk_bmad_status(){

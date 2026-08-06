@@ -153,12 +153,30 @@ require_file "scripts/opk-command-guard.sh"
 if rg -q "OPK_GUARD_SKIP" "scripts/opk-command-guard.sh" >/dev/null 2>&1; then
 	fail "opk-command-guard.sh must NOT contain OPK_GUARD_SKIP bypass"
 fi
+require_file "scripts/guard-rules.sh"
+require_file "scripts/sync-guard-bashrc.sh"
+require_file "scripts/test-command-guard.sh"
+require_file "scripts/test-safety-plugin.mjs"
+require_file "templates/guard/guard-corpus.json"
+require_file "templates/guard/opk-guard-bashrc"
+if rg -q "OPK_GUARD_SKIP|ALLOWLIST_PATTERNS" "scripts/guard-rules.sh" >/dev/null 2>&1; then
+	fail "guard-rules.sh must NOT contain OPK_GUARD_SKIP bypass or ALLOWLIST_PATTERNS allowlist"
+fi
 require_file "scripts/validate-opencode-pack.py"
 require_file "scripts/test-cli-contracts.sh"
 require_file "scripts/install-gsd-core.sh"
 require_file "scripts/install-markitdown.sh"
 require_file "scripts/install-supermemory.sh"
 require_file "scripts/install-safety-plugin.sh"
+require_file "scripts/install-guard.sh"
+if rg -q "OPK_GUARD_SKIP[=:]|ALLOWLIST_PATTERNS[=:]" "scripts/install-guard.sh" >/dev/null 2>&1; then
+	fail "install-guard.sh must NOT define OPK_GUARD_SKIP bypass or ALLOWLIST_PATTERNS allowlist"
+fi
+if bash scripts/install-guard.sh --check >/dev/null 2>&1; then
+	ok "install-guard.sh --check passes"
+else
+	fail "install-guard.sh --check failed"
+fi
 require_file "scripts/audit-ecc.sh"
 require_file "scripts/install-ecc-lite.sh"
 require_file "scripts/check-ecc-lite.sh"
@@ -216,6 +234,8 @@ echo "[v2.1.3 CLI Split & WAL & Legacy Archive & Token Guard & CI]"
 require_contains "bin/opk" "scripts/opk-commands.sh"
 require_contains "scripts/opk-commands.sh" "opk_recover_legacy"
 require_contains "scripts/opk-commands.sh" "OPENCODE_CONFIG_DIR"
+require_contains "bin/opk" "guard)"
+require_contains "scripts/opk-commands.sh" "opk_guard_status"
 # WAL (write-ahead journal) in the project merger
 require_contains "scripts/merge-opk-project.py" "WAL_FILE_NAME"
 require_contains "scripts/merge-opk-project.py" "recover_wal"
@@ -911,6 +931,33 @@ if grep -q '/home/' "docs/UPSTREAM_AUDIT.md" 2>/dev/null || grep -q '/Users/' "d
 else
 	ok "docs/UPSTREAM_AUDIT.md: no absolute local paths"
 fi
+
+# ─── Guard parity: Bash engine vs JS plugin vs shared corpus ────────
+echo "[guard parity]"
+if command -v node >/dev/null 2>&1; then
+	if bash scripts/test-command-guard.sh; then
+		ok "test-command-guard.sh: Bash engine matches guard-corpus.json"
+	else
+		fail "test-command-guard.sh: Bash engine drifted from guard-corpus.json"
+	fi
+	if node scripts/test-safety-plugin.mjs; then
+		ok "test-safety-plugin.mjs: JS plugin matches guard-corpus.json"
+	else
+		fail "test-safety-plugin.mjs: JS plugin drifted from guard-corpus.json"
+	fi
+	if bash scripts/sync-guard-bashrc.sh --stdout >/dev/null 2>&1; then
+		if diff -q <(bash scripts/sync-guard-bashrc.sh --stdout 2>/dev/null) "templates/guard/opk-guard-bashrc" >/dev/null 2>&1; then
+			ok "templates/guard/opk-guard-bashrc is in sync with scripts/guard-rules.sh"
+		else
+			fail "templates/guard/opk-guard-bashrc is stale — re-run scripts/sync-guard-bashrc.sh"
+		fi
+	else
+		fail "scripts/sync-guard-bashrc.sh --stdout failed to generate the fragment"
+	fi
+else
+	warn "node not found — skipping JS guard parity checks"
+fi
+
 
 # audit-upstreams.py must have --root, --check, --write
 if python3 scripts/audit-upstreams.py --help 2>&1 | grep -q '\-\-root'; then
