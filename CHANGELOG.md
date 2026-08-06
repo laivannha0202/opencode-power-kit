@@ -34,9 +34,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `verify.sh` guard-parity section: runs both corpus tests, asserts the
   template fragment is in sync with the engine, and rejects
   `OPK_GUARD_SKIP` / `ALLOWLIST_PATTERNS` anywhere in the guard.
+- `scripts/test-guard-no-env-bypass.sh`: comprehensive E2E matrix test
+  (4 destructive commands × 12 env values = 48 cases) running real
+  `BASH_ENV` subprocesses, benign-command pass-through tests, mutation
+  test that proves the old warn-to-allow bypass is caught, and static
+  guard-file invariants. Bash guard tests now run in `verify.sh`
+  regardless of Node availability; missing Node is a hard `fail` for
+  JS parity.
+- `templates/guard/guard-corpus.json`: added `git clean -df` and
+  `git clean -dfn` combined-flag cases (55 total).
 
 ### Fixed
 
+- `templates/guard/opk-guard-bashrc` DEBUG trap: replaced `extdebug`-based
+  blocking with `exit 1` directly in the handler, fixing the bug where
+  `OPK_GUARD_STRICT=warn` allowed blocked commands to exit 0 and the
+  shell continued executing the guarded command. Blocked commands now
+  always produce exit code 1 in all environments and modes.
 - Redirect/tee target extraction in both engines: quote stripping now uses
   three separate substitutions (`${tok//\"/}`, `${tok//\'/}`, `${tok//\`/}`)
   — the previous combined pattern consumed following characters and turned

@@ -47,6 +47,16 @@
       "note": "clean force dry-run"
     },
     {
+      "cmd": "git clean -df",
+      "verdict": "block",
+      "note": "clean combined flags"
+    },
+    {
+      "cmd": "git clean -dfn",
+      "verdict": "block",
+      "note": "clean combined flags dry-run"
+    },
+    {
       "cmd": "git push --force origin main",
       "verdict": "block",
       "note": "push force"

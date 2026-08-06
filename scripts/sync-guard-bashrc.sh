@@ -59,26 +59,30 @@ EOF
 
   cat <<'EOF'
 # ─── DEBUG-trap glue: check BEFORE the command runs ────────────────────────
-# A non-zero DEBUG-trap return only skips the command when the extdebug
-# shell option is on (bash manual). extdebug is enabled lazily INSIDE the
-# trap (not at startup) so bash never attempts its bashdb autoload.
+# When a dangerous command is detected, the trap prints BLOCKED and exits
+# the shell with code 1 — the command never executes.  A non-zero DEBUG-
+# trap return alone does NOT guarantee a non-zero process exit (bash only
+# skips the command when extdebug is on, but the shell still exits 0).
+# Using exit 1 directly ensures fail-closed: blocked commands always
+# produce a non-zero exit code.
 _opk_guard_debug() {
   # Re-entry guard: DEBUG fires for every simple command, including those
   # inside this very function; the local shadows the flag for nested traps.
   [[ "${_opk_guard_active:-0}" == "1" ]] && return 0
-  local rc=0
   local c="${BASH_COMMAND:-}"
-  local _opk_guard_active=1
+  _opk_guard_active=1
   case "$c" in
     '' | _opk_guard_* | opk_guard_* | local* | unset* | return* | exit* | :* | '[['* | trap* | source* | shopt*)
+      _opk_guard_active=0
       return 0 ;;
   esac
-  OPK_GUARD_SILENT=1 opk_guard_scan "$c" "${OPK_GUARD_ROOT:-$PWD}" || rc=1
-  if [[ $rc -eq 1 ]]; then
+  if ! OPK_GUARD_SILENT=1 opk_guard_scan "$c" "${OPK_GUARD_ROOT:-$PWD}"; then
     echo "opk-guard: BLOCKED — $c (run it by hand if you are sure)" >&2
-    shopt -s extdebug 2>/dev/null || true
+    _opk_guard_active=0
+    exit 1
   fi
-  return $rc
+  _opk_guard_active=0
+  return 0
 }
 trap '_opk_guard_debug' DEBUG
 EOF

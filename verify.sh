@@ -934,33 +934,37 @@ fi
 
 # ─── Guard parity: Bash engine vs JS plugin vs shared corpus ────────
 echo "[guard parity]"
-if command -v node >/dev/null 2>&1; then
-	if bash scripts/test-command-guard.sh; then
-		ok "test-command-guard.sh: Bash engine matches guard-corpus.json"
+
+# Bash guard tests always run (independent of Node)
+if bash scripts/test-command-guard.sh; then
+	ok "test-command-guard.sh: Bash engine matches guard-corpus.json"
+else
+	fail "test-command-guard.sh: Bash engine drifted from guard-corpus.json"
+fi
+if bash scripts/sync-guard-bashrc.sh --stdout >/dev/null 2>&1; then
+	if diff -q <(bash scripts/sync-guard-bashrc.sh --stdout 2>/dev/null) "templates/guard/opk-guard-bashrc" >/dev/null 2>&1; then
+		ok "templates/guard/opk-guard-bashrc is in sync with scripts/guard-rules.sh"
 	else
-		fail "test-command-guard.sh: Bash engine drifted from guard-corpus.json"
+		fail "templates/guard/opk-guard-bashrc is stale — re-run scripts/sync-guard-bashrc.sh"
 	fi
+else
+	fail "scripts/sync-guard-bashrc.sh --stdout failed to generate the fragment"
+fi
+if bash scripts/test-guard-no-env-bypass.sh; then
+	ok "test-guard-no-env-bypass.sh: no env bypass possible"
+else
+	fail "test-guard-no-env-bypass.sh: env bypass detected"
+fi
+
+# JS parity requires Node — missing Node is a hard fail
+if command -v node >/dev/null 2>&1; then
 	if node scripts/test-safety-plugin.mjs; then
 		ok "test-safety-plugin.mjs: JS plugin matches guard-corpus.json"
 	else
 		fail "test-safety-plugin.mjs: JS plugin drifted from guard-corpus.json"
 	fi
-	if bash scripts/sync-guard-bashrc.sh --stdout >/dev/null 2>&1; then
-		if diff -q <(bash scripts/sync-guard-bashrc.sh --stdout 2>/dev/null) "templates/guard/opk-guard-bashrc" >/dev/null 2>&1; then
-			ok "templates/guard/opk-guard-bashrc is in sync with scripts/guard-rules.sh"
-		else
-			fail "templates/guard/opk-guard-bashrc is stale — re-run scripts/sync-guard-bashrc.sh"
-		fi
-	else
-		fail "scripts/sync-guard-bashrc.sh --stdout failed to generate the fragment"
-	fi
-	if bash scripts/test-guard-no-env-bypass.sh; then
-		ok "test-guard-no-env-bypass.sh: no env bypass possible"
-	else
-		fail "test-guard-no-env-bypass.sh: env bypass detected"
-	fi
 else
-	warn "node not found — skipping JS guard parity checks"
+	fail "node not found — JS guard parity check required"
 fi
 
 
