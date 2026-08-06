@@ -305,8 +305,10 @@ BENIGN_CMDS=(
 
 BENIGN_PASS=0
 BENIGN_FAIL=0
+BENIGN_TOTAL=0
 
 for cmd in "${BENIGN_CMDS[@]}"; do
+  BENIGN_TOTAL=$((BENIGN_TOTAL + 1))
   stdout_file="$TMP_ROOT/benign-stdout"
   stderr_file="$TMP_ROOT/benign-stderr"
   rm -f "$stdout_file" "$stderr_file"
@@ -365,11 +367,13 @@ if grep -q '^opk-guard: BLOCKED' "$ADV_STDERR" 2>/dev/null; then adv_stderr_guar
 if [[ $ADV_RC -eq 0 && $adv_stdout_has_blocked -eq 1 && $adv_stderr_guard -eq 0 ]]; then
   ok "adversarial git diff -> exit=0, stdout has BLOCKED, no false-positive guard in stderr"
   BENIGN_PASS=$((BENIGN_PASS + 1))
+  BENIGN_TOTAL=$((BENIGN_TOTAL + 1))
 else
   fail "adversarial git diff -> rc=$ADV_RC stdout_blocked=$adv_stdout_has_blocked stderr_guard=$adv_stderr_guard"
   echo "    stdout: $(cat "$ADV_STDOUT")"
   echo "    stderr: $(cat "$ADV_STDERR")"
   BENIGN_FAIL=$((BENIGN_FAIL + 1))
+  BENIGN_TOTAL=$((BENIGN_TOTAL + 1))
 fi
 
 # ======================================================================
@@ -494,7 +498,7 @@ echo "=== guard-no-env-bypass summary ==="
 echo "passed: $PASS"
 echo "failed: $FAIL"
 echo "e2e-matrix: $E2E_PASS/$E2E_TOTAL"
-echo "benign: $BENIGN_PASS/${#BENIGN_CMDS[@]}"
+echo "benign: $BENIGN_PASS/$BENIGN_TOTAL"
 
 if [[ $FAIL -gt 0 ]]; then
   echo "RESULT: FAIL"

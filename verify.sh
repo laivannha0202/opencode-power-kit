@@ -955,6 +955,11 @@ if bash scripts/test-guard-no-env-bypass.sh; then
 else
 	fail "test-guard-no-env-bypass.sh: env bypass detected"
 fi
+if python3 scripts/test-guard-interactive.py; then
+	ok "test-guard-interactive.py: interactive guard E2E via PTY"
+else
+	fail "test-guard-interactive.py: interactive guard E2E failed"
+fi
 
 # JS parity requires Node — missing Node is a hard fail
 if command -v node >/dev/null 2>&1; then
