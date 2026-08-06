@@ -19,14 +19,24 @@
 # the injection env is refused.
 #
 # CLI:
-#   opk_tx.py begin --root R --reason X
+#   opk_tx.py begin --root R --reason X [--lease L]
 #   opk_tx.py stage  --txid T --root R --kind KIND [--rel P] [--text T]
 #                    [--file F] [--marker M] [--src-root SR --src-rel SRREL]
-#                    [--mode M] [--require-absent]
-#   opk_tx.py commit --txid T --root R
-#   opk_tx.py rollback --txid T --root R
+#                    [--mode M] [--require-absent] [--lease L]
+#   opk_tx.py commit --txid T --root R [--lease L]
+#   opk_tx.py rollback --txid T --root R [--force] [--lease L]
 #   opk_tx.py status --root R [--json]
 #   opk_tx.py recover --root R --latest|--all [--yes]
+#   opk_tx.py check-lock --root R
+#   opk_tx.py hold-lock --root R   (validate + flock + hold until killed)
+#
+# The optional --lease is a per-run nonce: begin refuses to run while an
+# active transaction is owned by a different lease, and stage/commit/
+# rollback refuse to touch a transaction owned by another lease. The
+# global installer lock (.opk-state/.install.lock) is created via
+# check-lock and held by install.sh/update-bmad.sh via hold-lock (an
+# exclusive flock held for the whole run; concurrent installers are
+# refused, not serialized).
 #
 # Exit codes: 0 ok | 1 error | 2 unsafe path | 3 missing
 # ─────────────────────────────────────────────────────────────────
@@ -36,6 +46,7 @@ import fcntl
 import json
 import os
 import re
+import stat
 import sys
 import time
 import uuid
@@ -88,15 +99,27 @@ def _sanitize(rel):
 
 
 class Lock:
+    """Per-invocation advisory lock. The file is opened with O_NOFOLLOW so a
+    symlinked lock path is refused instead of being followed."""
+
     def __init__(self, root):
         self.root = root
         self.fd = None
 
     def __enter__(self):
         lock_dir = os.path.join(self.root, STATE_REL)
-        os.makedirs(lock_dir, exist_ok=True)
-        self.fd = os.open(os.path.join(lock_dir, ".tx-lock"),
-                          os.O_RDWR | os.O_CREAT, 0o600)
+        if not os.path.isdir(lock_dir):
+            io.mkdir(self.root, STATE_REL, create_parents=True)
+        try:
+            self.fd = os.open(os.path.join(lock_dir, ".tx-lock"),
+                              os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+        except OSError as exc:
+            if exc.errno == errno.ELOOP:
+                raise TxUnsafe("refusing symlinked tx lock path") from exc
+            raise TxError("cannot open tx lock: %s" % exc) from exc
+        st = os.fstat(self.fd)
+        if not stat.S_ISREG(st.st_mode) or st.st_nlink > 1:
+            raise TxUnsafe("tx lock is not a regular single-link file")
         try:
             fcntl.flock(self.fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError as exc:
@@ -170,10 +193,40 @@ def _rel_of_manifest(root, tx_id):
     return manifest
 
 
-def begin(root, reason):
+def _active_other_lease(root, lease):
+    """Return an active transaction owned by a different lease, if any.
+    A lease is a per-run nonce; refusing to begin while another live
+    run owns an active transaction prevents tx interleaving even for
+    direct tx CLI users (installers are additionally serialized by the
+    global .install.lock flock)."""
+    if not lease:
+        return None
+    for t in list_txs(root):
+        if t.get("status") in ("prepared", "applying", "failed"):
+            own = t.get("lease")
+            if own and own != lease:
+                return t
+    return None
+
+
+def _check_lease(manifest, lease):
+    own = manifest.get("lease")
+    if own and own != lease:
+        raise TxError(
+            "transaction %s is owned by lease %s (this run: %s); "
+            "refusing to touch it" % (manifest.get("tx_id"), own, lease))
+
+
+def begin(root, reason, lease=None):
     _fail_after()
     root = io.canonical_root(root)
     with Lock(root):
+        other = _active_other_lease(root, lease)
+        if other is not None:
+            raise TxError(
+                "active transaction %s is owned by another run (lease %s); "
+                "refusing to begin a new transaction" %
+                (other.get("tx_id"), other.get("lease")))
         tx_id = "%s-%s" % (time.strftime("%Y%m%d-%H%M%S"), uuid.uuid4().hex[:8])
         manifest = {
             "version": TX_VERSION,
@@ -184,6 +237,8 @@ def begin(root, reason):
             "status": "prepared",
             "ops": [],
         }
+        if lease:
+            manifest["lease"] = lease
         rel = os.path.join(TX_DIR_REL, tx_id)
         io.mkdir(root, rel, create_parents=True)
         io.mkdir(root, os.path.join(rel, BACKUPS), create_parents=True)
@@ -214,33 +269,36 @@ def _pre_backup(root, tx_id, seq, rel, manifest):
 
 
 def stage(root, tx_id, kind, rel, text=None, file_src=None, marker=None,
-          mode=None, require_absent=False, src_root=None, src_rel=None):
+          mode=None, require_absent=False, src_root=None, src_rel=None,
+          lease=None):
     if kind not in KINDS:
         raise TxError("unknown op kind: %s" % kind)
     try:
         with Lock(root):
             return _stage_locked(root, tx_id, kind, rel, text, file_src, marker,
-                                 mode, require_absent, src_root, src_rel)
+                                 mode, require_absent, src_root, src_rel,
+                                 lease)
     except (TxError, io.UnsafePathError, io.PathMissingError,
             io.OpkSafeIOError):
-        _best_effort_rollback(root, tx_id)
+        _best_effort_rollback(root, tx_id, lease)
         raise
 
 
-def _best_effort_rollback(root, tx_id):
+def _best_effort_rollback(root, tx_id, lease=None):
     """Reverse any applied ops of a failed transaction. If the lock or the
     transaction state prevents a clean rollback, leave status=failed so a
     later `recover` finishes the job."""
     try:
-        rollback(root, tx_id)
+        rollback(root, tx_id, lease=lease)
     except Exception:
         pass
 
 
 def _stage_locked(root, tx_id, kind, rel, text=None, file_src=None,
                   marker=None, mode=None, require_absent=False,
-                  src_root=None, src_rel=None):
+                  src_root=None, src_rel=None, lease=None):
     manifest = _rel_of_manifest(root, tx_id)
+    _check_lease(manifest, lease)
     if manifest["status"] in ("committed", "rolled_back", "failed"):
         raise TxError("transaction already %s" % manifest["status"])
     manifest["status"] = "applying"
@@ -347,9 +405,10 @@ def _merge_marker(root, rel, marker, content):
     return existing.rstrip("\n") + "\n" + block
 
 
-def commit(root, tx_id):
+def commit(root, tx_id, lease=None):
     with Lock(root):
         manifest = _rel_of_manifest(root, tx_id)
+        _check_lease(manifest, lease)
         if manifest["status"] == "committed":
             return {"tx_id": tx_id, "status": "committed", "ops": len(manifest["ops"])}
         if manifest["status"] in ("rolled_back", "failed"):
@@ -364,10 +423,11 @@ def commit(root, tx_id):
         return {"tx_id": tx_id, "status": "committed", "ops": len(manifest["ops"])}
 
 
-def rollback(root, tx_id, force=False):
+def rollback(root, tx_id, force=False, lease=None):
     """Reverse every op. Idempotent: rolled_back is a no-op."""
     with Lock(root):
         manifest = _load_manifest(root, tx_id)
+        _check_lease(manifest, lease)
         if manifest["status"] == "rolled_back":
             return {"tx_id": tx_id, "status": "rolled_back", "ops": 0}
         if manifest["status"] == "committed" and not force:
@@ -478,6 +538,72 @@ def recover(root, which="latest", txid=None, yes=False):
     return {"recovered": out, "pending": len(pending)}
 
 
+def check_lock(root):
+    """Create/validate the global installer lock file (used by install.sh /
+    update-bmad.sh with flock(1)). O_NOFOLLOW: a symlinked lock is refused."""
+    root = io.canonical_root(root)
+    lock_dir = os.path.join(root, STATE_REL)
+    if not os.path.isdir(lock_dir):
+        io.mkdir(root, STATE_REL, create_parents=True)
+    try:
+        fd = os.open(os.path.join(lock_dir, ".install.lock"),
+                     os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    except OSError as exc:
+        if exc.errno == errno.ELOOP:
+            raise TxUnsafe("refusing symlinked install lock path") from exc
+        raise TxError("cannot open install lock: %s" % exc) from exc
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode) or st.st_nlink > 1:
+            raise TxUnsafe("install lock is not a regular single-link file")
+    finally:
+        os.close(fd)
+    return {"lock": STATE_REL + "/.install.lock", "ok": True}
+
+
+def hold_lock(root):
+    """Create/validate the global installer lock file, take an exclusive
+    flock on it, and HOLD it until the process is terminated.
+
+    install.sh / update-bmad.sh run this in the background; the lock is
+    released automatically when the holder process dies (SIGTERM from the
+    caller's EXIT trap, or the OS closing the fd). A second installer
+    fails with an error instead of proceeding concurrently.
+    """
+    root = io.canonical_root(root)
+    lock_dir = os.path.join(root, STATE_REL)
+    if not os.path.isdir(lock_dir):
+        io.mkdir(root, STATE_REL, create_parents=True)
+    try:
+        fd = os.open(os.path.join(lock_dir, ".install.lock"),
+                     os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    except OSError as exc:
+        if exc.errno == errno.ELOOP:
+            raise TxUnsafe("refusing symlinked install lock path") from exc
+        raise TxError("cannot open install lock: %s" % exc) from exc
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode) or st.st_nlink > 1:
+            raise TxUnsafe("install lock is not a regular single-link file")
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
+            raise TxError("another installer is holding the install lock") from exc
+    except BaseException:
+        os.close(fd)
+        raise
+    print(json.dumps({"lock": STATE_REL + "/.install.lock", "ok": True,
+                      "pid": os.getpid()}))
+    sys.stdout.flush()
+    try:
+        while True:
+            time.sleep(3600)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        os.close(fd)
+
+
 # ─── CLI ─────────────────────────────────────────────────────────
 
 def _parse_args(argv):
@@ -512,7 +638,8 @@ def main(argv):
     cmd, args = _parse_args(argv)
     if cmd == "begin":
         return print(json.dumps({"tx_id": begin(_need(args, "root"),
-                                                args.get("reason", ""))}))
+                                                args.get("reason", ""),
+                                                lease=args.get("lease"))}))
     if cmd == "stage":
         op = stage(_need(args, "root"), _need(args, "txid"), _need(args, "kind"),
                    rel=args.get("rel", ""),
@@ -521,13 +648,16 @@ def main(argv):
                    marker=args.get("marker"),
                    mode=int(args["mode"], 8) if "mode" in args else None,
                    require_absent=bool(args.get("require-absent")),
-                   src_root=args.get("src-root"), src_rel=args.get("src-rel"))
+                   src_root=args.get("src-root"), src_rel=args.get("src-rel"),
+                   lease=args.get("lease"))
         return print(json.dumps(op, sort_keys=True))
     if cmd == "commit":
-        return print(json.dumps(commit(_need(args, "root"), _need(args, "txid"))))
+        return print(json.dumps(commit(_need(args, "root"), _need(args, "txid"),
+                                       lease=args.get("lease"))))
     if cmd == "rollback":
         return print(json.dumps(rollback(_need(args, "root"), _need(args, "txid"),
-                                         force=bool(args.get("force")))))
+                                         force=bool(args.get("force")),
+                                         lease=args.get("lease"))))
     if cmd == "status":
         return print(json.dumps(status(_need(args, "root"), args.get("txid")),
                                 sort_keys=True))
@@ -536,6 +666,11 @@ def main(argv):
                                         args.get("which", "latest"),
                                         txid=args.get("txid"),
                                         yes=bool(args.get("yes")))))
+    if cmd == "check-lock":
+        return print(json.dumps(check_lock(_need(args, "root"))))
+    if cmd == "hold-lock":
+        hold_lock(_need(args, "root"))
+        return None
     raise TxError("unknown command: %s" % cmd)
 
 

@@ -183,13 +183,14 @@ else
 fi
 
 # Mode detection dùng scripts/detect-mode.py (single source: POWER|SAFE|CUSTOM).
+# Bắt cả stderr để parse-error/BROKEN không bị nuốt im lặng.
 if [ -n "$CFG" ]; then
-  MODE_OUT="$(python3 "$KIT_DIR/scripts/detect-mode.py" "$CFG" 2>/dev/null || true)"
+  MODE_OUT="$(python3 "$KIT_DIR/scripts/detect-mode.py" "$CFG" 2>&1 || true)"
   case "$MODE_OUT" in
     POWER)   info "Mode: POWER (permission: allow)" ;;
     SAFE)    info "Mode: SAFE (permission: ask)" ;;
     CUSTOM)  info "Mode: CUSTOM (mixed permissions)" ;;
-    *)       warn "Không xác định được mode của $CFG ($MODE_OUT)" ;;
+    *)       warn "Không xác định được mode của $CFG: $MODE_OUT" ;;
   esac
 fi
 

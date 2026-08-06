@@ -99,6 +99,25 @@ craft_crash() { # dir: stale WAL with one record for opencode.json + partial mut
   printf '%s' "{\"model\":\"fixture/original\"}" >"$dir/.opk-wal/backup-000001.bin"
 }
 
+wal_has_no_live_state() { # dir: .opk-wal may hold only archive-* sessions
+  local dir="$1" entry
+  [[ -e "$dir/.opk-wal" ]] || return 0
+  [[ -d "$dir/.opk-wal" && ! -L "$dir/.opk-wal" ]] || return 1
+  [[ ! -e "$dir/.opk-wal/journal.wal" ]] || return 1
+  for entry in "$dir"/.opk-wal/*; do
+    [[ -e "$entry" ]] || continue
+    case "$(basename "$entry")" in
+      archive-*)
+        [[ -d "$entry" && ! -L "$entry" ]] || return 1
+        ;;
+      *)
+        return 1
+        ;;
+    esac
+  done
+  return 0
+}
+
 printf 'WAL recovery\n'
 
 # --- T1: crafted crash state -> recover_wal restores and cleans up --------
@@ -124,7 +143,7 @@ printf '{"model":"fixture/original"}\n' >"$P/opencode.json"
 craft_crash "$P"
 MERGE_OUT="$(python3 "$MERGE" --project-dir "$P" --mode power 2>&1)" || true
 check "full merge recovers stale WAL before writing" "1" "$(grep -c 'recovered interrupted transaction' <<<"$MERGE_OUT")"
-check "full merge succeeds after recovery" "0" "$([[ -e "$P/.opk-wal" ]] && echo 1 || echo 0)"
+check "full merge succeeds after recovery" "1" "$(wal_has_no_live_state "$P" && echo 1 || echo 0)"
 check "full merge left config in managed state" "1" "$(grep -c '"model": "fixture/original"' "$P/opencode.json" || true)"
 
 # --- T3: injected failure rolls back and leaves no WAL --------------------
@@ -167,7 +186,7 @@ check "dry-run leaves config untouched" '{"model":"fixture/keep"}' "$(cat "$P/op
 P="$(new_project wal-success)"
 printf '{"model":"fixture/keep"}\n' >"$P/opencode.json"
 python3 "$MERGE" --project-dir "$P" --mode power >/dev/null 2>&1
-check "successful merge leaves no WAL directory" "0" "$([[ -d "$P/.opk-wal" ]] && echo 1 || echo 0)"
+check "successful merge leaves no live WAL state" "1" "$(wal_has_no_live_state "$P" && echo 1 || echo 0)"
 
 printf '\nWAL recovery: %d passed, %d failed\n' "$PASS" "$FAIL"
 ((FAIL == 0))

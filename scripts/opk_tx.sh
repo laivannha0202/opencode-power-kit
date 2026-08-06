@@ -13,6 +13,8 @@
 #   opk_tx.sh rollback --txid T --root R [--force]
 #   opk_tx.sh status --root R [--txid T]
 #   opk_tx.sh recover --root R [--latest|--all|--txid T] [--yes]
+#   opk_tx.sh check-lock --root R
+#   opk_tx.sh hold-lock --root R
 #   opk_tx.sh help
 # ─────────────────────────────────────────────────────────────────
 set -uo pipefail
@@ -31,6 +33,8 @@ Usage:
   opk_tx.sh rollback --txid T --root R [--force]
   opk_tx.sh status --root R [--txid T]
   opk_tx.sh recover --root R [--latest | --all | --txid T] [--yes]
+  opk_tx.sh check-lock --root R
+  opk_tx.sh hold-lock --root R
 
 Exit codes: 0 ok | 1 error | 2 unsafe path | 3 missing"
 

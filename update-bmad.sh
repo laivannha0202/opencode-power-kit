@@ -27,6 +27,85 @@ if [[ "$MODE" == interactive ]]; then
   read -r -p 'Update BMAD? [y/N] ' a
   [[ "$a" =~ ^([yY]|yes|YES)$ ]] || exit 0
 fi
-LOG="$TARGET/.opencode-power-bmad-update.log"
-"${CMD[@]}" >"$LOG" 2>&1 || { rc=$?; tail -50 "$LOG" >&2 || true; exit "$rc"; }
+
+# --- Per-run lease + global update lock (giống install.sh) ---
+# hold-lock mở + validate + flock .install.lock trong MỘT fd (O_NOFOLLOW);
+# process giữ lock được kill ở EXIT trap -> flock tự giải phóng.
+LEASE="update-$$-$(date +%s)"
+LOCK_OUT="$(mktemp "${TMPDIR:-/tmp}/opk-lock.XXXXXX")"
+python3 "$KIT_DIR/scripts/opk_tx.py" hold-lock --root "$TARGET" >"$LOCK_OUT" 2>&1 &
+LOCK_PID=$!
+LOCK_ACQUIRED=0
+for _ in $(seq 1 100); do
+  if grep -q '"ok": true' "$LOCK_OUT" 2>/dev/null; then
+    LOCK_ACQUIRED=1
+    break
+  fi
+  if ! kill -0 "$LOCK_PID" 2>/dev/null; then
+    break
+  fi
+  sleep 0.05
+done
+if [[ "$LOCK_ACQUIRED" != 1 ]]; then
+  echo "ERROR: không lấy được update lock (.opk-state/.install.lock):" >&2
+  cat "$LOCK_OUT" >&2
+  rm -f "$LOCK_OUT"
+  exit 1
+fi
+rm -f "$LOCK_OUT"
+trap 'kill "$LOCK_PID" 2>/dev/null || true' EXIT
+
+# --- Khôi phục giao dịch dở dang từ lần install/update bị gián đoạn ---
+# Chạy SAU khi giữ lock: không có tiến trình khác đang ghi.
+TX_SH="$KIT_DIR/scripts/opk_tx.sh"
+pending="$("$TX_SH" status --root "$TARGET" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    txs = json.load(sys.stdin)
+except Exception:
+    txs = []
+print(sum(1 for t in txs if t.get("status") in ("prepared", "applying", "failed")))
+' 2>/dev/null || echo 0)"
+if [[ "${pending:-0}" -gt 0 ]] 2>/dev/null; then
+  echo "WARN: có $pending giao dịch dở dang — đang khôi phục..."
+  "$TX_SH" recover --root "$TARGET" --all --yes
+fi
+
+# --- Failure injection (test-only, fail-closed ngoài test) ---
+if [[ "${OPK_TEST_INJECT_FAIL:-}" == before-publish ]]; then
+  if [[ "${OPK_TEST_MODE:-0}" != 1 ]]; then
+    echo "ERROR: OPK_TEST_INJECT_FAIL=before-publish chỉ được phép trong OPK_TEST_MODE=1 (test-only)." >&2
+    exit 1
+  fi
+  echo "WARN: OPK_TEST_INJECT_FAIL=before-publish — dừng update (test-only)." >&2
+  echo "ERROR: Injected failure tại phase: before-publish (OPK_TEST_INJECT_FAIL)" >&2
+  exit 1
+fi
+
+# --- Chạy npx, capture vào TEMP log ---
+# Không bao giờ shell-redirect vào path trong project: symlink được seed
+# sẵn ở đích sẽ khiến redirect ghi xuyên qua nó. Publish qua safe write
+# layer (từ chối symlink/hardlink) sau khi npx thoát.
+LOG_NAME=".opencode-power-bmad-update.log"
+LOG="$TARGET/$LOG_NAME"
+TMP_LOG="$(mktemp "${TMPDIR:-/tmp}/opk-bmad.XXXXXX")"
+rc=0
+"${CMD[@]}" >"$TMP_LOG" 2>&1 || rc=$?
+if ! python3 "$KIT_DIR/scripts/opk_safe_io.py" write \
+  --root "$TARGET" \
+  --rel "$LOG_NAME" \
+  --stdin <"$TMP_LOG" >/dev/null 2>&1; then
+  echo "ERROR: không publish được BMAD log qua safe write (đích không an toàn?): $LOG" >&2
+  echo "Log tạm: $TMP_LOG" >&2
+  rm -f "$TMP_LOG"
+  exit 1
+fi
+rm -f "$TMP_LOG"
+if [[ "$rc" -ne 0 ]]; then
+  echo "ERROR: BMAD $VERSION update THẤT BẠI (exit code: $rc)" >&2
+  echo "Full log: $LOG" >&2
+  echo "----- tail -50 của log -----" >&2
+  tail -50 "$LOG" 2>/dev/null || echo "(không đọc được log)" >&2
+  exit "$rc"
+fi
 echo "BMAD $VERSION updated"
