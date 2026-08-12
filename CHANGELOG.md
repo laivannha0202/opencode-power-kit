@@ -5,6 +5,127 @@ All notable changes to OpenCode Power Kit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Shared guard rule engine (`scripts/guard-rules.sh`): a single source of
+  truth for dangerous-command patterns (rm -rf, `git reset --hard`,
+  `git clean -f`, `git push --force/-f`, curl/wget pipe-to-shell, SQL
+  DROP/TRUNCATE/DELETE-without-WHERE, redirect/tee into sensitive files like
+  `.env`, secrets and private keys). All git patterns support `git -C <dir>`
+  prefixed invocations.
+- `scripts/opk-command-guard.sh` rewritten as a thin wrapper (v2.2.0) over
+  the shared engine: keeps the `opk_guard_check` / `opk_guard` /
+  `opk_guard_prompt` API, no bypass variable and no allowlist.
+- `scripts/sync-guard-bashrc.sh` generates the self-contained BASH_ENV
+  fragment `templates/guard/opk-guard-bashrc` (DEBUG-trap guard for
+  non-interactive bash children); `--stdout` mode for read-only checks.
+- Shared verdict corpus `templates/guard/guard-corpus.json` (53 cases)
+  driving parity tests for both engines: `scripts/test-command-guard.sh`
+  (Bash) and `scripts/test-safety-plugin.mjs` (JS plugin
+  `templates/plugins/opk-safety-guard.js`, which now also detects
+  redirect/tee into sensitive files).
+- `scripts/install-guard.sh`: idempotent installer for the BASH_ENV guard
+  (fragment to `~/.config/opencode-power-kit/guard/`, marked block in
+  `~/.bashrc`) with `--check`/`--uninstall`/`--yes`; refuses stale or
+  bypass/allowlist-bearing fragments, atomic writes, symlink refusal.
+  Wired into the CLI as `opk guard status|install|uninstall`.
+- `verify.sh` guard-parity section: runs both corpus tests, asserts the
+  template fragment is in sync with the engine, and rejects
+  `OPK_GUARD_SKIP` / `ALLOWLIST_PATTERNS` anywhere in the guard.
+- `scripts/test-guard-no-env-bypass.sh`: comprehensive E2E matrix test
+  (4 destructive commands × 12 env values = 48 cases) running real
+  `BASH_ENV` subprocesses, benign-command pass-through tests, mutation
+  test that proves the old warn-to-allow bypass is caught, and static
+  guard-file invariants. Bash guard tests now run in `verify.sh`
+  regardless of Node availability; missing Node is a hard `fail` for
+  JS parity.
+- `templates/guard/guard-corpus.json`: added `git clean -df`,
+  `git clean -dfn`, and `git clean --dry-run` cases (56 total).
+- `scripts/test-guard-interactive.sh`: E2E tests proving interactive
+  Bash shells survive blocked commands. Tests `git reset --hard`,
+  `git clean -df`, `rm --recursive --force`, and `git push --force`
+  (with mock) — all blocked, shell stays alive, safe commands after
+  block still execute. Also verifies explicit `exit 0` behavior.
+
+### Fixed
+
+- `templates/guard/opk-guard-bashrc` DEBUG trap: replaced unconditional
+  `exit 1` with shell-mode-aware behavior — interactive shells
+  (`[[ $- == *i* ]]`) use `return 1` with extdebug to skip the
+  dangerous command while keeping the shell alive; non-interactive
+  shells use `exit 1` to terminate the process with nonzero. This
+  prevents the regression where sourcing the guard in an interactive
+  terminal killed the shell on a blocked command.
+- `scripts/test-guard-no-env-bypass.sh`: benign detection now captures
+  stdout and stderr separately, using anchored prefix
+  (`^opk-guard: BLOCKED`) on stderr only — eliminates false-positives
+  when command output contains literal "BLOCKED". Added adversarial
+  `git diff` test proving a diff with "BLOCKED" in content passes
+  without triggering the guard. `git diff` restored as benign
+  production-BASH_ENV control.
+- `scripts/test-guard-no-env-bypass.sh`: force-push mock git now uses
+  absolute marker path via `OPK_FORCE_PUSH_MARKER` env var with
+  self-check proving the marker mechanism works before E2E runs.
+- Redirect/tee target extraction in both engines: quote stripping now uses
+  three separate substitutions (`${tok//\"/}`, `${tok//\'/}`, `${tok//\`/}`)
+  — the previous combined pattern consumed following characters and turned
+  `.env` into `.`, so `echo x >> .env` slipped past the Bash engine.
+
+## [2.2.0] - 2026-08-05
+
+### Added
+
+- Safe-I/O layer (`scripts/opk_safe_io.py`): canonical root resolution with
+  `split_rel` path containment, directory-fd (`O_DIRECTORY` + `O_NOFOLLOW`)
+  writes, symlink/hardlink/`..` traversal refusal, and atomic replace with
+  `fsync`; 14-command CLI.
+- Transaction layer (`scripts/opk_tx.py`): `begin`/`stage`/`commit`/`rollback`/
+  `recover`; per-operation pre-content backups with sha256, `flock`
+  serialization, `MERGE_MARKER` idempotent blocks, journal + manifest under
+  `.opk-state/transactions/`, best-effort auto-rollback on staged failure, and
+  crash recovery; the test-only `OPK_TEST_FAIL_AFTER` injection is refused in
+  production.
+- `scripts/opk_tx.sh`: bash wrapper over the transaction CLI with fail-closed
+  exit codes (0 ok / 1 error / 2 unsafe / 3 missing).
+- `install.sh` now routes project writes through transactions: the
+  `.gitignore` merge (marker `gitignore-extra`), `knip.json`/`lefthook.yml`
+  creation (require-absent) and the install report rewrite each run as one
+  atomic transaction; pending transactions auto-recover on re-run and the
+  installer fails closed on transaction errors. The BMAD log stays a plain
+  redirect (log artifact, outside transaction scope).
+- `doctor.sh` mode detection is single-sourced through
+  `scripts/detect-mode.py` (POWER / SAFE / CUSTOM), replacing the two broken
+  inline Python blocks.
+- Release gate: new checks `detect-mode templates`, `test-safe-io`,
+  `test-tx` and `test-install-tx` plus existence asserts for the two new
+  scripts (34 checks total, previously 30).
+
+### Fixed
+
+- `scripts/opk-command-guard.sh`: removed the `OPK_GUARD_SKIP` environment
+  bypass — the guard can no longer be disabled by exporting one variable.
+- `verify.sh`: the ECC no-auto-enable negative asserts referenced
+  `scripts/bootstrap.sh` and `scripts/install-global.sh`, which do not exist
+  (the scripts live at the repo root), so the asserts were no-ops; they now
+  check the real files. Added a needle that fails if the guard bypass returns.
+- `doctor.sh` Section 6: replaced `json.load(sys.open(...))` and
+  `from detect_mode import` (wrong module name) with the canonical
+  `detect-mode.py` call; unknown mode output now warns instead of guessing.
+
+### Validation
+
+- `test-safe-io.sh` (39 checks): roundtrip, symlink matrix, escapes, hardlink
+  alias, atomicity, require-absent.
+- `test-tx.sh` (36 checks): happy path, rollback, marker idempotency, injected
+  failures, crash recovery, locking.
+- `test-install-tx.sh` (21 checks): user content preservation, marker
+  idempotency, report overwrite, crash → recovery; end-to-end `install.sh`
+  run on a sandbox with a fake npx passed with exit 0.
+- All three suites are wired into `release-gate.sh` (section 9 + 11) and
+  `verify.sh`; release gate: 34/34 PASS, 0 warnings; `verify.sh`: 481/481.
+
 ## [2.1.3] - 2026-08-03
 
 ### Added

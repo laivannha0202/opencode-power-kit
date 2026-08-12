@@ -137,27 +137,24 @@ cat > "$TMP/custom.json" <<'EOF'
 EOF
 check "custom (mixed)" "CUSTOM" "$(python3 "$DETECT" "$TMP/custom.json")"
 
-# 5) Custom with top-level string allow -> POWER
+# 5) Top-level string "allow" is an INCOMPLETE Power contract (missing the
+#    external_directory / doom_loop denies and the deny contracts) -> CUSTOM.
+#    detect-mode.py and opk mode show share one strict engine (opk_mode.py),
+#    so both must agree — see check 7 below.
 cat > "$TMP/custom2.json" <<'EOF'
 {
   "permission": "allow"
 }
 EOF
-check "custom (string allow)" "POWER" "$(python3 "$DETECT" "$TMP/custom2.json")"
+check "custom (string allow, incomplete contract)" "CUSTOM" "$(python3 "$DETECT" "$TMP/custom2.json")"
 
-# 6) JSONC comment tolerance
-cat > "$TMP/jsonc.json" <<'EOF'
-{
-  // this is a comment
-  "permission": {
-    "*": "ask",
-    "bash": { "*": "ask" },
-    "write": "ask",
-    "edit": "ask",
-    "task": "ask"
-  }
-}
-EOF
+# 6) JSONC comment tolerance — full SAFE contract with a comment -> SAFE
+python3 - "$KIT_DIR/templates/opencode.safe.json" > "$TMP/jsonc.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+print("// this is a comment")
+print(json.dumps(d, indent=2, ensure_ascii=False))
+PY
 check "jsonc safe" "SAFE" "$(python3 "$DETECT" "$TMP/jsonc.json")"
 
 # 7) Real CLI integration: mode merges the root project config and ignores OPENCODE_CONFIG_DIR.

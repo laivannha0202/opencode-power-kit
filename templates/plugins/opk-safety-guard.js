@@ -17,7 +17,7 @@
 // Helper functions (isSensitivePath / findDangerousCommand / extractPatchPaths)
 // are private (not exported) and tested via the plugin hook in test-safety-plugin.mjs.
 //
-// @version 2.1.0
+// @version 2.2.0
 // ============================================================================
 
 // --- Sensitive path detection ------------------------------------------------
@@ -81,15 +81,21 @@ function stripQuotes(cmd) {
 
 // Matches: rm -rf, rm -fr, rm -r -f, rm --recursive --force, rm -Rf, rm -fR
 const RM_RF_RE = /\brm\b[^|;&]*(-[a-z]*[rR][a-z]*\s+-[a-z]*[fF][a-z]*|-[rR][fF]|-[fF][rR]|--recursive\s+--force|--force\s+--recursive)/;
-const GIT_RESET_RE = /\bgit\s+reset\s+--hard\b/;
-const GIT_CLEAN_RE = /\bgit\s+clean\s+-f/;
+// git ... supports an optional `-C <path>` (matched once or more) so
+// `git -C /srv/app reset --hard HEAD` is caught like `git reset --hard`.
+const GIT_RESET_RE = /\bgit\b(?:\s+-C\s+\S+)*\s+reset\s+--hard\b/;
+const GIT_CLEAN_RE = /\bgit\b(?:\s+-C\s+\S+)*\s+clean\s+-[a-zA-Z]*[fF][a-zA-Z]*/;
 // Matches: git push --force, git push -f, git push ... --force, git push ... --force-with-lease
-const GIT_PUSH_FORCE_RE = /\bgit\s+push\b[^|;&]*(--force|-[a-zA-Z]*f[a-zA-Z]*|--force-with-lease)\b/;
+const GIT_PUSH_FORCE_RE = /\bgit\b(?:\s+-C\s+\S+)*\s+push\b[^|;&]*(--force|-[a-zA-Z]*f[a-zA-Z]*|--force-with-lease)\b/;
 const SQL_RE = /\b(DROP\s+TABLE|TRUNCATE\s+TABLE|TRUNCATE\s+)\b/i;
 const SQL_DELETE_RE = /\bDELETE\s+FROM\b(?![\s\S]*\bWHERE\b)/i;
 const PIPE_SHELL_RE = /\|\s*(?:sudo\s+|env\s+)?(?:ba)?sh\b|\|\s*zsh\b/;
 // Matches: bash -c "dangerous", sh -c 'dangerous'
 const SHELL_C_RE = /\b(ba)?sh\s+-c\b/;
+// Redirect (> file, >> file, 2> file, &> file, 1> file, 3> file, ...)
+const REDIRECT_TARGET_RE = /(?:\s*(?:2?>>?|&>|&>>|1>>?|3>>?)\s*)([^\s&|;>]+)/g;
+// tee <file> (target may be a sensitive file)
+const TEE_TARGET_RE = /(?:\s*tee\s+)([^\s&|;>]+)/g;
 
 function splitSegments(cmd) {
   return String(cmd)
@@ -148,6 +154,27 @@ function findDangerousCommand(command) {
   const HAS_SQL_CLIENT = /\b(mysql|psql|sqlite3?|sqlcmd|pg_dump|psql)\b/i.test(raw);
   if (HAS_SQL_CLIENT && (SQL_RE.test(raw) || SQL_DELETE_RE.test(raw))) {
     return "SQL DROP/TRUNCATE/DELETE không WHERE: mất dữ liệu bảng";
+  }
+
+  // Redirect / tee into a sensitive file: `echo TOKEN=x > .env`,
+  // `node setup.js > .env.production`, `printf x | tee .env`, ...
+  // Plain `touch .env.local` stays allowed — only the write target counts.
+  const rawHasRedirect = /[>]|tee/.test(raw);
+  if (rawHasRedirect) {
+    const targets = [];
+    for (const m of raw.matchAll(REDIRECT_TARGET_RE)) {
+      if (m[1]) targets.push(m[1]);
+    }
+    for (const m of raw.matchAll(TEE_TARGET_RE)) {
+      if (m[1]) targets.push(m[1]);
+    }
+    for (let t of targets) {
+      t = t.replace(/["'`]/g, "");
+      if (t === "&1" || t === "/dev/null") continue;
+      if (isSensitivePath(t)) {
+        return `redirect/tee vào file nhạy cảm: ${t}`;
+      }
+    }
   }
 
   return null;
@@ -249,3 +276,8 @@ const OPKSafetyGuard = async (ctx) => {
 };
 
 module.exports = OPKSafetyGuard;
+// Expose internals for the parity test (test-safety-plugin.mjs).
+module.exports.findDangerousCommand = findDangerousCommand;
+module.exports.guardToolCall = guardToolCall;
+module.exports.isSensitivePath = isSensitivePath;
+module.exports.extractPatchPaths = extractPatchPaths;

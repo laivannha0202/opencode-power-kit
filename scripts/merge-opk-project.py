@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import fcntl
 import hashlib
 import json
@@ -24,6 +25,10 @@ WAL_BACKUP_PREFIX = "backup-"
 WAL_COMMIT_PATH = ".commit"
 KIT_DIR = Path(__file__).resolve().parent.parent
 
+# Machine-readable summary of what this run did (populated by the merge
+# functions, printed with --json for install.sh's report).
+SUMMARY: list[dict[str, Any]] = []
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -38,12 +43,28 @@ def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
+JSON_MODE = False
+
+
 def log(message: str) -> None:
-    print(f"[merge] {message}")
+    if JSON_MODE:
+        print(f"[merge] {message}", file=sys.stderr)
+    else:
+        print(f"[merge] {message}")
 
 
 def timestamp() -> str:
     return time.strftime("%Y%m%d-%H%M%S") + f"-{time.time_ns() % 1_000_000_000:09d}-{os.getpid()}"
+
+
+def record_summary(file: str, status: str, backup: str | None = None,
+                   archive: str | None = None) -> None:
+    entry: dict[str, Any] = {"file": file, "status": status}
+    if backup:
+        entry["backup"] = backup
+    if archive:
+        entry["archive"] = archive
+    SUMMARY.append(entry)
 
 
 def backup_path(path: Path) -> Path:
@@ -363,6 +384,8 @@ class WriteAheadLog:
     def open(self) -> None:
         if self.dir.is_symlink() or (self.dir.exists() and not self.dir.is_dir()):
             raise ValueError(f"refusing unsafe WAL directory: {self.dir}")
+        if self.file.exists():
+            self._archive_current()
         self.dir.mkdir(mode=0o700, exist_ok=True)
         try:
             self._fd = os.open(
@@ -372,6 +395,21 @@ class WriteAheadLog:
             )
         except OSError as error:
             raise ValueError(f"cannot open WAL file {self.file}: {error}") from error
+
+    def _archive_current(self) -> None:
+        """Keep a committed journal + its backups as an archive session so
+        uninstall/rollback can restore the pre-install originals later."""
+        archive_dir = self.dir / f"archive-{timestamp()}"
+        archive_dir.mkdir(mode=0o700)
+        for entry in sorted(self.dir.iterdir()):
+            if entry.is_dir():
+                continue
+            if entry.is_symlink() or not entry.is_file():
+                raise ValueError(f"refusing to archive unsafe WAL entry: {entry}")
+            if entry.name == WAL_FILE_NAME or entry.name.startswith(WAL_BACKUP_PREFIX):
+                os.replace(entry, archive_dir / entry.name)
+        if self._fd >= 0:
+            self.close()
 
     def close(self) -> None:
         if self._fd >= 0:
@@ -409,6 +447,22 @@ class WriteAheadLog:
             {"seq": self._seq, "path": str(relative), "mode": mode, "backup": backup.name}
         )
 
+    def journal_post(self, path: Path, content: bytes) -> None:
+        """Record the content published to *path* (after the atomic write).
+
+        Post-records let uninstall detect user modifications (current
+        content differs from the recorded post-install content) and are
+        skipped by rollback replay.
+        """
+        relative = self._relative_safe(path)
+        self._seq += 1
+        self._append_record({
+            "seq": self._seq,
+            "path": str(relative),
+            "post": True,
+            "content": base64.b64encode(content).decode("ascii"),
+        })
+
     def _relative_safe(self, path: Path) -> Path:
         try:
             relative = path.relative_to(self.project)
@@ -442,7 +496,13 @@ class WriteAheadLog:
             {"seq": 0, "path": WAL_COMMIT_PATH, "mode": None, "backup": None}
         )
         self.close()
-        self._remove_dir()
+        # Keep the journal + backups as an archive session instead of
+        # deleting them: uninstall needs the pre-install originals.
+        self._archive_current()
+
+    @staticmethod
+    def _is_committed(records: list[dict[str, Any]]) -> bool:
+        return any(record.get("path") == WAL_COMMIT_PATH for record in records)
 
     def rollback(self) -> None:
         """Replay journaled mutations in reverse order (best-effort).
@@ -454,7 +514,7 @@ class WriteAheadLog:
         records = self._read_records()
         for record in records:
             relative = self._record_path(record)
-            if relative == WAL_COMMIT_PATH:
+            if relative == WAL_COMMIT_PATH or record.get("post"):
                 continue
             backup_name = record.get("backup")
             mode = record.get("mode")
@@ -475,7 +535,7 @@ class WriteAheadLog:
 
     def _rollback_record(self, record: dict[str, Any]) -> None:
         relative = self._record_path(record)
-        if relative == WAL_COMMIT_PATH:
+        if relative == WAL_COMMIT_PATH or record.get("post"):
             return
         path = self.project / relative
         backup_name = record.get("backup")
@@ -559,18 +619,39 @@ class WriteAheadLog:
 
 
 def recover_wal(project: Path) -> None:
-    """Roll back any transaction left behind by a crashed process."""
+    """Roll back any transaction left behind by a crashed process.
+
+    A journal with a commit marker is a completed session: it is archived
+    as-is (its backups are the pre-install originals uninstall needs). An
+    incomplete journal is replayed (rolled back) and then removed.
+    """
     wal = WriteAheadLog(project)
     if wal.dir.is_symlink() or (wal.dir.exists() and not wal.dir.is_dir()):
         raise ValueError(f"refusing unsafe WAL directory: {wal.dir}")
     if not wal.dir.exists():
         return
+    if wal.file.is_symlink():
+        raise ValueError(f"refusing symlinked WAL journal: {wal.file}")
     if wal.file.exists():
-        wal.rollback()
-        log("recovered interrupted transaction from .opk-wal")
+        records = wal._read_records()  # noqa: SLF001
+        if wal._is_committed(records):  # noqa: SLF001
+            wal.close()
+            wal._archive_current()  # noqa: SLF001
+        else:
+            wal.rollback()
+            log("recovered interrupted transaction from .opk-wal")
     else:
-        # Crash before the first record was written: no mutation happened.
-        wal._remove_dir()  # noqa: SLF001
+        # No journal in the root: either a crash before the first record was
+        # written (dir is empty -> safe to remove) or a previously committed
+        # session whose journal was moved into an archive-* subdirectory
+        # (must never be deleted: uninstall needs those pre-install
+        # originals). Only remove a completely empty directory.
+        try:
+            has_entries = any(wal.dir.iterdir())  # noqa: SLF001
+        except OSError:
+            has_entries = True
+        if not has_entries:
+            wal._remove_dir()  # noqa: SLF001
 
 
 def journal_entry(wal: WriteAheadLog | None, path: Path, content: bytes | None, mode: int) -> None:
@@ -965,6 +1046,8 @@ def merge_project_config(
         journal_entry(wal, root, None, 0o644)
 
     published = False
+    root_existed = root.exists()
+    archived: Path | None = None
     try:
         if changed:
             atomic_write(root, merged)
@@ -973,11 +1056,32 @@ def merge_project_config(
             raise RuntimeError("root config verification failed after atomic write")
         if legacy and legacy.exists():
             destination = archive_legacy(project, legacy)
+            archived = destination
             log(f"legacy config archived -> {destination.relative_to(project)}")
     except Exception as error:
         raise
 
+    if wal is not None:
+        if published:
+            wal.journal_post(root, root.read_bytes())
+        if archived is not None:
+            wal.journal_post(archived, archived.read_bytes())
+
     log(f"{root.name}: merge complete; user model/provider/MCP/custom keys preserved")
+    if published and not root_existed:
+        status = "created"
+    elif published:
+        status = "modified"
+    else:
+        status = "preserved"
+    record_summary(
+        str(root.relative_to(project)),
+        status,
+        backup=str(root_backup.relative_to(project)) if root_backup else None,
+    )
+    if legacy and legacy.exists():
+        record_summary(str(legacy.relative_to(project)), "archived",
+                       archive=str(archived.relative_to(project)))
     _test_hook_inject_fail("opencode.json")
     return changed or (legacy is not None and legacy.exists())
 
@@ -1016,6 +1120,7 @@ def merge_markdown(
         updated = existing.rstrip() + f"\n\n{block}\n"
 
     if updated == existing:
+        record_summary(filename, "preserved")
         return False
 
     if not dry_run:
@@ -1032,9 +1137,12 @@ def merge_markdown(
         _test_hook_pre_publish_swap(target)
 
         atomic_write_bytes(target, updated.encode("utf-8"), mode=mode)
+        if wal is not None:
+            wal.journal_post(target, target.read_bytes())
         _test_hook_inject_fail(filename)
 
     log(f"{filename}: {'would update' if dry_run else 'updated managed block'}")
+    record_summary(filename, "updated")
     return True
 
 
@@ -1058,6 +1166,7 @@ def install_safety_plugin(
 
     if target.exists() and OPK_PLUGIN_MARKER not in target.read_text(encoding="utf-8"):
         log("safety plugin: custom file exists; preserving it")
+        record_summary(str(target.relative_to(project)), "preserved")
         return False
 
     if dry_run:
@@ -1078,8 +1187,11 @@ def install_safety_plugin(
     _test_hook_pre_publish_swap(target)
 
     atomic_write_bytes(target, template.read_bytes(), mode=mode)
+    if wal is not None:
+        wal.journal_post(target, target.read_bytes())
     _test_hook_inject_fail("opk-safety-guard.js")
     log("safety plugin: installed in .opencode/plugins/")
+    record_summary(str(target.relative_to(project)), "installed")
     return True
 
 
@@ -1104,7 +1216,12 @@ def main() -> int:
     parser.add_argument("--mode", choices=("power", "safe"))
     parser.add_argument("--migrate-only", action="store_true")
     parser.add_argument("--normalize-jsonc", action="store_true")
+    parser.add_argument("--json", action="store_true",
+                        help="print a machine-readable operation summary")
     args = parser.parse_args()
+    if args.json:
+        global JSON_MODE
+        JSON_MODE = True
     try:
         project = project_from_argument(args.project_dir)
         directory_fd = os.open(project, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
@@ -1131,7 +1248,11 @@ def main() -> int:
             os.close(directory_fd)
     except Exception as error:
         print(f"[merge] ERROR: {error}", file=sys.stderr)
+        if args.json:
+            print(json.dumps({"error": str(error), "files": SUMMARY}, sort_keys=True))
         return 1
+    if args.json:
+        print(json.dumps({"ok": True, "files": SUMMARY}, sort_keys=True))
     return 0
 
 

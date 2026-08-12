@@ -28,6 +28,7 @@ Core:
   opk auto [opencode args...]
   opk run-auto "prompt"
   opk safety-plugin status|install [--yes]
+  opk guard status|install [--yes]|uninstall
 
 Integrations:
   opk bmad status|update [--stable|--next|--version X.Y.Z]
@@ -53,6 +54,8 @@ HELP
   run-auto) _guard opk_run_auto; opk_run_auto "$@" ;;
   safety-plugin) sub="${1:-status}"; shift || true
     case "$sub" in status) _guard opk_safety_plugin_status; opk_safety_plugin_status;; install) safe_opencode_project || err 'run inside a safe project with a project marker'; run_script "$KIT_DIR/scripts/install-safety-plugin.sh" "$@";; *) err 'safety-plugin: use status|install';; esac ;;
+  guard) sub="${1:-status}"; shift || true
+    case "$sub" in status) _guard opk_guard_status; opk_guard_status;; install) run_script "$KIT_DIR/scripts/install-guard.sh" "$@";; uninstall) run_script "$KIT_DIR/scripts/install-guard.sh" --uninstall;; *) err 'guard: use status|install|uninstall';; esac ;;
   global) run_script "$KIT_DIR/install-global.sh" "$@" ;;
   quick) run_script "$KIT_DIR/install-global.sh" --yes "$@" ;;
   install|project|init) safe_project || err 'run inside a real project'; run_script "$KIT_DIR/install.sh" "$@" ;;

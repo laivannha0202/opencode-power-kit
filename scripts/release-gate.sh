@@ -166,6 +166,7 @@ fi
 # --- 6. Scripts ---
 section "6. Scripts"
 for s in detect-mode.py merge-opk-project.py install-global.py opk-permissions.py \
+         opk_safe_io.py opk_tx.py \
          validate-opencode-pack.py check-cli-file-references.py \
          check-opencode-config-paths.py check-agent-permission-contracts.py \
          test-cli-contracts.sh test-global-installer.sh \
@@ -223,7 +224,8 @@ section "9. Test Coverage"
 for s in test-permission-rules.py test-safety-plugin.mjs test-token-guard.mjs \
          test-opk-mode.sh test-installer-preservation.sh test-global-installer.sh \
          test-opencode-resolved-config.sh test-timeout.sh test-runtime-behavior.sh \
-         test-wal-recovery.sh test-legacy-recovery.sh; do
+         test-wal-recovery.sh test-legacy-recovery.sh test-safe-io.sh \
+         test-tx.sh test-install-tx.sh; do
   if [ -f "$KIT_DIR/scripts/$s" ]; then
     pass "scripts/$s exists"
   else
@@ -391,6 +393,21 @@ run_cmd "test-wal-recovery" \
 
 run_cmd "test-legacy-recovery" \
   "bash $KIT_DIR/scripts/test-legacy-recovery.sh"
+
+# --- Safe-I/O & Transaction Tests ---
+echo ""
+echo "--- Safe-I/O & Transaction Tests ---"
+run_cmd "detect-mode templates" \
+  "test \"\$(python3 $KIT_DIR/scripts/detect-mode.py $KIT_DIR/templates/opencode.power.json)\" = POWER && test \"\$(python3 $KIT_DIR/scripts/detect-mode.py $KIT_DIR/templates/opencode.safe.json)\" = SAFE"
+
+run_cmd "test-safe-io" \
+  "bash $KIT_DIR/scripts/test-safe-io.sh"
+
+run_cmd "test-tx" \
+  "bash $KIT_DIR/scripts/test-tx.sh"
+
+run_cmd "test-install-tx" \
+  "bash $KIT_DIR/scripts/test-install-tx.sh"
 
 # --- Path Safety & JSONC Tests ---
 echo ""

@@ -169,24 +169,29 @@ done
 
 # --- Section 6: Project state (if in a project) ---
 section "Project State (current dir)"
+CFG=""
 if [ -f "opencode.json" ] && [ ! -f "opencode.jsonc" ]; then
   pass "opencode.json exists"
-  if python3 -c "import json,sys; d=json.load(sys.open('opencode.json')); p=d.get('permission'); sys.exit(0 if p=='allow' else 1)" 2>/dev/null; then
-    info "Mode: POWER (permission: allow)"
-  else
-    info "Mode: SAFE or CUSTOM (permission object)"
-  fi
+  CFG="opencode.json"
 elif [ -f "opencode.jsonc" ] && [ ! -f "opencode.json" ]; then
   pass "opencode.jsonc exists"
-  if python3 -c "import json,sys; sys.path.insert(0,'scripts'); from detect_mode import strip_jsonc; d=json.loads(strip_jsonc(open('opencode.jsonc').read())); p=d.get('permission'); sys.exit(0 if p=='allow' else 1)" 2>/dev/null; then
-    info "Mode: POWER (permission: allow)"
-  else
-    info "Mode: SAFE or CUSTOM (permission object)"
-  fi
+  CFG="opencode.jsonc"
 elif [ -f "opencode.json" ] && [ -f "opencode.jsonc" ]; then
   warn "CONFLICT: both opencode.json and opencode.jsonc exist"
 else
   info "No config found (not in project?)"
+fi
+
+# Mode detection dùng scripts/detect-mode.py (single source: POWER|SAFE|CUSTOM).
+# Bắt cả stderr để parse-error/BROKEN không bị nuốt im lặng.
+if [ -n "$CFG" ]; then
+  MODE_OUT="$(python3 "$KIT_DIR/scripts/detect-mode.py" "$CFG" 2>&1 || true)"
+  case "$MODE_OUT" in
+    POWER)   info "Mode: POWER (permission: allow)" ;;
+    SAFE)    info "Mode: SAFE (permission: ask)" ;;
+    CUSTOM)  info "Mode: CUSTOM (mixed permissions)" ;;
+    *)       warn "Không xác định được mode của $CFG: $MODE_OUT" ;;
+  esac
 fi
 
 if [ -f ".opencode/plugins/opk-safety-guard.js" ]; then

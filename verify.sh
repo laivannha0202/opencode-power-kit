@@ -150,12 +150,33 @@ require_file "opencode-global/commands/power-build.md"
 require_file "opencode-global/commands/tooling-doctor.md"
 require_file "scripts/cleanup-agent-artifacts.sh"
 require_file "scripts/opk-command-guard.sh"
+if rg -q "OPK_GUARD_SKIP" "scripts/opk-command-guard.sh" >/dev/null 2>&1; then
+	fail "opk-command-guard.sh must NOT contain OPK_GUARD_SKIP bypass"
+fi
+require_file "scripts/guard-rules.sh"
+require_file "scripts/sync-guard-bashrc.sh"
+require_file "scripts/test-command-guard.sh"
+require_file "scripts/test-safety-plugin.mjs"
+require_file "templates/guard/guard-corpus.json"
+require_file "templates/guard/opk-guard-bashrc"
+if rg -q "OPK_GUARD_SKIP|ALLOWLIST_PATTERNS" "scripts/guard-rules.sh" >/dev/null 2>&1; then
+	fail "guard-rules.sh must NOT contain OPK_GUARD_SKIP bypass or ALLOWLIST_PATTERNS allowlist"
+fi
 require_file "scripts/validate-opencode-pack.py"
 require_file "scripts/test-cli-contracts.sh"
 require_file "scripts/install-gsd-core.sh"
 require_file "scripts/install-markitdown.sh"
 require_file "scripts/install-supermemory.sh"
 require_file "scripts/install-safety-plugin.sh"
+require_file "scripts/install-guard.sh"
+if rg -q "OPK_GUARD_SKIP[=:]|ALLOWLIST_PATTERNS[=:]" "scripts/install-guard.sh" >/dev/null 2>&1; then
+	fail "install-guard.sh must NOT define OPK_GUARD_SKIP bypass or ALLOWLIST_PATTERNS allowlist"
+fi
+if bash scripts/install-guard.sh --check >/dev/null 2>&1; then
+	ok "install-guard.sh --check passes"
+else
+	fail "install-guard.sh --check failed"
+fi
 require_file "scripts/audit-ecc.sh"
 require_file "scripts/install-ecc-lite.sh"
 require_file "scripts/check-ecc-lite.sh"
@@ -213,6 +234,8 @@ echo "[v2.1.3 CLI Split & WAL & Legacy Archive & Token Guard & CI]"
 require_contains "bin/opk" "scripts/opk-commands.sh"
 require_contains "scripts/opk-commands.sh" "opk_recover_legacy"
 require_contains "scripts/opk-commands.sh" "OPENCODE_CONFIG_DIR"
+require_contains "bin/opk" "guard)"
+require_contains "scripts/opk-commands.sh" "opk_guard_status"
 # WAL (write-ahead journal) in the project merger
 require_contains "scripts/merge-opk-project.py" "WAL_FILE_NAME"
 require_contains "scripts/merge-opk-project.py" "recover_wal"
@@ -514,10 +537,10 @@ require_contains "scripts/audit-ecc.sh" "--help"
 require_contains "scripts/install-ecc-lite.sh" "--help"
 require_contains "scripts/check-ecc-lite.sh" "--help"
 # No auto-enable in bootstrap / install-global
-if rg -q "ecc" "scripts/bootstrap.sh" 2>/dev/null; then
+if rg -q "ecc" "bootstrap.sh" 2>/dev/null; then
 	fail "bootstrap.sh must NOT auto-enable ECC"
 fi
-if rg -q "ecc" "scripts/install-global.sh" 2>/dev/null; then
+if rg -q "ecc" "install-global.sh" 2>/dev/null; then
 	fail "install-global.sh must NOT auto-enable ECC"
 fi
 # THIRD_PARTY
@@ -777,10 +800,10 @@ require_contains "CHANGELOG.md" "init-deep-lite"
 require_contains "CHANGELOG.md" "no MCP"
 require_contains "CHANGELOG.md" "no telemetry"
 # VERSION must match the current release exactly, not by substring.
-if [[ "${EXPECTED_VERSION}" == "2.1.3" ]]; then
-	ok "VERSION exactly matches 2.1.3"
+if [[ "${EXPECTED_VERSION}" == "2.2.0" ]]; then
+	ok "VERSION exactly matches 2.2.0"
 else
-	fail "VERSION is '${EXPECTED_VERSION:-missing}', expected exactly 2.1.3"
+	fail "VERSION is '${EXPECTED_VERSION:-missing}', expected exactly 2.2.0"
 fi
 # New commands (5)
 require_file "opencode-global/commands/intent-router.md"
@@ -908,6 +931,47 @@ if grep -q '/home/' "docs/UPSTREAM_AUDIT.md" 2>/dev/null || grep -q '/Users/' "d
 else
 	ok "docs/UPSTREAM_AUDIT.md: no absolute local paths"
 fi
+
+# ─── Guard parity: Bash engine vs JS plugin vs shared corpus ────────
+echo "[guard parity]"
+
+# Bash guard tests always run (independent of Node)
+if bash scripts/test-command-guard.sh; then
+	ok "test-command-guard.sh: Bash engine matches guard-corpus.json"
+else
+	fail "test-command-guard.sh: Bash engine drifted from guard-corpus.json"
+fi
+if bash scripts/sync-guard-bashrc.sh --stdout >/dev/null 2>&1; then
+	if diff -q <(bash scripts/sync-guard-bashrc.sh --stdout 2>/dev/null) "templates/guard/opk-guard-bashrc" >/dev/null 2>&1; then
+		ok "templates/guard/opk-guard-bashrc is in sync with scripts/guard-rules.sh"
+	else
+		fail "templates/guard/opk-guard-bashrc is stale — re-run scripts/sync-guard-bashrc.sh"
+	fi
+else
+	fail "scripts/sync-guard-bashrc.sh --stdout failed to generate the fragment"
+fi
+if bash scripts/test-guard-no-env-bypass.sh; then
+	ok "test-guard-no-env-bypass.sh: no env bypass possible"
+else
+	fail "test-guard-no-env-bypass.sh: env bypass detected"
+fi
+if python3 scripts/test-guard-interactive.py; then
+	ok "test-guard-interactive.py: interactive guard E2E via PTY"
+else
+	fail "test-guard-interactive.py: interactive guard E2E failed"
+fi
+
+# JS parity requires Node — missing Node is a hard fail
+if command -v node >/dev/null 2>&1; then
+	if node scripts/test-safety-plugin.mjs; then
+		ok "test-safety-plugin.mjs: JS plugin matches guard-corpus.json"
+	else
+		fail "test-safety-plugin.mjs: JS plugin drifted from guard-corpus.json"
+	fi
+else
+	fail "node not found — JS guard parity check required"
+fi
+
 
 # audit-upstreams.py must have --root, --check, --write
 if python3 scripts/audit-upstreams.py --help 2>&1 | grep -q '\-\-root'; then
