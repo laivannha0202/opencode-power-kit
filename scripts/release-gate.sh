@@ -184,10 +184,11 @@ else
   fail "merge-opk-project.py missing import os"
 fi
 
-if grep -q "json.load" "$KIT_DIR/scripts/detect-mode.py" 2>/dev/null; then
-  pass "detect-mode.py uses JSON parser"
+if grep -q "from opk_mode import .*load_config" "$KIT_DIR/scripts/detect-mode.py" 2>/dev/null && \
+   grep -q "data = load_config(path)" "$KIT_DIR/scripts/detect-mode.py" 2>/dev/null; then
+  pass "detect-mode.py uses shared JSON/JSONC parser"
 else
-  warn "detect-mode.py may not use JSON parser"
+  warn "detect-mode.py shared parser delegation not detected"
 fi
 
 # --- 7. No personal paths ---
@@ -226,7 +227,8 @@ for s in test-permission-rules.py test-safety-plugin.mjs test-token-guard.mjs \
          test-opencode-resolved-config.sh test-timeout.sh test-runtime-behavior.sh \
          test-wal-recovery.sh test-legacy-recovery.sh test-safe-io.sh \
          test-tx.sh test-install-tx.sh test-hardening-contract.py \
-         test-command-guard.sh test-guard-no-env-bypass.sh test-guard-interactive.py; do
+         test-command-guard.sh test-guard-no-env-bypass.sh test-guard-interactive.py \
+         test-phase2-upstream-contract.py check-bmad-runtime-prereqs.sh; do
   if [ -f "$KIT_DIR/scripts/$s" ]; then
     pass "scripts/$s exists"
   else
@@ -358,6 +360,9 @@ run_cmd "test-token-guard" \
 
 run_cmd "test-hardening-contract" \
   "python3 $KIT_DIR/scripts/test-hardening-contract.py"
+
+run_cmd "test-phase2-upstream-contract" \
+  "python3 $KIT_DIR/scripts/test-phase2-upstream-contract.py"
 
 # --- Shell Tests ---
 echo ""

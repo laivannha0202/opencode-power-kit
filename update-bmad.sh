@@ -21,6 +21,10 @@ TARGET="$(pwd -P)"
 CMD=(npx --yes "bmad-method@$VERSION" install --modules bmm --tools opencode --user-name "${OPK_USER_NAME:-${USER:-User}}" --communication-language Vietnamese --document-output-language Vietnamese --directory "$TARGET" -y)
 printf 'BMAD plan:'; printf ' %q' "${CMD[@]}"; printf '\n'
 [[ "$MODE" == dry-run ]] && exit 0
+if ! bash "$KIT_DIR/scripts/check-bmad-runtime-prereqs.sh"; then
+  echo "ERROR: BMAD $VERSION runtime prerequisites failed; update aborted before project mutation." >&2
+  exit 1
+fi
 command -v npx >/dev/null || { echo 'ERROR: npx not found' >&2; exit 1; }
 if [[ "$MODE" == interactive ]]; then
   [[ -t 0 ]] || { echo 'ERROR: pass --yes' >&2; exit 1; }

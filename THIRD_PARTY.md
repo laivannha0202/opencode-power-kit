@@ -97,11 +97,11 @@ full-stack development. OpenCode itself must be installed separately.
 | Field | Value |
 |-------|-------|
 | Role | Agent skill library — loaded as an OpenCode plugin at runtime |
-| Integration | **Plugin reference** — project/global templates pin `superpowers@git+https://github.com/obra/superpowers.git#v6.2.0` |
+| Integration | **Plugin reference** — project/global templates pin `superpowers@git+https://github.com/obra/superpowers.git#v6.3.0` |
 | Source | https://github.com/obra/superpowers |
 | Kit ships | Only a JSON reference; no source files from Superpowers are vendored |
 | License | MIT (per upstream) |
-| Version pin | `OPK_SUPERPOWERS_VERSION=6.2.0`; `audit-upstreams.py --check` rejects template drift |
+| Version pin | `OPK_SUPERPOWERS_VERSION=6.3.0`; `audit-upstreams.py --check` rejects template drift |
 
 At OpenCode startup, the `opencode.json` plugin directive tells OpenCode to
 fetch Superpowers from GitHub. The kit does **not** bundle Superpowers skills
@@ -118,7 +118,7 @@ curated skills, separate from Superpowers.
 | Integration | **Install-time dependency** — `install.sh` runs `npx bmad-method@VERSION install` into the target project |
 | Source | https://github.com/bmad-code-org/BMAD-METHOD |
 | npm | `bmad-method` (published to npm registry) |
-| Version pin | CLI/update default: `OPK_BMAD_VERSION=6.10.0` in `scripts/upstream-versions.sh`; `BMAD_METHOD_VERSION` remains the explicit compatibility override |
+| Version pin | CLI/update default: `OPK_BMAD_VERSION=6.11.0` in `scripts/upstream-versions.sh`; `BMAD_METHOD_VERSION` remains the explicit compatibility override |
 | Kit ships | Wrapper scripts that call the official npm installer |
 | Update path | `bash update-bmad.sh` / `opk update-bmad` — re-runs `npx bmad-method@... install` |
 | License | MIT (per upstream) |

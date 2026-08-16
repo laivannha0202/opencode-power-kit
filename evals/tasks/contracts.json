@@ -166,11 +166,11 @@
   {
     "id": "contract-018",
     "name": "README agent count accurate",
-    "description": "README must show 16 active agents",
+    "description": "README must show 17 active agents",
     "check_type": "grep_present",
     "target": "README.md",
     "patterns": [
-      "16 active agents"
+      "17 active agents"
     ],
     "expected": "all_present"
   },
@@ -204,8 +204,8 @@
     "check_type": "grep_present",
     "target": "docs/UPSTREAM_CAPABILITY_MAP.md",
     "patterns": [
-      "v6.2.0 (central + template pin)",
-      "6.10.0 (CLI/update pin)",
+      "v6.3.0 (central + template pin)",
+      "6.11.0 (CLI/update pin)",
       "@1.8.0 (reviewed central pin)",
       "https://github.com/obra/superpowers.git",
       "https://github.com/bmad-code-org/BMAD-METHOD",
@@ -253,7 +253,7 @@
     "check_type": "grep_present",
     "target": "THIRD_PARTY.md",
     "patterns": [
-      "6.10.0",
+      "6.11.0",
       "@1.8.0",
       "rohitg00/agentmemory",
       "obra/superpowers"

@@ -197,6 +197,17 @@ if is_bad_project_dir; then
 	err "Không chạy install.sh trong $TARGET_DIR."
 fi
 
+# --- BMAD runtime prerequisites (6.11+) ---
+# Preserve the old "no Node -> install OPK but skip BMAD" behavior. If npx is
+# present, however, do not install a BMAD version whose rendered skills cannot run.
+if command -v npx >/dev/null 2>&1; then
+	if ! bash "$KIT_DIR/scripts/check-bmad-runtime-prereqs.sh"; then
+		err "BMAD Method $BMAD_METHOD_VERSION prerequisites failed.
+  Required: Node >=20.12.0, npx, uv, python3.
+  OPK will not auto-install or upgrade system runtimes."
+	fi
+fi
+
 recover_pending_tx
 
 if [ ! -d "$KIT_DIR/templates" ]; then

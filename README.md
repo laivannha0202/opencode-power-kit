@@ -1,7 +1,7 @@
 # OpenCode Power Kit
 
 [![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](./VERSION)
-[![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.10.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
+[![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.11.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)
 [![Linux-only](https://img.shields.io/badge/platform-Linux--only-blue.svg)](#cài-nhanh)
@@ -171,7 +171,7 @@ người dùng hiểu rõ ranh giới.
 
 ## Power Mode v1.5.0
 
-- **16 active agents** — 10 core strong agents, 3 lite agents, 1 taste agent, 1 ECC-lite, 1 Hermes-lite; GSD 34 reference-only in `extras/gsd-agent-reference/`
+- **17 active agents** — 10 core strong agents, 3 lite agents, 1 taste agent, 1 ECC-lite, 1 Hermes-lite; GSD 34 reference-only in `extras/gsd-agent-reference/`
 - **71 commands** — phân loại theo power workflow, safety, build lifecycle, review, DB/API, QA/E2E, DevOps, quality/security, token/tooling, RAG, compression, memory
 - **`scripts/opk-command-guard.sh`** — lớp bảo vệ: cảnh báo/chặn lệnh shell nguy hiểm (`rm -rf`, `git reset --hard`, force push, `DROP TABLE`, ...)
 - **`build-strong` Agent Delegation** — tự động triệu hồi subagent chuyên biệt dựa trên ngữ cảnh
@@ -616,7 +616,7 @@ Phù hợp nhất cho project dùng: NestJS backend, React/Vite frontend, MySQL 
 | Safety | CommonJS safety plugin, opk-command-guard, cleanup-safe | Instruction-based, not sandbox; depends on model compliance | `node scripts/test-safety-plugin.mjs` |
 | Build verification | 22 behavioral contracts, eval regression suite | Contracts verify workflow, not model output quality | `bash evals/run.sh` |
 | Linux-only runtime | Bash entrypoints, shared platform guard, portable timeout fallback | Chỉ hỗ trợ Linux; không ship Windows runtime | `bash scripts/release-gate.sh` |
-| Third-party integration | Superpowers v6.2.0, BMAD updater pin 6.10.0, GSD 1.8.0, ECC, Hermes, RAG, Headroom, AgentMemory | Opt-in only; no auto-enable; user installs per dependency | `python3 scripts/audit-upstreams.py --check` |
+| Third-party integration | Superpowers v6.3.0, BMAD updater pin 6.11.0, GSD 1.8.0, ECC, Hermes, RAG, Headroom, AgentMemory | Opt-in only; no auto-enable; user installs per dependency | `python3 scripts/audit-upstreams.py --check` |
 
 ---
 

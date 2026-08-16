@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upstream compatibility
+
+- Phase-2 upstream compatibility: reviewed and advanced Superpowers from
+  `6.2.0` to `6.3.0` and BMAD Method from `6.10.0` to `6.11.0`.
+- BMAD install/update now checks Node `>=20.12.0`, `npx`, `uv`, and `python3`
+  before invoking BMAD 6.11, preventing a successful install that would later
+  halt when rendered BMAD skills call `uv`.
+- Release validation now recognizes `detect-mode.py`'s shared
+  `opk_mode.load_config` JSON/JSONC parser instead of warning because the thin
+  wrapper does not call `json.load` directly.
+- Added a release-gated Phase-2 upstream contract to prevent central pins,
+  templates, runtime prerequisites, and current dependency documentation from
+  drifting apart.
+
 ### Security
 
 - Phase-1 runtime hardening: added `opk-main` as the managed primary router and
