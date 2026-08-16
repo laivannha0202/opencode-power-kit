@@ -800,7 +800,7 @@ def validate_version() -> list[str]:
     active_agents = sorted(active_agents_dir.glob("*.md"))
     active_commands = sorted((GLOBAL_DIR / "commands").glob("*.md"))
     active_skills = sorted([d for d in (GLOBAL_DIR / "skills").iterdir() if d.is_dir()])
-    expected_agents = 16
+    expected_agents = 17
     expected_commands = 71
     expected_skills = 23
     if len(active_agents) == expected_agents:

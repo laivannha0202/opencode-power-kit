@@ -318,10 +318,32 @@ cp "$KIT_DIR/templates/opencode.safe.json" "$MONO/opencode.json"
 cp "$KIT_DIR/templates/opencode.power.json" "$NESTED/opencode.json"
 pushd "$NESTED" >/dev/null
 check "nested POWER overrides root SAFE for doctor" "POWER" "$(show_mode)"
+
+# Power permissions alone are intentionally insufficient for unattended mode.
+# Missing reviewed runtime assets must fail closed until the public mode command
+# repairs/installs safety guard + token guard + opk-main.
 if "$OPK" auto --help >/dev/null 2>&1; then
-  check "nested POWER allows auto delegation" "zero" "zero"
+  check "nested POWER without runtime assets blocks auto" "nonzero" "zero"
 else
-  check "nested POWER allows auto delegation" "zero" "nonzero"
+  check "nested POWER without runtime assets blocks auto" "nonzero" "nonzero"
+fi
+
+if "$OPK" mode power >/dev/null 2>&1; then
+  runtime_assets_ok=false
+  if [[ -f "$NESTED/.opencode/plugins/opk-safety-guard.js" && \
+        -f "$NESTED/.opencode/plugins/opk-token-guard.js" && \
+        -f "$NESTED/.opencode/agents/opk-main.md" ]]; then
+    runtime_assets_ok=true
+  fi
+  check "nested POWER repair installs reviewed runtime assets" "true" "$runtime_assets_ok"
+else
+  check "nested POWER repair command" "zero" "nonzero"
+fi
+
+if "$OPK" auto --help >/dev/null 2>&1; then
+  check "nested POWER with reviewed runtime allows auto" "zero" "zero"
+else
+  check "nested POWER with reviewed runtime allows auto" "zero" "nonzero"
 fi
 popd >/dev/null
 

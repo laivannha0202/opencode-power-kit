@@ -128,6 +128,19 @@ function findDangerousCommand(command) {
     }
   }
 
+  // Nested execution: inspect raw quoted payloads for ssh/eval.
+  // General doc searches stay quote-stripped below, but actual ssh/eval
+  // commands must not hide destructive payloads inside quotes.
+  for (const rawSeg of splitSegments(raw)) {
+    const nested = rawSeg.trim();
+    const kind = /^(?:sudo\s+)?ssh\b/.test(nested) ? "ssh" : /^eval\b/.test(nested) ? "eval" : null;
+    if (!kind) continue;
+    if (RM_RF_RE.test(nested)) return `${kind} payload rm -rf: xóa dữ liệu không thể phục hồi`;
+    if (GIT_RESET_RE.test(nested)) return `${kind} payload git reset --hard: mất thay đổi chưa commit`;
+    if (GIT_CLEAN_RE.test(nested)) return `${kind} payload git clean -f: xóa untracked files`;
+    if (GIT_PUSH_FORCE_RE.test(nested)) return `${kind} payload git push --force: ghi đè lịch sử remote`;
+  }
+
   // Pipe-to-shell must be checked on the whole (quote-stripped) command
   // because the pipe itself is the danger and splitting on | would hide it.
   if (PIPE_SHELL_RE.test(stripped)) {

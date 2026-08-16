@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Phase-1 runtime hardening: added `opk-main` as the managed primary router and
+  set project templates to `default_agent: opk-main` with `subagent_depth: 1`.
+- Project/global installers now deploy both `opk-safety-guard.js` and
+  `opk-token-guard.js`; project install also deploys the managed `opk-main`
+  agent so project-local runtime behavior does not depend on a previous global install.
+- Power-mode bash rules and token guard now block shell reads of `.env`, secret,
+  credential, private-key and common token-store paths instead of relying only
+  on the OpenCode `read` permission.
+- Safety guards now inspect quoted destructive payloads passed through `ssh` and
+  `eval`; the previous shared SSH gap is a blocking regression case.
+- `opk auto` / `opk run-auto` now fail closed unless Power permissions resolve
+  and installed safety/token/router assets byte-match the reviewed kit sources.
+- Added installer reachability, static hardening-contract and real PTY side-effect
+  tests so source-only or false-positive guard coverage cannot pass release gate.
+
 ### Added
 
 - Shared guard rule engine (`scripts/guard-rules.sh`): a single source of

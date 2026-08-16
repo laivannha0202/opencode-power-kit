@@ -196,6 +196,19 @@ opk_guard_scan() {
     fi
   fi
 
+  # Nested execution: inspect raw ssh/eval segments before quote stripping.
+  _opk_guard_split_segments "$raw"
+  for seg in "${_opk_guard_segments[@]}"; do
+    if [[ "$seg" =~ ^[[:space:]]*(sudo[[:space:]]+)?ssh([[:space:]]|$) || \
+          "$seg" =~ ^[[:space:]]*eval([[:space:]]|$) ]]; then
+      if _opk_guard_danger_in "$seg"; then
+        _opk_guard_violation="nested execution: $_opk_guard_violation"
+        [[ -n "${OPK_GUARD_SILENT:-}" ]] || echo "opk-guard: BLOCKED — [$_opk_guard_violation]: $cmd" >&2
+        return 1
+      fi
+    fi
+  done
+
   # pipe-to-shell on the whole (quote-stripped) command
   if [[ "$stripped" =~ $_OPK_PIPE_SHELL ]]; then
     _opk_guard_violation="pipe-to-shell: curl/wget/... | sh|bash|zsh — rủi ro thực thi mã từ xa"

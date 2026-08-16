@@ -392,6 +392,9 @@ class Installer:
         profile = parse_json(self.kit / "templates" / f"opencode.{profile_name}.json")
         merged = dict(current)
         merged.setdefault("$schema", "https://opencode.ai/config.json")
+        for key in ("default_agent", "subagent_depth"):
+            if key in profile and key not in merged:
+                merged[key] = profile[key]
         merged["plugin"] = union(merged.get("plugin"), profile.get("plugin"))
 
         compaction = merged.get("compaction") if isinstance(merged.get("compaction"), dict) else {}
@@ -407,6 +410,35 @@ class Installer:
         merged["watcher"] = watcher
         if self.mode is not None or "permission" not in merged:
             merged["permission"] = profile["permission"]
+        else:
+            # managed security denies: preserve the user's current mode while
+            # appending reviewed deny rules from the selected safety profile.
+            current_permission = merged.get("permission")
+            wanted_permission = profile.get("permission", {})
+            if isinstance(current_permission, str):
+                current_permission = {"*": current_permission}
+            elif isinstance(current_permission, dict):
+                current_permission = dict(current_permission)
+            else:
+                current_permission = {}
+            fallback = current_permission.get("*", "ask")
+            for permission_key in ("read", "bash"):
+                wanted_rules = wanted_permission.get(permission_key, {}) if isinstance(wanted_permission, dict) else {}
+                if not isinstance(wanted_rules, dict):
+                    continue
+                existing_rules = current_permission.get(permission_key, fallback)
+                if isinstance(existing_rules, str):
+                    existing_rules = {"*": existing_rules}
+                elif isinstance(existing_rules, dict):
+                    existing_rules = dict(existing_rules)
+                else:
+                    existing_rules = {"*": fallback}
+                for pattern, effect in wanted_rules.items():
+                    if effect == "deny":
+                        existing_rules.pop(pattern, None)
+                        existing_rules[pattern] = "deny"
+                current_permission[permission_key] = existing_rules
+            merged["permission"] = current_permission
 
         serialized = json.dumps(merged, indent=2, ensure_ascii=False) + "\n"
         if target.exists() and target.read_text(encoding="utf-8") == serialized:
@@ -439,7 +471,9 @@ class Installer:
         previous = self.load_manifest()
         managed = dict(previous)
         source_root = self.kit / "opencode-global"
-        seen: set[str] = set()
+        sources: list[tuple[Path, str]] = []
+        source_rel_seen: set[str] = set()
+
         for directory in ASSET_DIRS:
             source_dir = source_root / directory
             if not source_dir.is_dir():
@@ -450,26 +484,48 @@ class Installer:
                 if source.is_symlink() or source.resolve(strict=True) != source:
                     raise ValueError(f"refusing symlinked OPK asset: {source}")
                 relative = source.relative_to(source_root).as_posix()
-                seen.add(relative)
-                destination = self.config_dir / relative
-                self.validate_target(destination)
-                source_hash = sha256(source)
-                if destination.exists():
-                    if destination.is_symlink() or not destination.is_file():
-                        raise ValueError(f"refusing non-regular asset target: {destination}")
-                    current_hash = sha256(destination)
-                    if relative not in previous:
-                        print(f"WARN: preserving custom asset collision: {destination}")
-                        continue
-                    if current_hash != previous[relative]:
-                        print(f"WARN: preserving modified managed asset: {destination}")
-                        continue
-                    if current_hash == source_hash:
-                        managed[relative] = source_hash
-                        continue
-                    self.backup(destination)
-                self.atomic_bytes(destination, source.read_bytes(), source.stat().st_mode & 0o777)
-                managed[relative] = source_hash
+                if relative in source_rel_seen:
+                    raise ValueError(f"duplicate OPK asset path: {relative}")
+                source_rel_seen.add(relative)
+                sources.append((source, relative))
+
+        # Runtime plugins live under templates/plugins as the single source of truth.
+        template_plugins = self.kit / "templates" / "plugins"
+        if template_plugins.is_symlink() or not template_plugins.is_dir():
+            raise ValueError(f"missing/unsafe template plugins directory: {template_plugins}")
+        for source in sorted(path for path in template_plugins.iterdir() if path.is_file()):
+            if source.is_symlink() or source.resolve(strict=True) != source:
+                raise ValueError(f"refusing symlinked OPK plugin template: {source}")
+            relative = f"plugins/{source.name}"
+            if relative in source_rel_seen:
+                raise ValueError(
+                    f"duplicate runtime plugin source for {relative}; keep templates/plugins authoritative"
+                )
+            source_rel_seen.add(relative)
+            sources.append((source, relative))
+
+        seen: set[str] = set()
+        for source, relative in sources:
+            seen.add(relative)
+            destination = self.config_dir / relative
+            self.validate_target(destination)
+            source_hash = sha256(source)
+            if destination.exists():
+                if destination.is_symlink() or not destination.is_file():
+                    raise ValueError(f"refusing non-regular asset target: {destination}")
+                current_hash = sha256(destination)
+                if relative not in previous:
+                    print(f"WARN: preserving custom asset collision: {destination}")
+                    continue
+                if current_hash != previous[relative]:
+                    print(f"WARN: preserving modified managed asset: {destination}")
+                    continue
+                if current_hash == source_hash:
+                    managed[relative] = source_hash
+                    continue
+                self.backup(destination)
+            self.atomic_bytes(destination, source.read_bytes(), source.stat().st_mode & 0o777)
+            managed[relative] = source_hash
 
         for relative in sorted(set(previous) - seen):
             print(f"WARN: source asset removed; preserving installed file and dropping manifest entry: {relative}")

@@ -253,8 +253,8 @@
     },
     {
       "cmd": "ssh user@host \"rm -rf /tmp/x\"",
-      "verdict": "allow",
-      "note": "remote-quoted command — KNOWN SHARED GAP: both engines strip quotes"
+      "verdict": "block",
+      "note": "remote quoted destructive command must be blocked"
     },
     {
       "cmd": "touch .env.local",
@@ -280,6 +280,11 @@
       "cmd": "git -C /srv/app status",
       "verdict": "allow",
       "why": "lệnh git an toàn với -C"
+    },
+    {
+      "cmd": "eval \"rm -rf /tmp/x\"",
+      "verdict": "block",
+      "note": "eval quoted destructive command"
     }
   ]
 }

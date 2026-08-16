@@ -66,12 +66,20 @@ assert resolved["small_model"] == "fixture/small"
 assert "fixture" in resolved["provider"] and "fixture" in resolved["mcp"]
 assert "fixture-plugin" in resolved["plugin"]
 assert project["instructions"] == ["CUSTOM.md"]
+assert project["default_agent"] == "opk-main"
+assert project["subagent_depth"] == 1
 assert "AGENTS.md" not in project["instructions"] and "OPENCODE.md" not in project["instructions"]
 assert resolved["compaction"]["auto"] is True and resolved["compaction"]["prune"] is True
 assert "node_modules/**" in resolved["watcher"]["ignore"]
 assert not any("ask" in json.dumps(agent.get("permission", {})) for agent in resolved.get("agent", {}).values())
 assert resolved["agent"]["build-strong"].get("permission", {}) == {}
+assert "opk-main" in resolved.get("agent", {})
+assert resolved["agent"]["opk-main"].get("mode") == "primary"
 PY
+
+[[ -f "$TEST_PROJECT/.opencode/plugins/opk-safety-guard.js" ]]
+[[ -f "$TEST_PROJECT/.opencode/plugins/opk-token-guard.js" ]]
+[[ -f "$TEST_PROJECT/.opencode/agents/opk-main.md" ]]
 
 [[ ! -e "$TEST_PROJECT/.opencode/opencode.json" ]]
 

@@ -84,12 +84,16 @@ assert "myServer" in d.get("mcp", {}), "mcp lost"
 assert "my-custom-plugin" in d.get("plugin", []), "custom plugin lost"
 assert d["permission"]["*"] == "ask", "custom permission overwritten"
 assert d.get("instructions", []) == ["CUSTOM.md"], "instructions not deduplicated/preserved"
+assert d.get("default_agent") == "opk-main", "default_agent not installed"
+assert d.get("subagent_depth") == 1, "subagent_depth not installed"
 print("OK_JSON_KEYS")
 PY
 [ "${PIPESTATUS[0]}" = "0" ] && check "custom JSON keys preserved (model/provider/mcp/plugin/permission)" 0 || check "custom JSON keys preserved" 1
 
 # 4) Safety plugin installed
 [ -f "$FIX/.opencode/plugins/opk-safety-guard.js" ] && check "safety plugin installed" 0 || check "safety plugin installed" 1
+[ -f "$FIX/.opencode/plugins/opk-token-guard.js" ] && check "token guard installed" 0 || check "token guard installed" 1
+[ -f "$FIX/.opencode/agents/opk-main.md" ] && check "opk-main project agent installed" 0 || check "opk-main project agent installed" 1
 
 # 5) Backup exists
 ls "$FIX"/*.opk-bak.* >/dev/null 2>&1

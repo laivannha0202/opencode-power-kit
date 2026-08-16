@@ -18,7 +18,11 @@ from typing import Any
 
 MARKER_OPEN = "<!-- >>> opencode-power-kit managed:v2 -->"
 MARKER_CLOSE = "<!-- <<< opencode-power-kit managed:v2 -->"
-OPK_PLUGIN_MARKER = "@opk-plugin opk-safety-guard"
+PROJECT_RUNTIME_ASSETS = (
+    ("plugins/opk-safety-guard.js", "templates/plugins/opk-safety-guard.js", "@opk-plugin opk-safety-guard"),
+    ("plugins/opk-token-guard.js", "templates/plugins/opk-token-guard.js", "@opk-plugin opk-token-guard"),
+    ("agents/opk-main.md", "opencode-global/agents/opk-main.md", "@opk-managed-agent opk-main"),
+)
 WAL_DIR_NAME = ".opk-wal"
 WAL_FILE_NAME = "journal.wal"
 WAL_BACKUP_PREFIX = "backup-"
@@ -714,6 +718,9 @@ def merge_compaction(config: dict[str, Any], profile: dict[str, Any]) -> None:
 def apply_managed(config: dict[str, Any], template: dict[str, Any], mode: str | None) -> dict[str, Any]:
     result = dict(config)
     result.setdefault("$schema", "https://opencode.ai/config.json")
+    for key in ("default_agent", "subagent_depth"):
+        if key in template and key not in result:
+            result[key] = template[key]
     if mode is None:
         result["plugin"] = union_values(result.get("plugin"), template.get("plugin"))
         if not result["plugin"]:
@@ -722,6 +729,36 @@ def apply_managed(config: dict[str, Any], template: dict[str, Any], mode: str | 
             result["instructions"] = dedupe(result["instructions"])
     if mode is not None or "permission" not in result:
         result["permission"] = template.get("permission", result.get("permission"))
+    else:
+        # managed security denies: preserve the user's mode/allow rules, but
+        # append reviewed secret/destructive denies so upgrades cannot retain
+        # an older unsafe Power contract. Ordered rules are last-match-wins.
+        current_permission = result.get("permission")
+        wanted_permission = template.get("permission", {})
+        if isinstance(current_permission, str):
+            current_permission = {"*": current_permission}
+        elif isinstance(current_permission, dict):
+            current_permission = dict(current_permission)
+        else:
+            current_permission = {}
+        fallback = current_permission.get("*", "ask")
+        for permission_key in ("read", "bash"):
+            wanted_rules = wanted_permission.get(permission_key, {}) if isinstance(wanted_permission, dict) else {}
+            if not isinstance(wanted_rules, dict):
+                continue
+            existing_rules = current_permission.get(permission_key, fallback)
+            if isinstance(existing_rules, str):
+                existing_rules = {"*": existing_rules}
+            elif isinstance(existing_rules, dict):
+                existing_rules = dict(existing_rules)
+            else:
+                existing_rules = {"*": fallback}
+            for pattern, effect in wanted_rules.items():
+                if effect == "deny":
+                    existing_rules.pop(pattern, None)
+                    existing_rules[pattern] = "deny"
+            current_permission[permission_key] = existing_rules
+        result["permission"] = current_permission
     merge_compaction(result, template)
     merge_watcher(result, template)
     return result
@@ -1146,53 +1183,49 @@ def merge_markdown(
     return True
 
 
-def install_safety_plugin(
+def install_project_runtime_assets(
     project: Path,
     dry_run: bool,
     wal: WriteAheadLog | None,
 ) -> bool:
-    template = KIT_DIR / "templates" / "plugins" / "opk-safety-guard.js"
-    target = project / ".opencode" / "plugins" / "opk-safety-guard.js"
-
-    if not template.is_file():
-        return False
-
-    # Source template must be a regular file (not a symlink)
-    if template.is_symlink():
-        raise ValueError(f"refusing symlink source template: {template}")
-
-    # Dirfd-based path validation for target
-    reject_unsafe_path(project, target)
-
-    if target.exists() and OPK_PLUGIN_MARKER not in target.read_text(encoding="utf-8"):
-        log("safety plugin: custom file exists; preserving it")
-        record_summary(str(target.relative_to(project)), "preserved")
-        return False
-
-    if dry_run:
-        return True
-
-    target.parent.mkdir(parents=True, exist_ok=True)
-
-    # Journal original state (write-ahead, before any mutation)
-    if target.exists():
-        metadata = target.stat(follow_symlinks=False)
-        mode = stat.S_IMODE(metadata.st_mode)
-        journal_entry(wal, target, target.read_bytes(), mode)
-    else:
-        mode = 0o755
-        journal_entry(wal, target, None, mode)
-
-    # Test hook: swap target to symlink just before publish
-    _test_hook_pre_publish_swap(target)
-
-    atomic_write_bytes(target, template.read_bytes(), mode=mode)
-    if wal is not None:
-        wal.journal_post(target, target.read_bytes())
-    _test_hook_inject_fail("opk-safety-guard.js")
-    log("safety plugin: installed in .opencode/plugins/")
-    record_summary(str(target.relative_to(project)), "installed")
-    return True
+    """Install reviewed local runtime assets with journaled atomic writes."""
+    changed = False
+    for target_rel, source_rel, marker in PROJECT_RUNTIME_ASSETS:
+        source = KIT_DIR / source_rel
+        target = project / ".opencode" / target_rel
+        if not source.is_file() or source.is_symlink():
+            raise ValueError(f"missing/unsafe OPK runtime source: {source_rel}")
+        reject_unsafe_path(project, target)
+        if target.exists():
+            existing_text = target.read_text(encoding="utf-8")
+            if marker not in existing_text:
+                log(f"runtime asset: custom file exists; preserving {target_rel}")
+                record_summary(str(target.relative_to(project)), "preserved")
+                continue
+            if target.read_bytes() == source.read_bytes():
+                record_summary(str(target.relative_to(project)), "preserved")
+                continue
+        changed = True
+        if dry_run:
+            log(f"runtime asset: would install {target_rel}")
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        reject_unsafe_path(project, target)
+        if target.exists():
+            metadata = target.stat(follow_symlinks=False)
+            mode = stat.S_IMODE(metadata.st_mode)
+            journal_entry(wal, target, target.read_bytes(), mode)
+        else:
+            mode = 0o644
+            journal_entry(wal, target, None, mode)
+        _test_hook_pre_publish_swap(target)
+        atomic_write_bytes(target, source.read_bytes(), mode=mode)
+        if wal is not None:
+            wal.journal_post(target, target.read_bytes())
+        _test_hook_inject_fail(Path(target_rel).name)
+        log(f"runtime asset: installed .opencode/{target_rel}")
+        record_summary(str(target.relative_to(project)), "installed")
+    return changed
 
 
 # ---------------------------------------------------------------------------
@@ -1237,7 +1270,7 @@ def main() -> int:
                 if not args.migrate_only:
                     merge_markdown(project, "AGENTS.md", args.dry_run, wal)
                     merge_markdown(project, "OPENCODE.md", args.dry_run, wal)
-                    install_safety_plugin(project, args.dry_run, wal)
+                    install_project_runtime_assets(project, args.dry_run, wal)
                 if wal is not None:
                     wal.commit()
             except Exception:

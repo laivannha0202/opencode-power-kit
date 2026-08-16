@@ -225,7 +225,8 @@ for s in test-permission-rules.py test-safety-plugin.mjs test-token-guard.mjs \
          test-opk-mode.sh test-installer-preservation.sh test-global-installer.sh \
          test-opencode-resolved-config.sh test-timeout.sh test-runtime-behavior.sh \
          test-wal-recovery.sh test-legacy-recovery.sh test-safe-io.sh \
-         test-tx.sh test-install-tx.sh; do
+         test-tx.sh test-install-tx.sh test-hardening-contract.py \
+         test-command-guard.sh test-guard-no-env-bypass.sh test-guard-interactive.py; do
   if [ -f "$KIT_DIR/scripts/$s" ]; then
     pass "scripts/$s exists"
   else
@@ -355,9 +356,21 @@ run_cmd "test-safety-plugin" \
 run_cmd "test-token-guard" \
   "node $KIT_DIR/scripts/test-token-guard.mjs"
 
+run_cmd "test-hardening-contract" \
+  "python3 $KIT_DIR/scripts/test-hardening-contract.py"
+
 # --- Shell Tests ---
 echo ""
 echo "--- Shell Tests ---"
+run_cmd "test-command-guard" \
+  "bash $KIT_DIR/scripts/test-command-guard.sh"
+
+run_cmd "test-guard-no-env-bypass" \
+  "bash $KIT_DIR/scripts/test-guard-no-env-bypass.sh"
+
+run_cmd "test-guard-interactive" \
+  "python3 $KIT_DIR/scripts/test-guard-interactive.py"
+
 run_cmd "test-opk-mode" \
   "bash $KIT_DIR/scripts/test-opk-mode.sh"
 

@@ -199,6 +199,40 @@ await expectNoThrow(
   () => hook({ tool: "bash" }, { args: { command: "cat ~/.zshrc" } }),
 );
 
+// --- 6b. Project secret path protection ------------------------------------
+await expectThrow(
+  "read .env blocked",
+  () => hook({ tool: "read" }, { args: { path: ".env" } }),
+);
+await expectThrow(
+  "read .env.production blocked",
+  () => hook({ tool: "read" }, { args: { path: "config/.env.production" } }),
+);
+await expectThrow(
+  "cat .env blocked",
+  () => hook({ tool: "bash" }, { args: { command: "cat .env" } }),
+);
+await expectThrow(
+  "grep TOKEN .env blocked",
+  () => hook({ tool: "bash" }, { args: { command: "grep TOKEN .env" } }),
+);
+await expectThrow(
+  "python open .env blocked",
+  () => hook({ tool: "bash" }, { args: { command: "python3 -c 'print(open(\".env\").read())'" } }),
+);
+await expectThrow(
+  "cat project secret blocked",
+  () => hook({ tool: "bash" }, { args: { command: "cat config/secrets" } }),
+);
+await expectThrow(
+  "cat private pem blocked",
+  () => hook({ tool: "bash" }, { args: { command: "cat certs/private.pem" } }),
+);
+await expectNoThrow(
+  "normal config read via bash allowed",
+  () => hook({ tool: "bash" }, { args: { command: "cat config/app.yaml" } }),
+);
+
 // --- 7. Non-bash tools untouched ---------------------------------------------
 await expectNoThrow(
   "read tool on normal file allowed",

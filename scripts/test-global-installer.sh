@@ -58,10 +58,15 @@ assert d["permission"]["edit"] == "allow"
 assert d["permission"]["external_directory"] == "deny"
 assert d["compaction"]["prune"] is True
 assert "node_modules/**" in d["watcher"]["ignore"]
+assert d["default_agent"] == "opk-main"
+assert d["subagent_depth"] == 1
 PY
 
 grep -q '^custom agent - preserve me$' "$HOME_FIX/.config/opencode/agents/build-strong.md"
 [[ -f "$HOME_FIX/.config/opencode/agents/api-strong.md" ]]
+[[ -f "$HOME_FIX/.config/opencode/agents/opk-main.md" ]]
+[[ -f "$HOME_FIX/.config/opencode/plugins/opk-safety-guard.js" ]]
+[[ -f "$HOME_FIX/.config/opencode/plugins/opk-token-guard.js" ]]
 [[ -f "$HOME_FIX/.config/opencode/.opk-managed-assets.json" ]]
 grep -q '^export KEEP_USER_LINE=yes$' "$HOME_FIX/.bashrc"
 grep -q "^export OPENCODE_CONFIG_DIR=\"$HOME_FIX/custom-outside-marker\"$" "$HOME_FIX/.bashrc"
@@ -90,6 +95,8 @@ d = json.load(open(sys.argv[1], encoding="utf-8"))
 assert d["permission"]["edit"] == "ask"
 assert d["permission"]["bash"]["*"] == "ask"
 assert d["permission"]["external_directory"] == "deny"
+assert d["default_agent"] == "opk-main"
+assert d["subagent_depth"] == 1
 PY
 
 # A broken/symlinked config target is rejected and its referent is unchanged.

@@ -16,6 +16,7 @@ AGENT_GLOBS = (
     "templates/**/agents/**/*.md",
 )
 POWER_COMPATIBLE = {
+    "opk-main",
     "api-strong",
     "build-strong",
     "db-strong",

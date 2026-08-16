@@ -23,6 +23,22 @@ safe_opencode_project(){ safe_project && opk_project_has_opencode_marker "$PWD";
 
 opencode_has_auto(){ command -v opencode >/dev/null 2>&1 && opencode --help 2>&1 | grep -q -- '--auto'; }
 
+
+_opk_require_managed_runtime_asset(){
+  local installed="$1" source="$2" marker="$3" label="$4"
+  [[ -f "$installed" && ! -L "$installed" ]] || err "$label missing/unsafe; run: opk install"
+  grep -qF "$marker" "$installed" || err "$label is custom/unmanaged; unattended mode refuses it"
+  [[ -f "$source" && ! -L "$source" ]] || err "$label source missing/unsafe in OPK kit"
+  cmp -s "$installed" "$source" || err "$label is stale; run: opk install"
+}
+
+_opk_require_runtime_guards(){
+  local project="$1"
+  _opk_require_managed_runtime_asset "$project/.opencode/plugins/opk-safety-guard.js" "$KIT_DIR/templates/plugins/opk-safety-guard.js" '@opk-plugin opk-safety-guard' 'safety guard'
+  _opk_require_managed_runtime_asset "$project/.opencode/plugins/opk-token-guard.js" "$KIT_DIR/templates/plugins/opk-token-guard.js" '@opk-plugin opk-token-guard' 'token guard'
+  _opk_require_managed_runtime_asset "$project/.opencode/agents/opk-main.md" "$KIT_DIR/opencode-global/agents/opk-main.md" '@opk-managed-agent opk-main' 'opk-main agent'
+}
+
 _opk_require_power_mode(){
   safe_opencode_project || err 'run inside a safe project with a project marker'
   need "$KIT_DIR/scripts/opk-permissions.py"
@@ -30,6 +46,7 @@ _opk_require_power_mode(){
   project="$(pwd -P)" || err 'cannot resolve current project'
   python3 "$KIT_DIR/scripts/opk-permissions.py" --project-dir "$project" --require-power || \
     err 'effective Power contract failed; run: opk permissions doctor'
+  _opk_require_runtime_guards "$project"
 }
 
 # --- Mode: show|power|safe|migrate ----------------------------------------
@@ -125,6 +142,8 @@ opk_run_auto(){
 # --- Safety plugin ---------------------------------------------------------
 
 opk_safety_plugin_status(){
+  # Public command remains scoped to the safety plugin only.
+  # Unattended mode separately requires safety + token + opk-main.
   if [[ -f .opencode/plugins/opk-safety-guard.js ]] && \
      grep -qF '@opk-plugin opk-safety-guard' .opencode/plugins/opk-safety-guard.js; then
     echo INSTALLED
