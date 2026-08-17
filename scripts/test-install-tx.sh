@@ -49,6 +49,33 @@ echo "== install.sh syntax =="
 check "bash -n install.sh" "$(bash -n "$INSTALL"; echo $?)"
 check "opk_tx.sh executable" "$( [ -x "$TX" ]; echo $?)"
 
+echo "== install.sh optional test env defaults =="
+# Production installs normally do NOT define OPK_TEST_MODE or OPK_ALLOW_DIR.
+# Under install.sh's `set -u`, optional test-only environment variables must
+# use safe defaults. Run the real installer in a HOME child project and inject
+# a deliberate failure immediately after merge so this test never reaches
+# BMAD/npx/network.
+ENV_DEFAULTS_ROOT="$(mktemp -d "${HOME}/.opk-install-env-defaults.XXXXXX")"
+ENV_DEFAULTS_PROJECT="$ENV_DEFAULTS_ROOT/project"
+mkdir -p "$ENV_DEFAULTS_PROJECT"
+printf '{"name":"opk-install-env-defaults","private":true}\n' >"$ENV_DEFAULTS_PROJECT/package.json"
+ENV_DEFAULTS_LOG="$ENV_DEFAULTS_ROOT/install.log"
+ENV_DEFAULTS_RC=0
+(
+  cd "$ENV_DEFAULTS_PROJECT"
+  env -u OPK_TEST_MODE -u OPK_ALLOW_DIR \
+    OPK_TEST_INJECT_FAIL=after-merge \
+    bash "$INSTALL"
+) >"$ENV_DEFAULTS_LOG" 2>&1 || ENV_DEFAULTS_RC=$?
+
+check "unset OPK_TEST_* does not trigger unbound variable" \
+  "$( ! grep -q 'unbound variable' "$ENV_DEFAULTS_LOG"; echo $?)"
+check "installer reached deliberate after-merge test-only stop" \
+  "$( grep -q 'OPK_TEST_INJECT_FAIL=after-merge' "$ENV_DEFAULTS_LOG"; echo $?)"
+check "deliberate after-merge stop is nonzero" \
+  "$([ "$ENV_DEFAULTS_RC" -ne 0 ]; echo $?)"
+rm -rf -- "$ENV_DEFAULTS_ROOT"
+
 echo "== user content preserved + marker merge (install.sh tx flow) =="
 cat > "$PROJ/.gitignore" <<'EOF'
 # user entries

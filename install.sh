@@ -161,7 +161,7 @@ is_bad_project_dir() {
 	esac
 	# Explicit test escape hatch: OPK_ALLOW_DIR must equal the real target path.
 	# Only honored in test mode; production installs are never affected.
-	if [ "$OPK_TEST_MODE" = "1" ] && [ -n "$OPK_ALLOW_DIR" ]; then
+	if [ "${OPK_TEST_MODE:-0}" = "1" ] && [ -n "${OPK_ALLOW_DIR:-}" ]; then
 		local a_real
 		a_real="$(cd "$OPK_ALLOW_DIR" 2>/dev/null && pwd -P 2>/dev/null || echo "$OPK_ALLOW_DIR")"
 		if [ "$a_real" = "$p_real" ]; then return 1; fi
