@@ -800,10 +800,10 @@ require_contains "CHANGELOG.md" "init-deep-lite"
 require_contains "CHANGELOG.md" "no MCP"
 require_contains "CHANGELOG.md" "no telemetry"
 # VERSION must match the current release exactly, not by substring.
-if [[ "${EXPECTED_VERSION}" == "2.2.0" ]]; then
-	ok "VERSION exactly matches 2.2.0"
+if [[ "${EXPECTED_VERSION}" == "2.3.0" ]]; then
+	ok "VERSION exactly matches 2.3.0"
 else
-	fail "VERSION is '${EXPECTED_VERSION:-missing}', expected exactly 2.2.0"
+	fail "VERSION is '${EXPECTED_VERSION:-missing}', expected exactly 2.3.0"
 fi
 # New commands (5)
 require_file "opencode-global/commands/intent-router.md"

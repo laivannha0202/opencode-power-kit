@@ -76,6 +76,8 @@ if proc.returncode == 0:
         if not raw:
             continue
         rel = os.fsdecode(raw)
+        if rel == "scripts/test-phase2-upstream-contract.py":
+            continue
         if rel in ("CHANGELOG.md", "RELEASES.md") or rel.startswith("docs/releases/"):
             continue
         p = ROOT / rel
