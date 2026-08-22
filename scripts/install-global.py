@@ -8,6 +8,7 @@ import fcntl
 import hashlib
 import json
 import os
+import shlex
 import shutil
 import stat
 import sys
@@ -568,7 +569,8 @@ class Installer:
         zshrc = self.home / ".zshrc"
         if zshrc.exists() or os.environ.get("SHELL", "").endswith("/zsh"):
             shell_files.append(zshrc)
-        kit_export = f'export OPK_KIT_DIR="{self.kit}"'
+        quoted_kit = shlex.quote(str(self.kit))
+        kit_export = f"export OPK_KIT_DIR={quoted_kit}"
         path_export = 'export PATH="$HOME/.local/bin:$PATH"'
         for path in shell_files:
             if path.exists() and (path.is_symlink() or not path.is_file()):
@@ -588,10 +590,11 @@ class Installer:
 
     def install_shim(self) -> None:
         path = self.home / ".local" / "bin" / "opk"
+        quoted_kit = shlex.quote(str(self.kit))
         content = (
             "#!/usr/bin/env bash\n"
             f"{SHIM_MARKER}\n"
-            f'export OPK_KIT_DIR="{self.kit}"\n'
+            f"export OPK_KIT_DIR={quoted_kit}\n"
             'exec "$OPK_KIT_DIR/bin/opk" "$@"\n'
         )
         if path.exists():

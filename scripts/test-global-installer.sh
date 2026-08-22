@@ -194,4 +194,98 @@ shopt -u nullglob
 [[ "${#rollback_assets[@]}" -eq 0 ]]
 [[ "${#rollback_backups[@]}" -ge 1 ]]
 
+
+# Shell quoting: a checkout path containing shell metacharacters must round-trip
+# literally through both managed RC blocks and the generated opk shim. Nothing
+# embedded in the path may be expanded or executed while sourcing/running it.
+QUOTE_HOME="$TMP/quote-home"
+SIDE_EFFECT="$TMP/SHOULD_NOT_EXIST"
+TRICKY_KIT="$TMP/kit \"double\" \$HOME \`touch \$SIDE_EFFECT\` 'single quote'"
+cp -a "$KIT_DIR" "$TRICKY_KIT"
+mkdir -p "$QUOTE_HOME"
+
+HOME="$QUOTE_HOME" SHELL=/bin/bash \
+  bash "$TRICKY_KIT/install-global.sh" --yes --mode power >/dev/null
+
+RC_VALUE="$(
+  env -i \
+    HOME="$QUOTE_HOME" \
+    PATH="/usr/bin:/bin" \
+    bash --noprofile --norc -c '
+      set -e
+      source "$HOME/.bashrc"
+      printf "%s" "$OPK_KIT_DIR"
+    '
+)"
+[[ "$RC_VALUE" == "$TRICKY_KIT" ]] || {
+  echo "quoted OPK_KIT_DIR did not round-trip through .bashrc" >&2
+  printf 'want: <%s>\ngot:  <%s>\n' "$TRICKY_KIT" "$RC_VALUE" >&2
+  exit 1
+}
+[[ ! -e "$SIDE_EFFECT" ]] || {
+  echo 'shell metacharacters in kit path executed while sourcing .bashrc' >&2
+  exit 1
+}
+
+# Replace the copied bin/opk with a harmless probe after installation so this
+# verifies the generated shim's assignment/exec quoting without invoking OPK.
+cat >"$TRICKY_KIT/bin/opk" <<'EOF'
+#!/usr/bin/env bash
+printf 'kit=<%s>\n' "${OPK_KIT_DIR:-}"
+printf 'arg=<%s>\n' "${1:-}"
+EOF
+chmod 755 "$TRICKY_KIT/bin/opk"
+
+SHIM_OUT="$(
+  env -i \
+    HOME="$QUOTE_HOME" \
+    PATH="/usr/bin:/bin" \
+    "$QUOTE_HOME/.local/bin/opk" 'literal $HOME `touch nope` "quote"'
+)"
+EXPECTED_KIT_LINE="kit=<$TRICKY_KIT>"
+EXPECTED_ARG_LINE='arg=<literal $HOME `touch nope` "quote">'
+grep -qxF "$EXPECTED_KIT_LINE" <<<"$SHIM_OUT" || {
+  echo "generated shim did not preserve literal kit path" >&2
+  printf '%s\n' "$SHIM_OUT" >&2
+  exit 1
+}
+grep -qxF "$EXPECTED_ARG_LINE" <<<"$SHIM_OUT" || {
+  echo "generated shim did not preserve literal argv" >&2
+  printf '%s\n' "$SHIM_OUT" >&2
+  exit 1
+}
+[[ ! -e "$SIDE_EFFECT" ]] || {
+  echo 'shell metacharacters in kit path executed through shim' >&2
+  exit 1
+}
+
+# Idempotence must also hold for the quoted representation.
+QUOTE_BASHRC_HASH="$(sha256sum "$QUOTE_HOME/.bashrc")"
+QUOTE_SHIM_HASH="$(sha256sum "$QUOTE_HOME/.local/bin/opk")"
+HOME="$QUOTE_HOME" SHELL=/bin/bash \
+  bash "$TRICKY_KIT/install-global.sh" --yes --mode power >/dev/null
+[[ "$QUOTE_BASHRC_HASH" == "$(sha256sum "$QUOTE_HOME/.bashrc")" ]]
+# Re-install restores the managed shim from the installer. Its generated
+# assignment must still evaluate to the exact literal checkout path.
+RC_SHIM_KIT="$(
+  env -i \
+    HOME="$QUOTE_HOME" \
+    PATH="/usr/bin:/bin" \
+    bash --noprofile --norc -c '
+      shim="$HOME/.local/bin/opk"
+      line="$(grep "^export OPK_KIT_DIR=" "$shim")"
+      eval "$line"
+      printf "%s" "$OPK_KIT_DIR"
+    '
+)"
+[[ "$RC_SHIM_KIT" == "$TRICKY_KIT" ]] || {
+  echo "reinstalled shim quoting failed literal round-trip" >&2
+  exit 1
+}
+[[ ! -e "$SIDE_EFFECT" ]] || {
+  echo 'quoted reinstall triggered shell side effect' >&2
+  exit 1
+}
+
+
 printf 'test-global-installer: OK\n'
