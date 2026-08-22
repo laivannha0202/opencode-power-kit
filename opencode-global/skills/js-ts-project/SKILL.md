@@ -1,3 +1,8 @@
+---
+name: js-ts-project
+description: "Quy ước khi làm việc với project JavaScript / TypeScript (NestJS, React, Vite, MySQL...)."
+---
+
 # JS/TS Project
 
 Quy ước khi làm việc với project JavaScript / TypeScript (NestJS, React, Vite, MySQL...).

@@ -1,3 +1,8 @@
+---
+name: env-config-safe
+description: "Quy tắc quản lý env config an toàn cho dự án."
+---
+
 # Env Config Safe
 
 Quy tắc quản lý env config an toàn cho dự án.

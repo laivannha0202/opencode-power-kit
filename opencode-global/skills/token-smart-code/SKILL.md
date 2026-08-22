@@ -1,3 +1,8 @@
+---
+name: token-smart-code
+description: "Tiết kiệm token khi đọc / sửa code. Đặc biệt quan trọng với repo lớn."
+---
+
 # Token-Smart Code
 
 Tiết kiệm token khi đọc / sửa code. Đặc biệt quan trọng với repo lớn.

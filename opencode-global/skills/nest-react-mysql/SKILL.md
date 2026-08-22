@@ -1,3 +1,8 @@
+---
+name: nest-react-mysql
+description: "Quy tắc tổng hợp cho stack NestJS + React/Vite + MySQL. Bản global, dùng khi bắt đầu dự án hoặc review toàn diện."
+---
+
 # Nest + React + MySQL
 
 Quy tắc tổng hợp cho stack NestJS + React/Vite + MySQL. Bản global, dùng khi bắt đầu dự án hoặc review toàn diện.

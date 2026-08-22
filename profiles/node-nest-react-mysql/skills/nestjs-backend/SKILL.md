@@ -1,3 +1,8 @@
+---
+name: nestjs-backend
+description: "Quy tắc và pattern khi sửa code NestJS (TypeScript)."
+---
+
 # NestJS Backend
 
 Quy tắc và pattern khi sửa code NestJS (TypeScript).

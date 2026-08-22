@@ -1,3 +1,8 @@
+---
+name: agentmemory-lite
+description: "Teaches agents how to plan memory usage, audit session memory quality, and perform safe agent handoffs across sessions. Enables multi-session workflows with persistent context."
+---
+
 # AgentMemory-lite Skill — Agent State & Session Memory
 
 > **Integration mode:** Reference / Workflow guidance only.

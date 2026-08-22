@@ -1,3 +1,8 @@
+---
+name: database-migration-safe
+description: "Skill review migration trước khi chạy, đặc biệt trên prod có data thật."
+---
+
 # Database Migration Safe
 
 Skill review migration trước khi chạy, đặc biệt trên prod có data thật.

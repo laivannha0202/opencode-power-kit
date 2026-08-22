@@ -1,3 +1,8 @@
+---
+name: fullstack-test-strategy
+description: "Chiến lược test cho dự án full-stack: FE (React/Vite) + BE (NestJS) + DB (MySQL)."
+---
+
 # Full-Stack Test Strategy
 
 Chiến lược test cho dự án full-stack: FE (React/Vite) + BE (NestJS) + DB (MySQL).

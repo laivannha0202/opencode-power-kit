@@ -1,3 +1,8 @@
+---
+name: fullstack-test-strategy
+description: "Test pyramid cho dự án full-stack. (Bản global, áp dụng mọi stack.)"
+---
+
 # Full-Stack Test Strategy
 
 Test pyramid cho dự án full-stack. (Bản global, áp dụng mọi stack.)

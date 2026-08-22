@@ -1,3 +1,8 @@
+---
+name: safe-edit
+description: "Quy tắc an toàn khi sửa code. Áp dụng cho mọi task có thay đổi file."
+---
+
 # Safe Edit
 
 Quy tắc an toàn khi sửa code. Áp dụng cho mọi task có thay đổi file.

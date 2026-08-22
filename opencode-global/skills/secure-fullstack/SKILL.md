@@ -1,3 +1,8 @@
+---
+name: secure-fullstack
+description: "Quy tắc security áp dụng cho cả frontend + backend + DB."
+---
+
 # Secure Full-Stack
 
 Quy tắc security áp dụng cho cả frontend + backend + DB.

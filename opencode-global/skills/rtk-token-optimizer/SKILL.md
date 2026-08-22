@@ -1,3 +1,8 @@
+---
+name: rtk-token-optimizer
+description: "Skill dùng kết hợp rtk (Rust Token Killer) để giảm output token cho lệnh shell."
+---
+
 # RTK Token Optimizer
 
 Skill dùng kết hợp rtk (Rust Token Killer) để giảm output token cho lệnh shell.

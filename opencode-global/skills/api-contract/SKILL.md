@@ -1,3 +1,8 @@
+---
+name: api-contract
+description: "Skill review contract giữa frontend và backend, hoặc giữa 2 service."
+---
+
 # API Contract Review
 
 Skill review contract giữa frontend và backend, hoặc giữa 2 service.

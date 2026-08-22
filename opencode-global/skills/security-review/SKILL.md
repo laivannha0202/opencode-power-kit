@@ -1,3 +1,8 @@
+---
+name: security-review
+description: "Khi review security cho code, check theo thứ tự ưu tiên:"
+---
+
 # Security Review
 
 Khi review security cho code, check theo thứ tự ưu tiên:

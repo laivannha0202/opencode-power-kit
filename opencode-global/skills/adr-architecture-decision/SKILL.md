@@ -1,3 +1,8 @@
+---
+name: adr-architecture-decision
+description: "Skill viết ADR ngắn gọn cho mỗi quyết định kiến trúc quan trọng."
+---
+
 # ADR — Architecture Decision Record
 
 Skill viết ADR ngắn gọn cho mỗi quyết định kiến trúc quan trọng.

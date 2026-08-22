@@ -6,9 +6,9 @@
 # Kiểm tra cấu trúc:
 #   - opencode-global/commands/*.md phải có frontmatter + description
 #   - opencode-global/agents/*.md phải có frontmatter + description + mode
-#   - opencode-global/skills/*/SKILL.md phải có heading và nội dung
+#   - opencode-global/skills/*/SKILL.md phải có frontmatter name/description + heading + nội dung
 #   - profiles/*/commands/*.md phải có frontmatter + description
-#   - profiles/*/skills/*/SKILL.md phải có heading và nội dung
+#   - profiles/*/skills/*/SKILL.md phải có frontmatter name/description + heading + nội dung
 #   - templates/openapi/*.example phải tồn tại (nếu openapi dir tồn tại)
 #
 # v1.3.4 bổ sung:
@@ -224,29 +224,95 @@ def validate_skills(skills_dir: Path) -> list[str]:
     if not skills_dir.is_dir():
         errors.append(f"missing dir: {skills_dir}")
         return errors
+
     skill_dirs = sorted([d for d in skills_dir.iterdir() if d.is_dir()])
     if not skill_dirs:
         errors.append(f"no skills in {skills_dir}")
+
+    name_pattern = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+    def scalar(value: str) -> str:
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] == '"':
+            try:
+                parsed = __import__("json").loads(value)
+                return parsed if isinstance(parsed, str) else value
+            except Exception:
+                return value[1:-1]
+        if len(value) >= 2 and value[0] == value[-1] == "'":
+            return value[1:-1].replace("''", "'")
+        return value
+
     for d in skill_dirs:
         skill_file = d / "SKILL.md"
+        label = f"skills/{d.name}/SKILL.md"
+
         if not skill_file.is_file():
-            errors.append(f"skills/{d.name}/SKILL.md: missing")
+            errors.append(f"{label}: missing")
             continue
+
         try:
             text = skill_file.read_text(encoding="utf-8")
         except OSError as e:
-            errors.append(f"skills/{d.name}/SKILL.md: read error {e}")
+            errors.append(f"{label}: read error {e}")
             continue
-        # Must have at least one markdown heading.
-        if not re.search(r"^#\s+\S+", text, re.MULTILINE):
-            errors.append(f"skills/{d.name}/SKILL.md: no top-level heading")
+
+        fm = parse_frontmatter(text)
+        if fm is None:
+            errors.append(f"{label}: missing or malformed YAML frontmatter")
             continue
-        # Body must contain more than the heading.
-        non_empty = [ln for ln in text.splitlines() if ln.strip()]
+
+        name = scalar(fm.get("name", ""))
+        description = scalar(fm.get("description", ""))
+
+        valid_name = True
+        if not name:
+            errors.append(f"{label}: missing 'name' in frontmatter")
+            valid_name = False
+        else:
+            if not (1 <= len(name) <= 64):
+                errors.append(f"{label}: name length must be 1..64")
+                valid_name = False
+            if not name_pattern.fullmatch(name):
+                errors.append(
+                    f"{label}: invalid name '{name}' "
+                    "(expected lowercase alphanumeric with single hyphens)"
+                )
+                valid_name = False
+            if name != d.name:
+                errors.append(
+                    f"{label}: frontmatter name '{name}' "
+                    f"must match directory '{d.name}'"
+                )
+                valid_name = False
+
+        valid_description = 1 <= len(description) <= 1024
+        if not valid_description:
+            errors.append(f"{label}: description length must be 1..1024")
+
+        body = text
+        if text.startswith("---"):
+            lines = text.splitlines()
+            closing = None
+            for i in range(1, len(lines)):
+                if lines[i].strip() == "---":
+                    closing = i
+                    break
+            if closing is not None:
+                body = "\n".join(lines[closing + 1 :])
+
+        if not re.search(r"^#\s+\S+", body, re.MULTILINE):
+            errors.append(f"{label}: no top-level heading in body")
+            continue
+
+        non_empty = [ln for ln in body.splitlines() if ln.strip()]
         if len(non_empty) < 3:
-            errors.append(f"skills/{d.name}/SKILL.md: body too short")
+            errors.append(f"{label}: body too short")
             continue
-        ok(f"skills/{d.name}/SKILL.md: heading + body ok")
+
+        if valid_name and valid_description:
+            ok(f"{label}: frontmatter + name + description + body ok")
+
     return errors
 
 

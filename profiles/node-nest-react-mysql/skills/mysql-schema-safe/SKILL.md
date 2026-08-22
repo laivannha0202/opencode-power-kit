@@ -1,3 +1,8 @@
+---
+name: mysql-schema-safe
+description: "Quy tắc thiết kế schema, migration, index, FK, backfill, rollback cho MySQL 8.x."
+---
+
 # MySQL Schema Safe
 
 Quy tắc thiết kế schema, migration, index, FK, backfill, rollback cho MySQL 8.x.

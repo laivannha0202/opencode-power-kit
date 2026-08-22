@@ -1,3 +1,8 @@
+---
+name: repo-map
+description: "Cách tạo repo-map ngắn gọn để nắm nhanh project trước khi sửa."
+---
+
 # Repo Map
 
 Cách tạo repo-map ngắn gọn để nắm nhanh project trước khi sửa.

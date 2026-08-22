@@ -1,3 +1,8 @@
+---
+name: serena-first
+description: "Dùng Serena cho semantic code retrieval và editing khi cần hiểu class / function / symbol."
+---
+
 # Serena First
 
 Dùng Serena cho semantic code retrieval và editing khi cần hiểu class / function / symbol.

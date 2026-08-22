@@ -1,3 +1,8 @@
+---
+name: frontend-ui-review
+description: "Skill review UI/UX cho frontend change, focus accessibility + consistency."
+---
+
 # Frontend UI Review
 
 Skill review UI/UX cho frontend change, focus accessibility + consistency.

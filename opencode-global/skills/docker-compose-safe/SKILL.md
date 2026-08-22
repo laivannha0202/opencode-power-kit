@@ -1,3 +1,8 @@
+---
+name: docker-compose-safe
+description: "Quy tắc viết docker-compose.yml cho dev an toàn, tránh mất data, tránh race."
+---
+
 # Docker Compose Safe
 
 Quy tắc viết `docker-compose.yml` cho dev an toàn, tránh mất data, tránh race.

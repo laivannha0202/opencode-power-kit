@@ -1,3 +1,8 @@
+---
+name: dependency-maintenance
+description: "Quy tắc update + bảo trì dependency an toàn, không đứt build."
+---
+
 # Dependency Maintenance
 
 Quy tắc update + bảo trì dependency an toàn, không đứt build.

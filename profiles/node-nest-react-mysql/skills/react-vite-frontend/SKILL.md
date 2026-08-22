@@ -1,3 +1,8 @@
+---
+name: react-vite-frontend
+description: "Quy tắc và pattern khi sửa code React + Vite (TypeScript)."
+---
+
 # React + Vite Frontend
 
 Quy tắc và pattern khi sửa code React + Vite (TypeScript).

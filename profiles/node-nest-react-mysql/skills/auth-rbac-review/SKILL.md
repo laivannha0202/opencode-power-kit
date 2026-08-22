@@ -1,3 +1,8 @@
+---
+name: auth-rbac-review
+description: "Review auth flow, role-based access control, route protection, token handling."
+---
+
 # Auth + RBAC Review
 
 Review auth flow, role-based access control, route protection, token handling.

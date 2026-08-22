@@ -1,3 +1,8 @@
+---
+name: openapi-contract
+description: "Quy tắc viết + review OpenAPI spec cho API NestJS / Express / bất kỳ stack nào."
+---
+
 # OpenAPI Contract
 
 Quy tắc viết + review OpenAPI spec cho API NestJS / Express / bất kỳ stack nào.

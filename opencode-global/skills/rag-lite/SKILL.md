@@ -1,3 +1,8 @@
+---
+name: rag-lite
+description: "Type: Flexible (adapt principles to context)"
+---
+
 # RAG-lite — Retrieval-Augmented Generation Workflow
 
 **Type:** Flexible (adapt principles to context)

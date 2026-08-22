@@ -1,3 +1,8 @@
+---
+name: test-strategy
+description: "Skill đề xuất và chạy test chứng minh tính đúng, phù hợp từng task."
+---
+
 # Test Strategy
 
 Skill đề xuất và chạy test chứng minh tính đúng, phù hợp từng task.

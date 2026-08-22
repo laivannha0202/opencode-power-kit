@@ -1,3 +1,8 @@
+---
+name: js-ts-quality
+description: "Quy tắc chất lượng code JavaScript / TypeScript."
+---
+
 # JS/TS Quality
 
 Quy tắc chất lượng code JavaScript / TypeScript.

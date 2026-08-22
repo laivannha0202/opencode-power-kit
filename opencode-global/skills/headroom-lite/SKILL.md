@@ -1,3 +1,8 @@
+---
+name: headroom-lite
+description: "Type: Flexible (adapt principles to context)"
+---
+
 # Headroom-lite — Context/Token Compression Workflow
 
 **Type:** Flexible (adapt principles to context)
