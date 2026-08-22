@@ -111,6 +111,50 @@ show_mode() {
   "$OPK" mode show | awk -F': ' '$1 == "Mode" { print $2 }'
 }
 
+# 0) OpenCode wildcard semantics. Keep this aligned with the OpenCode version
+# pinned by required CI. Only * and ? are wildcard tokens; [] is literal, and
+# a trailing " *" is optional (for example "git *" also matches "git").
+if python3 - "$KIT_DIR/scripts" <<'PY'
+import sys
+
+sys.path.insert(0, sys.argv[1])
+from opk_mode import evaluate_rules, wildcard_match
+
+# * and ? are the only wildcard tokens.
+assert wildcard_match("file1.txt", "file?.txt")
+assert not wildcard_match("file12.txt", "file?.txt")
+assert wildcard_match("prefix-any-suffix", "prefix*suffix")
+
+# Regex/glob character-class syntax is literal in OpenCode permission patterns.
+assert not wildcard_match("filea.txt", "file[ab].txt")
+assert wildcard_match("file[ab].txt", "file[ab].txt")
+assert not wildcard_match("filex.txt", "file[!a].txt")
+assert wildcard_match("file[!a].txt", "file[!a].txt")
+assert wildcard_match("foo+bar", "foo+bar")
+
+# OpenCode normalizes slashes before matching.
+assert wildcard_match(r"C:\Windows\System32\drivers", "C:/Windows/System32/*")
+
+# OpenCode v1.18.20 special-cases a trailing space+star as optional.
+assert wildcard_match("git", "git *")
+assert wildcard_match("git status", "git *")
+assert not wildcard_match("gitx", "git *")
+
+# Permission object order remains last-match-wins.
+rules = {
+    "*": "allow",
+    "*.env": "deny",
+    "*.env.example": "allow",
+}
+assert evaluate_rules(rules, "app.env") == "deny"
+assert evaluate_rules(rules, "app.env.example") == "allow"
+PY
+then
+  check "OpenCode wildcard contract" "pass" "pass"
+else
+  check "OpenCode wildcard contract" "pass" "fail"
+fi
+
 # 1) Power template
 cp "$KIT_DIR/templates/opencode.power.json" "$TMP/power.json"
 check "opencode.power.json" "POWER" "$(python3 "$DETECT" "$TMP/power.json")"

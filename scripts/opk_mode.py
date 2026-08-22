@@ -20,8 +20,8 @@ JSONC parsing (comments + trailing commas) lives here too, so the installed
 
 from __future__ import annotations
 
-import fnmatch
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -297,7 +297,35 @@ def agent_conflicts(config: dict[str, Any]) -> list[str]:
 
 
 def wildcard_match(value: str, pattern: str) -> bool:
-    return fnmatch.fnmatchcase(value.replace("\\", "/"), pattern.replace("\\", "/"))
+    """Match OpenCode permission wildcards on Linux.
+
+    Mirrors OpenCode v1.18.20 ``Wildcard.match``:
+    - normalize backslashes to forward slashes;
+    - only ``*`` and ``?`` are wildcard tokens;
+    - every other character, including ``[]``, is literal;
+    - a trailing ``" *"`` is optional, so ``"git *"`` matches both
+      ``"git"`` and ``"git status"``;
+    - matching spans the whole string and ``*``/``?`` may match newlines.
+
+    OPK is Linux-only, so matching remains case-sensitive.
+    """
+    normalized_value = value.replace("\\", "/")
+    normalized_pattern = pattern.replace("\\", "/")
+
+    trailing_space_star = normalized_pattern.endswith(" *")
+    core_pattern = (
+        normalized_pattern[:-2]
+        if trailing_space_star
+        else normalized_pattern
+    )
+
+    escaped = re.escape(core_pattern)
+    escaped = escaped.replace(r"\*", ".*").replace(r"\?", ".")
+
+    if trailing_space_star:
+        escaped += r"( .*)?"
+
+    return re.fullmatch(escaped, normalized_value, flags=re.DOTALL) is not None
 
 
 def evaluate_rules(rules: dict[str, str], resource: str) -> str:
