@@ -28,12 +28,36 @@ const PROJECT_SECRET_PATH_PATTERNS = [
 ];
 
 function normalizePath(path) {
-  return String(path || "").replace(/\\\\/g, "/").trim();
+  let p = String(path || "").replace(/\\/g, "/").trim();
+  if (!p) return "";
+
+  const absolute = p.startsWith("/");
+  const parts = [];
+
+  for (const part of p.split("/")) {
+    if (!part || part === ".") continue;
+
+    if (part === "..") {
+      if (parts.length > 0 && parts[parts.length - 1] !== "..") {
+        parts.pop();
+      } else if (!absolute) {
+        // Preserve unresolved leading traversal. It must remain visible to
+        // sensitive-path matching instead of turning the path into "safe".
+        parts.push("..");
+      }
+      continue;
+    }
+
+    parts.push(part);
+  }
+
+  const normalized = parts.join("/");
+  return absolute ? `/${normalized}` : normalized;
 }
 
 function isTokenStorePath(path) {
   const p = normalizePath(path);
-  if (!p || p.split("/").includes("..")) return false;
+  if (!p) return false;
   return TOKEN_STORE_PATH_PATTERNS.some((re) => re.test(p));
 }
 
@@ -169,8 +193,3 @@ const OPKTokenGuard = async () => ({
 });
 
 module.exports = OPKTokenGuard;
-module.exports.findTokenLeak = findTokenLeak;
-module.exports.guardTokenCall = guardTokenCall;
-module.exports.isTokenStorePath = isTokenStorePath;
-module.exports.isProtectedSecretPath = isProtectedSecretPath;
-module.exports.findProtectedPathLiteral = findProtectedPathLiteral;

@@ -61,6 +61,33 @@ function expectNoThrow(name, fn) {
 
 // --- 1. Plugin export exists + shape ---
 check("OPKTokenGuard export exists", typeof OPKTokenGuard === "function");
+
+// Runtime module must expose one distinct callable factory under dynamic import.
+// CJS interop may alias the same function as `default` / `module.exports`; that
+// is fine as long as helpers are not exposed as additional plugin factories.
+const forbiddenHelperExports = [
+  "findTokenLeak",
+  "guardTokenCall",
+  "isTokenStorePath",
+  "isProtectedSecretPath",
+  "findProtectedPathLiteral",
+];
+for (const name of forbiddenHelperExports) {
+  check(`runtime export does not expose helper: ${name}`, !(name in OPKTokenGuard));
+}
+
+const tokenNamespace = await import(
+  new URL("../templates/plugins/opk-token-guard.js", import.meta.url).href
+);
+const tokenCallableExports = Object.values(tokenNamespace).filter(
+  (value) => typeof value === "function",
+);
+const distinctTokenCallableExports = [...new Set(tokenCallableExports)];
+check(
+  "dynamic import exposes exactly one distinct token-guard factory",
+  distinctTokenCallableExports.length === 1,
+);
+
 const plugin = await OPKTokenGuard({});
 check(
   "plugin returns object with tool.execute.before",
@@ -199,6 +226,49 @@ await expectNoThrow(
   () => hook({ tool: "bash" }, { args: { command: "cat ~/.zshrc" } }),
 );
 
+
+// --- 6a. Traversal/canonicalization cannot turn token-store paths safe --------
+await expectThrow(
+  "read ../.ssh/config blocked",
+  () => hook({ tool: "read" }, { args: { path: "../.ssh/config" } }),
+);
+await expectThrow(
+  "read foo/../.aws/credentials blocked",
+  () => hook({ tool: "read" }, { args: { path: "foo/../.aws/credentials" } }),
+);
+await expectThrow(
+  "read tmp/../.config/opencode/auth.json blocked",
+  () => hook(
+    { tool: "read" },
+    { args: { path: "tmp/../.config/opencode/auth.json" } },
+  ),
+);
+await expectThrow(
+  "write ./../.netrc blocked",
+  () => hook({ tool: "write" }, { args: { path: "./../.netrc" } }),
+);
+await expectThrow(
+  "edit safe/../../.kube/config blocked",
+  () => hook(
+    { tool: "edit" },
+    { args: { path: "safe/../../.kube/config" } },
+  ),
+);
+await expectThrow(
+  "Windows-style .ssh traversal blocked",
+  () => hook(
+    { tool: "read" },
+    { args: { path: "tmp\\..\\.ssh\\config" } },
+  ),
+);
+await expectNoThrow(
+  "safe lexical normalization src/../README.md allowed",
+  () => hook(
+    { tool: "read" },
+    { args: { path: "src/../README.md" } },
+  ),
+);
+
 // --- 6b. Project secret path protection ------------------------------------
 await expectThrow(
   "read .env blocked",
@@ -238,6 +308,19 @@ await expectNoThrow(
   "read tool on normal file allowed",
   () => hook({ tool: "read" }, { args: { path: "normal.txt" } }),
 );
+
+await expectThrow(
+  "apply_patch traversal into .ssh blocked",
+  () => hook(
+    { tool: "apply_patch" },
+    {
+      args: {
+        patchText: "*** Update File: safe/../.ssh/config\n@@\n-old\n+new\n",
+      },
+    },
+  ),
+);
+
 await expectNoThrow(
   "apply_patch safe file allowed",
   () => hook({ tool: "apply_patch" }, { args: { patchText: "*** Add File: x.ts\n" } }),
