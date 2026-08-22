@@ -12,6 +12,7 @@
 #   bash bootstrap.sh --doctor
 #   bash bootstrap.sh --dry-run --global
 #   bash bootstrap.sh --yes --all
+#   # --yes / --dry-run are modifiers and require an explicit action.
 #   bash bootstrap.sh --help
 # ============================================================================
 set -euo pipefail
@@ -219,8 +220,8 @@ Flags:
   --all                 Cài global + project + fullstack (auto-detect project)
   --project-dir <path>  Override thư mục project (dùng với --project/--fullstack/--all)
   --doctor              Chạy doctor (read-only)
-  --dry-run             Chỉ in kế hoạch
-  --yes                 Skip confirm
+  --dry-run             Chỉ in kế hoạch; phải đi kèm action
+  --yes                 Không hỏi confirm; phải đi kèm action
   --help                In trợ giúp này
 
 Sau khi cài global:
@@ -269,18 +270,12 @@ done
 
 banner
 
-# No flag: default to --global
+# No action: fail closed. Modifiers never select a mutating action implicitly.
 if [ "$GLOBAL_FLAG" = false ] && [ "$PROJECT_FLAG" = false ] &&
 	[ "$FULLSTACK_FLAG" = false ] && [ "$ALL_FLAG" = false ] &&
 	[ "$DOCTOR_FLAG" = false ]; then
-	if [ "$ASSUME_YES" = true ]; then
-		GLOBAL_FLAG=true
-	else
-		show_help
-		info "Không có flag nào — mặc định sẽ chạy --global. Thêm --yes để skip confirm."
-		GLOBAL_FLAG=true
-		ASSUME_YES=true
-	fi
+	show_help
+	err "Cần chọn action rõ ràng: --global | --project | --fullstack | --all | --doctor. --yes/--dry-run chỉ là modifier."
 fi
 
 # Validate PROJECT_DIR if set

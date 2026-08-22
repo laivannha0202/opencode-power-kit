@@ -11,8 +11,8 @@
 #   bash setup.sh --fullstack     # cài full-stack profile
 #   bash setup.sh --all           # global + project + fullstack (cần cd vào project)
 #   bash setup.sh --doctor        # chạy doctor (read-only)
-#   bash setup.sh --dry-run       # chỉ in kế hoạch, không sửa gì
-#   bash setup.sh --yes           # skip confirm
+#   bash setup.sh --dry-run --global  # chỉ in kế hoạch, không sửa gì
+#   bash setup.sh --yes --fullstack   # forward non-interactive confirm
 #   bash setup.sh --help
 # ============================================================================
 set -euo pipefail
@@ -191,7 +191,7 @@ print_plan() {
 # --- Action runners ---
 do_global() {
 	info "Chạy install-global.sh..."
-	bash "$KIT_DIR/install-global.sh"
+	bash "$KIT_DIR/install-global.sh" "${CHILD_CONFIRM_ARGS[@]}"
 	print_next_steps true
 }
 
@@ -212,19 +212,19 @@ do_fullstack() {
 		err "Không chạy fullstack profile trong $PWD_NOW."
 	fi
 	info "Chạy install-fullstack-profile.sh trong $PWD_NOW ..."
-	bash "$KIT_DIR/scripts/install-fullstack-profile.sh"
+	bash "$KIT_DIR/scripts/install-fullstack-profile.sh" "${CHILD_CONFIRM_ARGS[@]}"
 	ok "Full-stack profile xong."
 	print_next_steps false
 }
 
 do_all() {
 	info "[1/4] install-global.sh..."
-	bash "$KIT_DIR/install-global.sh"
+	bash "$KIT_DIR/install-global.sh" "${CHILD_CONFIRM_ARGS[@]}"
 	if is_safe_project_dir; then
 		info "[2/4] install.sh trong $PWD_NOW ..."
 		bash "$KIT_DIR/install.sh"
 		info "[3/4] install-fullstack-profile.sh trong $PWD_NOW ..."
-		bash "$KIT_DIR/scripts/install-fullstack-profile.sh"
+		bash "$KIT_DIR/scripts/install-fullstack-profile.sh" "${CHILD_CONFIRM_ARGS[@]}"
 		info "[4/4] verify.sh trong $PWD_NOW ..."
 		bash "$KIT_DIR/verify.sh"
 		ok "All-in-one xong."
@@ -292,8 +292,8 @@ Flags:
   --fullstack   Cài full-stack profile (Nest/React/MySQL)
   --all         Cài tất cả (cần cd vào project; nếu pwd = HOME/kit/tmp/var/usr/etc sẽ skip project+fullstack)
   --doctor      Chạy doctor (read-only)
-  --dry-run     Chỉ in kế hoạch
-  --yes         Skip confirm
+  --dry-run     Chỉ in kế hoạch; phải đi kèm action
+  --yes         Forward non-interactive confirm; phải đi kèm action
   --help        In trợ giúp này
 
 Sau khi cài global:
@@ -334,17 +334,21 @@ done
 # --- Dispatch ---
 banner
 
-# Default: no flag -> interactive menu
+# Default: no action -> interactive menu only when there are no modifiers.
+# --yes and --dry-run are modifiers; neither is allowed to choose --global.
 if [ "$GLOBAL_FLAG" = false ] && [ "$PROJECT_FLAG" = false ] &&
 	[ "$FULLSTACK_FLAG" = false ] && [ "$ALL_FLAG" = false ] &&
 	[ "$DOCTOR_FLAG" = false ]; then
-	if [ "$ASSUME_YES" = true ]; then
-		# --yes without action flag: default to --global
-		GLOBAL_FLAG=true
-	else
-		interactive
-		exit 0
+	if [ "$ASSUME_YES" = true ] || [ "$DRY_RUN" = true ]; then
+		err "--yes/--dry-run cần đi kèm action: --global | --project | --fullstack | --all | --doctor"
 	fi
+	interactive
+	exit 0
+fi
+
+CHILD_CONFIRM_ARGS=()
+if [ "$ASSUME_YES" = true ]; then
+	CHILD_CONFIRM_ARGS=(--yes)
 fi
 
 # Dry-run: print plan, do not execute
@@ -357,9 +361,20 @@ if [ "$DRY_RUN" = true ]; then
 	exit 0
 fi
 
-# Execute in order
-[ "$GLOBAL_FLAG" = true ] && do_global
-[ "$PROJECT_FLAG" = true ] && do_project
-[ "$FULLSTACK_FLAG" = true ] && do_fullstack
-[ "$ALL_FLAG" = true ] && do_all
-[ "$DOCTOR_FLAG" = true ] && do_doctor
+# Execute in order. Use explicit if blocks so an unselected final action
+# cannot make a successful setup exit with status 1 under `set -e`.
+if [ "$GLOBAL_FLAG" = true ]; then
+	do_global
+fi
+if [ "$PROJECT_FLAG" = true ]; then
+	do_project
+fi
+if [ "$FULLSTACK_FLAG" = true ]; then
+	do_fullstack
+fi
+if [ "$ALL_FLAG" = true ]; then
+	do_all
+fi
+if [ "$DOCTOR_FLAG" = true ]; then
+	do_doctor
+fi
