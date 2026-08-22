@@ -166,7 +166,7 @@ fi
 # --- 6. Scripts ---
 section "6. Scripts"
 for s in detect-mode.py merge-opk-project.py install-global.py install-fullstack-profile.py opk-permissions.py \
-         opk_safe_io.py opk_tx.py \
+         opk_safe_io.py opk_tx.py opk_install_session.py \
          validate-opencode-pack.py check-cli-file-references.py \
          check-opencode-config-paths.py check-agent-permission-contracts.py \
          test-cli-contracts.sh test-global-installer.sh \
@@ -226,7 +226,7 @@ for s in test-permission-rules.py test-safety-plugin.mjs test-token-guard.mjs \
          test-opk-mode.sh test-installer-preservation.sh test-fullstack-installer.sh test-global-installer.sh \
          test-opencode-resolved-config.sh test-timeout.sh test-runtime-behavior.sh \
          test-wal-recovery.sh test-legacy-recovery.sh test-safe-io.sh \
-         test-tx.sh test-install-tx.sh test-hardening-contract.py \
+         test-tx.sh test-install-tx.sh test-install-session.sh test-hardening-contract.py \
          test-command-guard.sh test-guard-no-env-bypass.sh test-guard-interactive.py \
          test-phase2-upstream-contract.py test-release-metadata.py \
          check-bmad-runtime-prereqs.sh; do
@@ -433,6 +433,9 @@ run_cmd "test-tx" \
 
 run_cmd "test-install-tx" \
   "bash $KIT_DIR/scripts/test-install-tx.sh"
+
+run_cmd "test-install-session" \
+  "bash $KIT_DIR/scripts/test-install-session.sh"
 
 # --- Path Safety & JSONC Tests ---
 echo ""

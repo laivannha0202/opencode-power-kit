@@ -43,9 +43,7 @@ source "$KIT_DIR/scripts/require-linux.sh"
 opk_require_linux
 TARGET_DIR="$(pwd)"
 REPORT_FILE="$TARGET_DIR/opencode-power-install-report.md"
-BACKUP_DIR="$TARGET_DIR/.opencode-power-kit-backup-$(date +%Y%m%d%H%M%S)"
 BMAD_LOG="$TARGET_DIR/.opencode-power-bmad-install.log"
-BACKUP_NEEDED=false
 MERGE_ARGS=()
 for arg in "$@"; do
 	[[ "$arg" != --normalize-jsonc ]] || MERGE_ARGS+=(--normalize-jsonc)
@@ -86,6 +84,7 @@ info "Install lock đang được giữ: .opk-state/.install.lock (lease: $LEASE
 # Mọi file install.sh ghi vào project đi qua opk_tx.sh (journal + backup +
 # rollback). Fail-closed: lỗi tx -> dừng install, hướng dẫn recover.
 TX_SH="$KIT_DIR/scripts/opk_tx.sh"
+SESSION_HELPER="$KIT_DIR/scripts/opk_install_session.py"
 
 opk_tx() {
 	# begin prints tx_id on stdout (needed); các lệnh khác chỉ cần rc, ẩn JSON.
@@ -244,7 +243,6 @@ else
 		err "merge-opk-project.py thất bại — kiểm tra lỗi ở trên.
   KHÔNG fallback copy thô để tránh ghi đè config user."
 	fi
-	BACKUP_NEEDED=true
 	ok "AGENTS.md / OPENCODE.md / opencode.json (merged)"
 	ok "Safety plugin: .opencode/plugins/opk-safety-guard.js"
 fi
@@ -346,6 +344,16 @@ inject_fail before-report
 # Nội dung report lấy từ dữ liệu THẬT: merge --json (status từng file),
 # tx gitignore/knip/lefthook, BMAD exit code, lease id.
 TX_R="$(opk_tx begin --root "$TARGET_DIR" --reason "install.sh: report" | tx_id_of)"
+
+# Create one lifecycle session before writing the report. TX_R is prepared at
+# this point; finalize below requires both tx ids to be committed.
+if ! SESSION_JSON="$(python3 "$SESSION_HELPER" create     --root "$TARGET_DIR"     --merge-json "$MERGE_JSON"     --txid "$TX_ID"     --txid "$TX_R"     --lease "$LEASE")"; then
+    err "Không tạo được install-session manifest; từ chối tiếp tục."
+fi
+SESSION_ID="$(python3 -c 'import json,sys;print(json.loads(sys.argv[1])["session_id"])' "$SESSION_JSON")"
+SESSION_MANIFEST="$(python3 -c 'import json,sys;print(json.loads(sys.argv[1])["manifest"])' "$SESSION_JSON")"
+MERGE_WAL="$(python3 -c 'import json,sys;print(json.loads(sys.argv[1]).get("merge_wal_archive") or "(none; merge skipped)")' "$SESSION_JSON")"
+
 REPORT_TMP="$(mktemp "${TMPDIR:-/tmp}/opk-report.XXXXXX")"
 cat >"$REPORT_TMP" <<EOF
 # OpenCode Power Kit - Install Report
@@ -397,9 +405,32 @@ PY
 - Version: $BMAD_METHOD_VERSION
 - Log: $BMAD_LOG
 
-## Backup
+## Restore / Uninstall session
 
-$([ "$BACKUP_NEEDED" = true ] && echo "- Backup tại: $BACKUP_DIR" || echo "- Không có file cần backup")
+- Session ID: `$SESSION_ID`
+- Session manifest: `$SESSION_MANIFEST`
+- Merger WAL archive: `$MERGE_WAL`
+- Transaction restore points: `$TX_ID`, `$TX_R`
+- Recovery copies created by merger (exact paths):
+
+$(python3 - "$MERGE_JSON" <<'PY'
+import json, sys
+data = json.loads(sys.argv[1]) if sys.argv[1] else {"files": []}
+backups = [
+    f.get("backup")
+    for f in data.get("files", [])
+    if isinstance(f, dict) and f.get("backup")
+]
+if backups:
+    for path in backups:
+        print(f"  - `{path}`")
+else:
+    print("  - (none)")
+PY
+)
+
+Uninstall dùng session manifest + WAL + transaction manifests và sẽ **refuse**
+nếu managed file đã bị user sửa sau khi install.
 
 ## Bước tiếp theo
 
@@ -412,6 +443,10 @@ opk_tx stage --txid "$TX_R" --root "$TARGET_DIR" --kind REPLACE \
 	--rel opencode-power-install-report.md --file "$REPORT_TMP"
 rm -f "$REPORT_TMP"
 opk_tx commit --txid "$TX_R" --root "$TARGET_DIR"
+
+if ! python3 "$SESSION_HELPER" finalize     --root "$TARGET_DIR" --session "$SESSION_ID" >/dev/null; then
+    err "Không finalize được install session $SESSION_ID; từ chối báo install thành công."
+fi
 inject_fail after-report
 
 ok "Tạo report: $REPORT_FILE"

@@ -400,7 +400,7 @@ class WriteAheadLog:
         except OSError as error:
             raise ValueError(f"cannot open WAL file {self.file}: {error}") from error
 
-    def _archive_current(self) -> None:
+    def _archive_current(self) -> Path:
         """Keep a committed journal + its backups as an archive session so
         uninstall/rollback can restore the pre-install originals later."""
         archive_dir = self.dir / f"archive-{timestamp()}"
@@ -414,6 +414,7 @@ class WriteAheadLog:
                 os.replace(entry, archive_dir / entry.name)
         if self._fd >= 0:
             self.close()
+        return archive_dir
 
     def close(self) -> None:
         if self._fd >= 0:
@@ -493,16 +494,16 @@ class WriteAheadLog:
 
     # -- commit / rollback ----------------------------------------------
 
-    def commit(self) -> None:
+    def commit(self) -> Path | None:
         if self._fd < 0:
-            return
+            return None
         self._append_record(
             {"seq": 0, "path": WAL_COMMIT_PATH, "mode": None, "backup": None}
         )
         self.close()
         # Keep the journal + backups as an archive session instead of
         # deleting them: uninstall needs the pre-install originals.
-        self._archive_current()
+        return self._archive_current()
 
     @staticmethod
     def _is_committed(records: list[dict[str, Any]]) -> bool:
@@ -1116,9 +1117,15 @@ def merge_project_config(
         status,
         backup=str(root_backup.relative_to(project)) if root_backup else None,
     )
-    if legacy and legacy.exists():
-        record_summary(str(legacy.relative_to(project)), "archived",
-                       archive=str(archived.relative_to(project)))
+    # `archive_legacy()` moves the original path, so `legacy.exists()` is
+    # false after a successful archive. Track the archive from the explicit
+    # result instead; lifecycle/uninstall needs this exact path to restore it.
+    if legacy is not None and archived is not None:
+        record_summary(
+            str(legacy.relative_to(project)),
+            "archived",
+            archive=str(archived.relative_to(project)),
+        )
     _test_hook_inject_fail("opencode.json")
     return changed or (legacy is not None and legacy.exists())
 
@@ -1257,6 +1264,7 @@ def main() -> int:
         JSON_MODE = True
     try:
         project = project_from_argument(args.project_dir)
+        wal_archive: Path | None = None
         directory_fd = os.open(project, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
         try:
             fcntl.flock(directory_fd, fcntl.LOCK_EX)
@@ -1272,7 +1280,7 @@ def main() -> int:
                     merge_markdown(project, "OPENCODE.md", args.dry_run, wal)
                     install_project_runtime_assets(project, args.dry_run, wal)
                 if wal is not None:
-                    wal.commit()
+                    wal_archive = wal.commit()
             except Exception:
                 if wal is not None:
                     wal.rollback()
@@ -1285,7 +1293,15 @@ def main() -> int:
             print(json.dumps({"error": str(error), "files": SUMMARY}, sort_keys=True))
         return 1
     if args.json:
-        print(json.dumps({"ok": True, "files": SUMMARY}, sort_keys=True))
+        print(json.dumps({
+            "ok": True,
+            "files": SUMMARY,
+            "wal_archive": (
+                str(wal_archive.relative_to(project))
+                if wal_archive is not None
+                else None
+            ),
+        }, sort_keys=True))
     return 0
 
 
