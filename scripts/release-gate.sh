@@ -165,7 +165,7 @@ fi
 
 # --- 6. Scripts ---
 section "6. Scripts"
-for s in detect-mode.py merge-opk-project.py install-global.py opk-permissions.py \
+for s in detect-mode.py merge-opk-project.py install-global.py install-fullstack-profile.py opk-permissions.py \
          opk_safe_io.py opk_tx.py \
          validate-opencode-pack.py check-cli-file-references.py \
          check-opencode-config-paths.py check-agent-permission-contracts.py \
@@ -223,7 +223,7 @@ fi
 # --- 9. Tests exist ---
 section "9. Test Coverage"
 for s in test-permission-rules.py test-safety-plugin.mjs test-token-guard.mjs \
-         test-opk-mode.sh test-installer-preservation.sh test-global-installer.sh \
+         test-opk-mode.sh test-installer-preservation.sh test-fullstack-installer.sh test-global-installer.sh \
          test-opencode-resolved-config.sh test-timeout.sh test-runtime-behavior.sh \
          test-wal-recovery.sh test-legacy-recovery.sh test-safe-io.sh \
          test-tx.sh test-install-tx.sh test-hardening-contract.py \
@@ -397,6 +397,9 @@ run_cmd "audit-hermes --check" \
 
 run_cmd "test-installer-preservation" \
   "bash $KIT_DIR/scripts/test-installer-preservation.sh"
+
+run_cmd "test-fullstack-installer" \
+  "bash $KIT_DIR/scripts/test-fullstack-installer.sh"
 
 run_cmd "test-global-installer" \
   "bash $KIT_DIR/scripts/test-global-installer.sh"
