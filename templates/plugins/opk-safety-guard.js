@@ -69,111 +69,396 @@ function isSensitivePath(filePath) {
 }
 
 // --- Dangerous command detection --------------------------------------------
-// Each entry: { id, test(segment) -> bool }. We scan each shell segment
-// (split on &&, ||, ; and newline) plus the whole command for pipe-to-shell.
-function stripQuotes(cmd) {
-  // Remove single- and double-quoted substrings so that searching docs
-  // containing the literal text "rm -rf" is not mistaken for a destructive op.
-  return String(cmd)
-    .replace(/'[^']*'/g, " ")
-    .replace(/"[^"]*"/g, " ");
-}
+// Token-aware scanner.  Do NOT delete quoted substrings: quotes can contain
+// executable options (`rm "-rf"`, `git reset "--hard"`) and shell payloads.
+// Instead, lex each simple command, normalize wrappers/executable paths, and
+// inspect only commands that can perform the destructive action.
 
-// Matches: rm -rf, rm -fr, rm -r -f, rm --recursive --force, rm -Rf, rm -fR
-const RM_RF_RE = /\brm\b[^|;&]*(-[a-z]*[rR][a-z]*\s+-[a-z]*[fF][a-z]*|-[rR][fF]|-[fF][rR]|--recursive\s+--force|--force\s+--recursive)/;
-// git ... supports an optional `-C <path>` (matched once or more) so
-// `git -C /srv/app reset --hard HEAD` is caught like `git reset --hard`.
-const GIT_RESET_RE = /\bgit\b(?:\s+-C\s+\S+)*\s+reset\s+--hard\b/;
-const GIT_CLEAN_RE = /\bgit\b(?:\s+-C\s+\S+)*\s+clean\s+-[a-zA-Z]*[fF][a-zA-Z]*/;
-// Matches: git push --force, git push -f, git push ... --force, git push ... --force-with-lease
-const GIT_PUSH_FORCE_RE = /\bgit\b(?:\s+-C\s+\S+)*\s+push\b[^|;&]*(--force|-[a-zA-Z]*f[a-zA-Z]*|--force-with-lease)\b/;
-const SQL_RE = /\b(DROP\s+TABLE|TRUNCATE\s+TABLE|TRUNCATE\s+)\b/i;
+const SQL_RE = /\b(DROP\s+TABLE|DROP\s+DATABASE|TRUNCATE\s+TABLE|TRUNCATE\s+)\b/i;
 const SQL_DELETE_RE = /\bDELETE\s+FROM\b(?![\s\S]*\bWHERE\b)/i;
-const PIPE_SHELL_RE = /\|\s*(?:sudo\s+|env\s+)?(?:ba)?sh\b|\|\s*zsh\b/;
-// Matches: bash -c "dangerous", sh -c 'dangerous'
-const SHELL_C_RE = /\b(ba)?sh\s+-c\b/;
-// Redirect (> file, >> file, 2> file, &> file, 1> file, 3> file, ...)
 const REDIRECT_TARGET_RE = /(?:\s*(?:2?>>?|&>|&>>|1>>?|3>>?)\s*)([^\s&|;>]+)/g;
-// tee <file> (target may be a sensitive file)
 const TEE_TARGET_RE = /(?:\s*tee\s+)([^\s&|;>]+)/g;
 
-function splitSegments(cmd) {
-  return String(cmd)
-    .split(/\n/)
-    .flatMap((line) => line.split(/&&|\|\||;/))
-    .map((s) => s.trim())
-    .filter(Boolean);
+function splitShellSegments(command) {
+  const text = String(command || "");
+  const segments = [];
+  let current = "";
+  let quote = "";
+  let escaped = false;
+
+  const flush = () => {
+    const value = current.trim();
+    if (value) segments.push(value);
+    current = "";
+  };
+
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+
+    if (escaped) {
+      current += ch;
+      escaped = false;
+      continue;
+    }
+
+    if (quote) {
+      current += ch;
+      if (ch === "\\" && quote === '"') {
+        escaped = true;
+      } else if (ch === quote) {
+        quote = "";
+      }
+      continue;
+    }
+
+    if (ch === "'" || ch === '"') {
+      quote = ch;
+      current += ch;
+      continue;
+    }
+
+    if (ch === "\n" || ch === ";" || ch === "|" || ch === "&") {
+      flush();
+      // Treat && / || as one separator.
+      if ((ch === "|" || ch === "&") && text[i + 1] === ch) i += 1;
+      continue;
+    }
+
+    current += ch;
+  }
+
+  flush();
+  return segments;
+}
+
+function shellTokens(segment) {
+  const text = String(segment || "");
+  const tokens = [];
+  let token = "";
+  let quote = "";
+  let escaped = false;
+  let active = false;
+
+  const flush = () => {
+    if (active) tokens.push(token);
+    token = "";
+    active = false;
+  };
+
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+
+    if (escaped) {
+      token += ch;
+      active = true;
+      escaped = false;
+      continue;
+    }
+
+    if (quote) {
+      if (ch === "\\" && quote === '"') {
+        escaped = true;
+      } else if (ch === quote) {
+        quote = "";
+      } else {
+        token += ch;
+        active = true;
+      }
+      continue;
+    }
+
+    if (ch === "'" || ch === '"') {
+      quote = ch;
+      active = true;
+      continue;
+    }
+
+    if (/\s/.test(ch)) {
+      flush();
+      continue;
+    }
+
+    if (ch === "\\") {
+      escaped = true;
+      active = true;
+      continue;
+    }
+
+    token += ch;
+    active = true;
+  }
+
+  if (escaped) token += "\\";
+  flush();
+  return tokens;
+}
+
+function executableName(token) {
+  const clean = String(token || "").replace(/\\/g, "/");
+  return clean.slice(clean.lastIndexOf("/") + 1);
+}
+
+function isAssignment(token) {
+  return /^[A-Za-z_][A-Za-z0-9_]*=/.test(String(token || ""));
+}
+
+function shortFlagHas(token, letter) {
+  return /^-[^-]+$/.test(token) && token.slice(1).includes(letter);
+}
+
+function unwrapCommand(tokens) {
+  let i = 0;
+
+  while (i < tokens.length && isAssignment(tokens[i])) i += 1;
+
+  let guard = 0;
+  while (i < tokens.length && guard < 8) {
+    guard += 1;
+    const exe = executableName(tokens[i]);
+
+    if (exe === "sudo") {
+      i += 1;
+      while (i < tokens.length && tokens[i].startsWith("-")) {
+        const opt = tokens[i];
+        if (["-u", "-g", "-h", "-p", "-C", "-R", "-T"].includes(opt)) i += 2;
+        else i += 1;
+      }
+      continue;
+    }
+
+    if (exe === "command") {
+      i += 1;
+      if (tokens[i] === "-v" || tokens[i] === "-V") {
+        return { exe: "command-query", args: [], index: i };
+      }
+      while (tokens[i] === "-p") i += 1;
+      continue;
+    }
+
+    if (exe === "env") {
+      i += 1;
+      while (i < tokens.length) {
+        const tok = tokens[i];
+        if (isAssignment(tok)) {
+          i += 1;
+          continue;
+        }
+        if (tok === "-i" || tok === "--ignore-environment" || tok === "-0" || tok === "--null") {
+          i += 1;
+          continue;
+        }
+        if (tok === "-u" || tok === "--unset" || tok === "-C" || tok === "--chdir") {
+          i += 2;
+          continue;
+        }
+        if (tok.startsWith("--unset=") || tok.startsWith("--chdir=")) {
+          i += 1;
+          continue;
+        }
+        break;
+      }
+      continue;
+    }
+
+    return { exe, args: tokens.slice(i + 1), index: i };
+  }
+
+  return { exe: "", args: [], index: i };
+}
+
+function rmDanger(args) {
+  let recursive = false;
+  let force = false;
+
+  for (const arg of args) {
+    if (arg === "--") break;
+    if (arg === "--recursive") recursive = true;
+    else if (arg === "--force") force = true;
+    else if (shortFlagHas(arg, "r") || shortFlagHas(arg, "R")) recursive = true;
+
+    if (shortFlagHas(arg, "f") || shortFlagHas(arg, "F")) force = true;
+  }
+
+  return recursive && force;
+}
+
+function normalizeGitArgs(args) {
+  let i = 0;
+  while (i < args.length) {
+    const arg = args[i];
+    if (arg === "-C" || arg === "-c" || arg === "--git-dir" || arg === "--work-tree" || arg === "--namespace") {
+      i += 2;
+      continue;
+    }
+    if (
+      arg.startsWith("--git-dir=") ||
+      arg.startsWith("--work-tree=") ||
+      arg.startsWith("--namespace=")
+    ) {
+      i += 1;
+      continue;
+    }
+    break;
+  }
+  return args.slice(i);
+}
+
+function gitDanger(args) {
+  const normalized = normalizeGitArgs(args);
+  const sub = normalized[0] || "";
+  const rest = normalized.slice(1);
+
+  if (sub === "reset" && rest.includes("--hard")) {
+    return "git reset --hard: mất thay đổi chưa commit";
+  }
+
+  if (sub === "clean") {
+    const forced = rest.some(
+      (arg) => arg === "--force" || shortFlagHas(arg, "f") || shortFlagHas(arg, "F"),
+    );
+    if (forced) return "git clean -f: xóa untracked files";
+  }
+
+  if (sub === "push") {
+    const forced = rest.some(
+      (arg) =>
+        arg === "--force" ||
+        arg.startsWith("--force-with-lease") ||
+        shortFlagHas(arg, "f"),
+    );
+    if (forced) return "git push --force/-f: ghi đè lịch sử remote";
+  }
+
+  return null;
+}
+
+function shellPayload(args) {
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (/^-[A-Za-z]*c[A-Za-z]*$/.test(arg)) {
+      return args[i + 1] || "";
+    }
+  }
+  return "";
+}
+
+function scanCoreCommand(tokens, depth = 0) {
+  if (!tokens.length || depth > 6) return null;
+
+  const { exe, args } = unwrapCommand(tokens);
+  if (!exe || exe === "command-query") return null;
+
+  if (exe === "rm" && rmDanger(args)) {
+    return "rm recursive+force: xóa dữ liệu không thể phục hồi";
+  }
+
+  if (exe === "git") {
+    return gitDanger(args);
+  }
+
+  if (exe === "bash" || exe === "sh" || exe === "zsh") {
+    const payload = shellPayload(args);
+    if (payload) return scanCommandText(payload, depth + 1);
+    return null;
+  }
+
+  if (exe === "eval") {
+    return scanCommandText(args.join(" "), depth + 1);
+  }
+
+  if (exe === "ssh") {
+    let i = 0;
+    while (i < args.length && args[i].startsWith("-")) {
+      const opt = args[i];
+      if (["-b", "-c", "-D", "-E", "-e", "-F", "-I", "-i", "-J", "-L", "-l", "-m", "-O", "-o", "-p", "-Q", "-R", "-S", "-W", "-w"].includes(opt)) i += 2;
+      else i += 1;
+    }
+    if (i < args.length) i += 1; // host
+    if (i < args.length) return scanCommandText(args.slice(i).join(" "), depth + 1);
+  }
+
+  return null;
+}
+
+function scanCommandText(command, depth = 0) {
+  if (depth > 6) return null;
+  for (const segment of splitShellSegments(command)) {
+    const danger = scanCoreCommand(shellTokens(segment), depth);
+    if (danger) return danger;
+  }
+  return null;
+}
+
+function isShellInvocation(segment) {
+  const { exe, args } = unwrapCommand(shellTokens(segment));
+  if (!["bash", "sh", "zsh"].includes(exe)) return false;
+  // A pipe into `bash script.sh` is still execution of pipeline input only
+  // when no script/command operand is supplied.  Shell options are allowed.
+  return !args.some((arg) => !arg.startsWith("-"));
+}
+
+function hasPipeToShell(command) {
+  const text = String(command || "");
+  let quote = "";
+  let escaped = false;
+  let current = "";
+
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+
+    if (escaped) {
+      current += ch;
+      escaped = false;
+      continue;
+    }
+    if (quote) {
+      current += ch;
+      if (ch === "\\" && quote === '"') escaped = true;
+      else if (ch === quote) quote = "";
+      continue;
+    }
+    if (ch === "'" || ch === '"') {
+      quote = ch;
+      current += ch;
+      continue;
+    }
+
+    if (ch === "|" && text[i + 1] !== "|") {
+      const right = text.slice(i + 1);
+      const next = splitShellSegments(right)[0] || "";
+      if (isShellInvocation(next)) return true;
+    }
+    current += ch;
+  }
+  return false;
 }
 
 /**
- * Trả về string mô tả rule vi phạm, hoặc null nếu an toàn.
- * Phát hiện command nguy hiểm kể cả khi nằm sau &&, ;, ||, pipe.
+ * Return a violation description, or null when the shell command is allowed.
  */
 function findDangerousCommand(command) {
   if (!command) return null;
   const raw = String(command);
-  const stripped = stripQuotes(raw);
 
-  // Check for bash -c "..." / sh -c '...' with dangerous inner command
-  // Must check BEFORE pipe detection because -c content is quoted and would
-  // be stripped. Check on raw command to preserve quoted content.
-  if (SHELL_C_RE.test(raw)) {
-    const innerMatch = raw.match(/\b(?:ba)?sh\s+-c\s+["']([^"']*)["']/);
-    if (innerMatch) {
-      const inner = innerMatch[1];
-      if (RM_RF_RE.test(inner)) return "bash -c rm -rf: xóa dữ liệu không thể phục hồi";
-      if (GIT_RESET_RE.test(inner)) return "bash -c git reset --hard: mất thay đổi chưa commit";
-      if (GIT_CLEAN_RE.test(inner)) return "bash -c git clean -f: xóa untracked files";
-      if (GIT_PUSH_FORCE_RE.test(inner)) return "bash -c git push --force: ghi đè lịch sử remote";
-    }
-  }
+  const coreDanger = scanCommandText(raw);
+  if (coreDanger) return coreDanger;
 
-  // Nested execution: inspect raw quoted payloads for ssh/eval.
-  // General doc searches stay quote-stripped below, but actual ssh/eval
-  // commands must not hide destructive payloads inside quotes.
-  for (const rawSeg of splitSegments(raw)) {
-    const nested = rawSeg.trim();
-    const kind = /^(?:sudo\s+)?ssh\b/.test(nested) ? "ssh" : /^eval\b/.test(nested) ? "eval" : null;
-    if (!kind) continue;
-    if (RM_RF_RE.test(nested)) return `${kind} payload rm -rf: xóa dữ liệu không thể phục hồi`;
-    if (GIT_RESET_RE.test(nested)) return `${kind} payload git reset --hard: mất thay đổi chưa commit`;
-    if (GIT_CLEAN_RE.test(nested)) return `${kind} payload git clean -f: xóa untracked files`;
-    if (GIT_PUSH_FORCE_RE.test(nested)) return `${kind} payload git push --force: ghi đè lịch sử remote`;
-  }
-
-  // Pipe-to-shell must be checked on the whole (quote-stripped) command
-  // because the pipe itself is the danger and splitting on | would hide it.
-  if (PIPE_SHELL_RE.test(stripped)) {
+  if (hasPipeToShell(raw)) {
     return "pipe-to-shell: curl/wget/... | sh|bash|zsh — rủi ro thực thi mã từ xa";
   }
 
-  for (const seg of splitSegments(stripped)) {
-    if (RM_RF_RE.test(seg)) {
-      return "rm -rf/-fr: xóa dữ liệu không thể phục hồi";
-    }
-    if (GIT_RESET_RE.test(seg)) {
-      return "git reset --hard: mất thay đổi chưa commit";
-    }
-    if (GIT_CLEAN_RE.test(seg)) {
-      return "git clean -f: xóa untracked files";
-    }
-    if (GIT_PUSH_FORCE_RE.test(seg)) {
-      return "git push --force/-f: ghi đè lịch sử remote";
-    }
-  }
-
-  // SQL: chỉ flag khi command thực sự gọi một SQL client (mysql/psql/...),
-  // tránh false positive khi user đọc tài liệu chứa chữ "DROP TABLE" qua grep/cat.
-  const HAS_SQL_CLIENT = /\b(mysql|psql|sqlite3?|sqlcmd|pg_dump|psql)\b/i.test(raw);
-  if (HAS_SQL_CLIENT && (SQL_RE.test(raw) || SQL_DELETE_RE.test(raw))) {
+  // SQL is intentionally gated on a real SQL client to avoid blocking
+  // documentation searches that merely contain SQL text.
+  const sqlClient = splitShellSegments(raw).some((segment) => {
+    const { exe } = unwrapCommand(shellTokens(segment));
+    return ["mysql", "psql", "sqlite", "sqlite3", "sqlcmd"].includes(exe);
+  });
+  if (sqlClient && (SQL_RE.test(raw) || SQL_DELETE_RE.test(raw))) {
     return "SQL DROP/TRUNCATE/DELETE không WHERE: mất dữ liệu bảng";
   }
 
-  // Redirect / tee into a sensitive file: `echo TOKEN=x > .env`,
-  // `node setup.js > .env.production`, `printf x | tee .env`, ...
-  // Plain `touch .env.local` stays allowed — only the write target counts.
-  const rawHasRedirect = /[>]|tee/.test(raw);
-  if (rawHasRedirect) {
+  // Redirect / tee into a sensitive file.
+  if (/[>]|tee/.test(raw)) {
     const targets = [];
     for (const m of raw.matchAll(REDIRECT_TARGET_RE)) {
       if (m[1]) targets.push(m[1]);
@@ -181,11 +466,11 @@ function findDangerousCommand(command) {
     for (const m of raw.matchAll(TEE_TARGET_RE)) {
       if (m[1]) targets.push(m[1]);
     }
-    for (let t of targets) {
-      t = t.replace(/["'`]/g, "");
-      if (t === "&1" || t === "/dev/null") continue;
-      if (isSensitivePath(t)) {
-        return `redirect/tee vào file nhạy cảm: ${t}`;
+    for (let target of targets) {
+      target = target.replace(/["'`]/g, "");
+      if (target === "&1" || target === "/dev/null") continue;
+      if (isSensitivePath(target)) {
+        return `redirect/tee vào file nhạy cảm: ${target}`;
       }
     }
   }

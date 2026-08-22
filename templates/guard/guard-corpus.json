@@ -1,5 +1,5 @@
 {
-  "comment": "Shared verdict corpus for the Bash engine (scripts/guard-rules.sh) and the OpenCode plugin engine (templates/plugins/opk-safety-guard.js). 'block' = engine MUST refuse the command; 'allow' = engine MUST pass it. Parity is enforced by scripts/test-command-guard.sh and scripts/test-safety-plugin.mjs. Do not add a case that the two engines could disagree on.",
+  "comment": "Shared verdict corpus for Bash and OpenCode safety guards. Includes adversarial quoted-option, wrapper, absolute-executable, and shell -c variants. 'block' means both engines MUST refuse; 'allow' means both MUST pass.",
   "cases": [
     {
       "cmd": "rm -rf .",
@@ -285,6 +285,91 @@
       "cmd": "eval \"rm -rf /tmp/x\"",
       "verdict": "block",
       "note": "eval quoted destructive command"
+    },
+    {
+      "cmd": "rm \"-rf\" build",
+      "verdict": "block",
+      "note": "quoted rm combined option"
+    },
+    {
+      "cmd": "rm '-r' '-f' build",
+      "verdict": "block",
+      "note": "quoted rm split options"
+    },
+    {
+      "cmd": "/usr/bin/rm -rf build",
+      "verdict": "block",
+      "note": "absolute rm executable"
+    },
+    {
+      "cmd": "command rm -rf build",
+      "verdict": "block",
+      "note": "command wrapper"
+    },
+    {
+      "cmd": "env FOO=1 rm -rf build",
+      "verdict": "block",
+      "note": "env wrapper"
+    },
+    {
+      "cmd": "sudo command rm \"-rf\" build",
+      "verdict": "block",
+      "note": "nested sudo command wrapper"
+    },
+    {
+      "cmd": "git reset \"--hard\" HEAD",
+      "verdict": "block",
+      "note": "quoted git reset option"
+    },
+    {
+      "cmd": "/usr/bin/git reset --hard HEAD",
+      "verdict": "block",
+      "note": "absolute git executable"
+    },
+    {
+      "cmd": "command git -C . reset --hard HEAD",
+      "verdict": "block",
+      "note": "command wrapper plus git -C"
+    },
+    {
+      "cmd": "env FOO=1 git clean \"-fd\"",
+      "verdict": "block",
+      "note": "env wrapper plus quoted git clean option"
+    },
+    {
+      "cmd": "bash -lc 'rm -rf build'",
+      "verdict": "block",
+      "note": "bash -lc payload"
+    },
+    {
+      "cmd": "sh -lc 'git reset --hard HEAD'",
+      "verdict": "block",
+      "note": "sh -lc payload"
+    },
+    {
+      "cmd": "env FOO=1 bash -lc 'git clean -fd'",
+      "verdict": "block",
+      "note": "env plus shell -lc payload"
+    },
+    {
+      "cmd": "echo \"git reset --hard HEAD\"",
+      "verdict": "allow",
+      "note": "quoted literal echo remains safe"
+    },
+    {
+      "cmd": "printf '%s\\n' 'rm -rf build'",
+      "verdict": "allow",
+      "note": "quoted printf literal remains safe"
+    },
+    {
+      "cmd": "rm -- \"-rf\"",
+      "verdict": "allow",
+      "note": "rm filename after option terminator is not recursive force"
+    },
+    {
+      "cmd": "command -v rm",
+      "verdict": "allow",
+      "note": "command query does not execute rm"
     }
   ]
 }
