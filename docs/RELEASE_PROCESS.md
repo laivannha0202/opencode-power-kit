@@ -2,6 +2,9 @@
 
 ## Yêu cầu trước khi release
 
+- `VERSION` là **single source of truth** cho phiên bản hiện tại mà runtime/test đọc.
+- Không hardcode current version vào header của CLI, validator, plugin hoặc test.
+- `CHANGELOG.md` và `docs/releases/vX.Y.Z.md` vẫn ghi version/date vì đây là lịch sử release; contract test sẽ đối chiếu chúng với `VERSION`.
 - Working tree sạch (`git status` không có thay đổi chưa commit)
 - Tất cả tests pass (`opk verify` và `bash scripts/release-gate.sh`)
 - Local tags khớp với file `VERSION`

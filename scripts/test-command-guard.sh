@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────
 # test-command-guard.sh
-# opencode-power-kit v2.2.0
+# Kit version comes from ./VERSION; this test has no independent version.
 #
 # Parity test for the shared Bash guard engine. Reads the shared
 # verdict corpus (templates/guard/guard-corpus.json) and asserts

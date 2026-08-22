@@ -1,6 +1,6 @@
 # OpenCode Power Kit
 
-[![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)](./VERSION)
+[![Version source](https://img.shields.io/badge/version-see%20VERSION-blue.svg)](./VERSION)
 [![BMAD Method](https://img.shields.io/badge/BMAD%20Method-v6.11.0-blue.svg)](https://github.com/bmad-code-org/BMAD-METHOD)
 [![No MCP](https://img.shields.io/badge/policy-no%20MCP-orange.svg)](#mô-hình-an-toàn)
 [![Safe / No secrets](https://img.shields.io/badge/policy-safe%20%2F%20no--secrets-success.svg)](#mô-hình-an-toàn)

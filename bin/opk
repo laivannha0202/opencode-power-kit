@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# OpenCode Power Kit CLI v2.1.3 — Linux-only, fail-fast updater.
+# OpenCode Power Kit CLI — Linux-only, version is read from ./VERSION.
 set -euo pipefail
 SELF="${BASH_SOURCE[0]}"
 BIN_DIR="$(cd "$(dirname "$SELF")" && pwd)"

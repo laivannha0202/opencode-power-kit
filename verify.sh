@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────
 # verify.sh
-# opencode-power-kit v1.6.6
+# Current kit version is read from ./VERSION.
 #
 # Sanity-check the power-kit. Runs on every CI run and is also safe
 # to run locally: it does not modify anything, it only inspects.

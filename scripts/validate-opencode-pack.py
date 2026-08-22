@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # ============================================================================
 # OpenCode Power Kit - Pack validator
-# opencode-power-kit v1.6.1
+# Current kit version is read from ./VERSION.
 #
 # Kiểm tra cấu trúc:
 #   - opencode-global/commands/*.md phải có frontmatter + description
@@ -41,7 +41,7 @@ PROFILES_DIR = KIT_ROOT / "profiles"
 TEMPLATES_DIR = KIT_ROOT / "templates"
 
 # ─── version compliance constants ───────────────────────────────────
-EXPECTED_VERSION = "2.3.0"
+SEMVER_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 
 AUTO_ROUTER_NEEDLES: tuple[tuple[str, str], ...] = (
     ("templates/AGENTS.md", "Lightweight Routing"),
@@ -359,19 +359,18 @@ def validate_openapi_templates() -> list[str]:
 
 # ─── version compliance section ─────────────────────────────────────
 def validate_version() -> list[str]:
-    """Release invariants for current EXPECTED_VERSION. Returns list of error messages."""
+    """Validate VERSION as the single machine-readable current-version source."""
     errors: list[str] = []
 
-    # VERSION file pin
-    print(f"[VERSION == {EXPECTED_VERSION}]")
+    print("[VERSION source of truth]")
     version_path = KIT_ROOT / "VERSION"
     if version_path.is_file():
         current = version_path.read_text(encoding="utf-8").strip()
-        if current == EXPECTED_VERSION:
-            ok(f"VERSION == {EXPECTED_VERSION}")
+        if SEMVER_RE.fullmatch(current):
+            ok(f"VERSION = {current} (valid semver; source of truth)")
         else:
             errors.append(
-                f"VERSION is '{current}', expected '{EXPECTED_VERSION}'"
+                f"VERSION is not valid X.Y.Z semver: {current!r}"
             )
     else:
         errors.append(f"VERSION file missing at {version_path}")

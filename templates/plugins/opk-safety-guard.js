@@ -17,7 +17,7 @@
 // Helper functions (isSensitivePath / findDangerousCommand / extractPatchPaths)
 // are private (not exported) and tested via the plugin hook in test-safety-plugin.mjs.
 //
-// @version 2.2.0
+// Kit version is intentionally not duplicated here; see ../../VERSION.
 // ============================================================================
 
 // --- Sensitive path detection ------------------------------------------------
