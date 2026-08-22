@@ -68,6 +68,7 @@ function isProtectedSecretPath(path) {
 }
 
 const PROTECTED_LITERAL_PATTERNS = [
+  ["proc environment", /\/proc\/(?:self|[0-9]+|\$[A-Za-z_][A-Za-z0-9_]*)\/environ\b/i],
   ["env file", /(^|[\/\s"'`=:(])\.env(?:\.[A-Za-z0-9_-]+)?(?=$|[\/\s"'`;|)&])/i],
   ["envrc", /(^|[\/\s"'`=:(])\.envrc(?=$|[\/\s"'`;|)&])/i],
   ["secret path", /(^|[\/\s"'`=:(])secrets?(?=$|[\/\s"'`;|)&])/i],
@@ -183,11 +184,45 @@ function guardTokenCall(tool, args) {
   }
 }
 
+function sanitizeAgentShellEnv(input, output) {
+  // AI shell calls carry sessionID/callID; manual PTY calls carry cwd only.
+  // Sanitize agent subprocesses without mutating the OpenCode parent process.
+  const agentScoped = Boolean(input && (input.callID || input.sessionID));
+  if (!agentScoped) return;
+
+  const env = output && output.env;
+  if (!env || typeof env !== "object") return;
+
+  // OpenCode merges shell.env output on top of process.env.
+  // Empty-string overrides remove secret values from the child process.
+  const names = new Set([
+    ...Object.keys(process.env),
+    ...Object.keys(env),
+  ]);
+
+  for (const name of names) {
+    const value = Object.prototype.hasOwnProperty.call(env, name)
+      ? env[name]
+      : process.env[name];
+
+    if (
+      isSecretEnvName(name) ||
+      (value && hasInlineSecret(String(value)))
+    ) {
+      env[name] = "";
+    }
+  }
+}
+
 const OPKTokenGuard = async () => ({
   "tool.execute.before": async (input, output) => {
     const tool = (input && input.tool) || (output && output.tool);
     const args = (output && output.args) || (input && input.args) || {};
     guardTokenCall(tool, args);
+    return output;
+  },
+  "shell.env": async (input, output) => {
+    sanitizeAgentShellEnv(input, output);
     return output;
   },
 });

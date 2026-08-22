@@ -9,6 +9,7 @@
 // Exit 0 = pass, 1 = fail.
 // ============================================================================
 import { createRequire } from "node:module";
+import { spawnSync } from "node:child_process";
 const require = createRequire(import.meta.url);
 const OPKTokenGuard = require("../templates/plugins/opk-token-guard.js");
 
@@ -96,6 +97,104 @@ check(
 
 const hook = plugin["tool.execute.before"];
 
+
+// --- 1b. Agent shell env: sanitize child, preserve OpenCode/provider auth ----
+check(
+  "plugin returns shell.env hook",
+  typeof plugin["shell.env"] === "function",
+);
+const shellEnvHook = plugin["shell.env"];
+
+const savedOpenAIKey = process.env.OPENAI_API_KEY;
+const savedServiceToken = process.env.OPK_TEST_SERVICE_TOKEN;
+
+try {
+  process.env.OPENAI_API_KEY =
+    "sk-opk-test-abcdefghijklmnopqrstuvwxyz012345";
+  process.env.OPK_TEST_SERVICE_TOKEN =
+    "opk-test-service-token-value";
+
+  const agentEnvOutput = {
+    env: {
+      SAFE_FLAG: "keep-me",
+      OPENAI_API_KEY: "prior-plugin-secret-value",
+    },
+  };
+
+  await shellEnvHook(
+    {
+      cwd: process.cwd(),
+      sessionID: "session-opk-test",
+      callID: "call-opk-test",
+    },
+    agentEnvOutput,
+  );
+
+  check(
+    "agent shell blanks known provider API key",
+    agentEnvOutput.env.OPENAI_API_KEY === "",
+  );
+  check(
+    "agent shell blanks suffix-matched token",
+    agentEnvOutput.env.OPK_TEST_SERVICE_TOKEN === "",
+  );
+  check(
+    "agent shell preserves non-secret injected env",
+    agentEnvOutput.env.SAFE_FLAG === "keep-me",
+  );
+  check(
+    "shell.env does not mutate OpenCode/provider process.env",
+    process.env.OPENAI_API_KEY ===
+      "sk-opk-test-abcdefghijklmnopqrstuvwxyz012345",
+  );
+
+  // Mirror OpenCode's runtime merge: { ...process.env, ...extra.env }.
+  const mergedAgentEnv = {
+    ...process.env,
+    ...agentEnvOutput.env,
+  };
+  const child = spawnSync(
+    process.execPath,
+    [
+      "-e",
+      "process.stdout.write((process.env.OPENAI_API_KEY || '') + '|' + (process.env.OPK_TEST_SERVICE_TOKEN || ''))",
+    ],
+    {
+      env: mergedAgentEnv,
+      encoding: "utf8",
+    },
+  );
+  check(
+    "merged agent child environment contains no secret values",
+    child.status === 0 && child.stdout === "|",
+  );
+
+  // Manual OpenCode PTY invokes shell.env with cwd only.
+  const ptyEnvOutput = {
+    env: {
+      OPENAI_API_KEY: "manual-terminal-value",
+    },
+  };
+  await shellEnvHook(
+    { cwd: process.cwd() },
+    ptyEnvOutput,
+  );
+  check(
+    "manual PTY environment is not sanitized",
+    ptyEnvOutput.env.OPENAI_API_KEY === "manual-terminal-value",
+  );
+} finally {
+  if (savedOpenAIKey === undefined) delete process.env.OPENAI_API_KEY;
+  else process.env.OPENAI_API_KEY = savedOpenAIKey;
+
+  if (savedServiceToken === undefined) {
+    delete process.env.OPK_TEST_SERVICE_TOKEN;
+  } else {
+    process.env.OPK_TEST_SERVICE_TOKEN = savedServiceToken;
+  }
+}
+
+
 // --- 2. Environment dumps blocked ---
 await expectThrow(
   "printenv blocked",
@@ -112,6 +211,51 @@ await expectThrow(
 await expectNoThrow(
   "env PREFIX=value cmd allowed",
   () => hook({ tool: "bash" }, { args: { command: "env PREFIX=x make test" } }),
+);
+
+
+await expectThrow(
+  "cat /proc/self/environ blocked",
+  () => hook(
+    { tool: "bash" },
+    { args: { command: "cat /proc/self/environ" } },
+  ),
+);
+await expectThrow(
+  "python read /proc/$PPID/environ blocked",
+  () => hook(
+    { tool: "bash" },
+    {
+      args: {
+        command:
+          "python3 -c 'open(\"/proc/$PPID/environ\", \"rb\").read()'",
+      },
+    },
+  ),
+);
+await expectNoThrow(
+  "python os.environ relies on sanitized child env",
+  () => hook(
+    { tool: "bash" },
+    {
+      args: {
+        command:
+          "python3 -c 'import os; print(os.environ.get(\"OPENAI_API_KEY\", \"\"))'",
+      },
+    },
+  ),
+);
+await expectNoThrow(
+  "node process.env relies on sanitized child env",
+  () => hook(
+    { tool: "bash" },
+    {
+      args: {
+        command:
+          "node -e 'console.log(process.env.OPENAI_API_KEY || \"\")'",
+      },
+    },
+  ),
 );
 
 // --- 3. echo/printf expanding secret env vars blocked ----------------------
