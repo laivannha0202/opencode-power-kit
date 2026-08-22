@@ -289,8 +289,3 @@ const OPKSafetyGuard = async (ctx) => {
 };
 
 module.exports = OPKSafetyGuard;
-// Expose internals for the parity test (test-safety-plugin.mjs).
-module.exports.findDangerousCommand = findDangerousCommand;
-module.exports.guardToolCall = guardToolCall;
-module.exports.isSensitivePath = isSensitivePath;
-module.exports.extractPatchPaths = extractPatchPaths;
