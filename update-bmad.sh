@@ -112,6 +112,11 @@ fi
 LOG_NAME=".opencode-power-bmad-update.log"
 LOG="$TARGET/$LOG_NAME"
 TMP_LOG="$(mktemp "${TMPDIR:-/tmp}/opk-bmad.XXXXXX")"
+if ! chmod 600 "$TMP_LOG"; then
+  rm -f "$TMP_LOG"
+  echo "ERROR: cannot secure BMAD temp log with mode 600" >&2
+  exit 1
+fi
 rc=0
 "${CMD[@]}" >"$TMP_LOG" 2>&1 || rc=$?
 if ! python3 "$KIT_DIR/scripts/opk_safe_io.py" write \
@@ -119,10 +124,11 @@ if ! python3 "$KIT_DIR/scripts/opk_safe_io.py" write \
   --rel "$LOG_NAME" \
   --stdin <"$TMP_LOG" >/dev/null 2>&1; then
   echo "ERROR: không publish được BMAD log qua safe write (đích không an toàn?): $LOG" >&2
-  echo "Log tạm: $TMP_LOG" >&2
-  rm -f "$TMP_LOG"
+  echo "Log tạm được giữ lại (mode 600): $TMP_LOG" >&2
+  echo "Xóa thủ công sau khi debug: rm -f -- \"$TMP_LOG\"" >&2
   exit 1
 fi
+# Publish succeeded, so the project log is now the durable diagnostic copy.
 rm -f "$TMP_LOG"
 if [[ "$rc" -ne 0 ]]; then
   echo "ERROR: BMAD $VERSION update THẤT BẠI (exit code: $rc)" >&2

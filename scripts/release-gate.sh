@@ -226,7 +226,7 @@ for s in test-permission-rules.py test-safety-plugin.mjs test-token-guard.mjs \
          test-opk-mode.sh test-installer-preservation.sh test-fullstack-installer.sh test-global-installer.sh \
          test-opencode-resolved-config.sh test-timeout.sh test-runtime-behavior.sh \
          test-wal-recovery.sh test-legacy-recovery.sh test-safe-io.sh \
-         test-tx.sh test-install-tx.sh test-install-session.sh test-hardening-contract.py \
+         test-tx.sh test-install-tx.sh test-install-session.sh test-bmad-log-lifecycle.sh test-hardening-contract.py \
          test-command-guard.sh test-guard-no-env-bypass.sh test-guard-interactive.py \
          test-phase2-upstream-contract.py test-release-metadata.py \
          check-bmad-runtime-prereqs.sh; do
@@ -436,6 +436,9 @@ run_cmd "test-install-tx" \
 
 run_cmd "test-install-session" \
   "bash $KIT_DIR/scripts/test-install-session.sh"
+
+run_cmd "test-bmad-log-lifecycle" \
+  "bash $KIT_DIR/scripts/test-bmad-log-lifecycle.sh"
 
 # --- Path Safety & JSONC Tests ---
 echo ""

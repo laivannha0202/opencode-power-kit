@@ -289,6 +289,10 @@ if command -v npx &>/dev/null; then
 	# write layer (refuses symlink/hardlink targets) after npx exits.
 	# shellcheck disable=SC2317  # errexit is set; this block can be invoked via && fallback
 	BMAD_TMP_LOG="$(mktemp "${TMPDIR:-/tmp}/opk-bmad.XXXXXX")"
+	if ! chmod 600 "$BMAD_TMP_LOG"; then
+		rm -f "$BMAD_TMP_LOG"
+		err "Không thể bảo vệ BMAD temp log với mode 600."
+	fi
 	if npx --yes "bmad-method@${BMAD_METHOD_VERSION}" install \
 		--modules bmm \
 		--tools opencode \
@@ -307,11 +311,13 @@ if command -v npx &>/dev/null; then
 		--root "$TARGET_DIR" \
 		--rel .opencode-power-bmad-install.log \
 		--stdin <"$BMAD_TMP_LOG" >/dev/null 2>&1; then
-		rm -f "$BMAD_TMP_LOG"
 		err "Không publish được BMAD log qua safe write (đích không an toàn?):
   $BMAD_LOG
-  Log tạm: $BMAD_TMP_LOG"
+  Log tạm được giữ lại (mode 600): $BMAD_TMP_LOG
+  Xóa thủ công sau khi debug: rm -f -- \"$BMAD_TMP_LOG\""
 	fi
+	# Publish thành công: project log là nguồn debug bền vững, temp copy
+	# không còn cần thiết.
 	rm -f "$BMAD_TMP_LOG"
 	if [ "$BMAD_RC" -ne 0 ]; then
 		echo ""
