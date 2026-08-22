@@ -14,7 +14,7 @@ const TOKEN_STORE_PATH_PATTERNS = [
 
 const PROJECT_SECRET_PATH_PATTERNS = [
   /(^|[\\/])\.env$/i,
-  /(^|[\\/])\.env\.[A-Za-z0-9_-]+$/i,
+  /(^|[\\/])\.env\.[^\\/]+$/i,
   /(^|[\\/])\.envrc$/i,
   /(^|[\\/])secrets?(?:[\\/]|$)/i,
   /(^|[\\/])secret[^\\/]*$/i,
@@ -64,12 +64,18 @@ function isTokenStorePath(path) {
 function isProtectedSecretPath(path) {
   const p = normalizePath(path);
   if (!p) return false;
-  return isTokenStorePath(p) || PROJECT_SECRET_PATH_PATTERNS.some((re) => re.test(p));
+  if (isTokenStorePath(p)) return true;
+
+  // .env.example is a conventional non-secret template. Keep the exception
+  // exact to the basename: .env.example.local and every other .env* remain
+  // protected.
+  if (/(^|[\\/])\.env\.example$/i.test(p)) return false;
+
+  return PROJECT_SECRET_PATH_PATTERNS.some((re) => re.test(p));
 }
 
 const PROTECTED_LITERAL_PATTERNS = [
   ["proc environment", /\/proc\/(?:self|[0-9]+|\$[A-Za-z_][A-Za-z0-9_]*)\/environ\b/i],
-  ["env file", /(^|[\/\s"'`=:(])\.env(?:\.[A-Za-z0-9_-]+)?(?=$|[\/\s"'`;|)&])/i],
   ["envrc", /(^|[\/\s"'`=:(])\.envrc(?=$|[\/\s"'`;|)&])/i],
   ["secret path", /(^|[\/\s"'`=:(])secrets?(?=$|[\/\s"'`;|)&])/i],
   ["private key", /private[._-]?key|id_rsa|id_ed25519|id_ecdsa/i],
@@ -83,8 +89,22 @@ const PROTECTED_LITERAL_PATTERNS = [
   ["claude credentials", /\.config\/claude\/credentials\.json/i],
 ];
 
+function findProtectedEnvLiteral(text) {
+  // Scan every env-looking literal independently. This is important for
+  // commands such as `cat .env .env.example`: the safe example token must
+  // never mask the real secret token.
+  const re = /(^|[\/\s"'`=:(])(\.env(?:\.[A-Za-z0-9_.-]+)?)(?=$|[\/\s"'`;|)&])/gi;
+  let match;
+  while ((match = re.exec(String(text || ""))) !== null) {
+    if (isProtectedSecretPath(match[2])) return "env file";
+  }
+  return null;
+}
+
 function findProtectedPathLiteral(text) {
   const normalized = String(text || "").replace(/\\\\/g, "/");
+  const envLiteral = findProtectedEnvLiteral(normalized);
+  if (envLiteral) return envLiteral;
   for (const [label, re] of PROTECTED_LITERAL_PATTERNS) {
     if (re.test(normalized)) return label;
   }

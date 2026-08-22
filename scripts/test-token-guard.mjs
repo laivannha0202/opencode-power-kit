@@ -422,6 +422,40 @@ await expectThrow(
   "read .env.production blocked",
   () => hook({ tool: "read" }, { args: { path: "config/.env.production" } }),
 );
+await expectNoThrow(
+  "read .env.example allowed",
+  () => hook({ tool: "read" }, { args: { path: ".env.example" } }),
+);
+await expectNoThrow(
+  "read nested .env.example allowed",
+  () => hook({ tool: "read" }, { args: { path: "config/.env.example" } }),
+);
+await expectNoThrow(
+  "write .env.example allowed",
+  () => hook({ tool: "write" }, { args: { path: ".env.example" } }),
+);
+await expectThrow(
+  "read .env.example.local remains blocked",
+  () => hook({ tool: "read" }, { args: { path: ".env.example.local" } }),
+);
+await expectNoThrow(
+  "token guard allows cat .env.example literal",
+  () => hook({ tool: "bash" }, { args: { command: "cat .env.example" } }),
+);
+await expectThrow(
+  "safe example cannot mask real .env in mixed command",
+  () => hook(
+    { tool: "bash" },
+    { args: { command: "cat .env .env.example" } },
+  ),
+);
+await expectThrow(
+  "safe example cannot mask .env.production in mixed command",
+  () => hook(
+    { tool: "bash" },
+    { args: { command: "cat .env.production .env.example" } },
+  ),
+);
 await expectThrow(
   "cat .env blocked",
   () => hook({ tool: "bash" }, { args: { command: "cat .env" } }),
@@ -468,6 +502,20 @@ await expectThrow(
 await expectNoThrow(
   "apply_patch safe file allowed",
   () => hook({ tool: "apply_patch" }, { args: { patchText: "*** Add File: x.ts\n" } }),
+);
+await expectNoThrow(
+  "apply_patch .env.example allowed",
+  () => hook(
+    { tool: "apply_patch" },
+    { args: { patchText: "*** Update File: .env.example\n@@\n-old\n+new\n" } },
+  ),
+);
+await expectThrow(
+  "apply_patch .env.example.local remains blocked",
+  () => hook(
+    { tool: "apply_patch" },
+    { args: { patchText: "*** Update File: .env.example.local\n@@\n-old\n+new\n" } },
+  ),
 );
 
 // --- Summary ---

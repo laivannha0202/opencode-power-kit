@@ -438,6 +438,19 @@ class Installer:
                     if effect == "deny":
                         existing_rules.pop(pattern, None)
                         existing_rules[pattern] = "deny"
+                    elif (
+                        permission_key == "read"
+                        and pattern == "*.env.example"
+                        and effect == "allow"
+                    ):
+                        # Managed narrow exception: add it only when the user did
+                        # not explicitly choose ask/deny. If an older OPK allow is
+                        # already present, move it after *.env.* so last-match-wins
+                        # makes the exception effective.
+                        current_effect = existing_rules.get(pattern)
+                        if current_effect is None or current_effect == "allow":
+                            existing_rules.pop(pattern, None)
+                            existing_rules[pattern] = "allow"
                 current_permission[permission_key] = existing_rules
             merged["permission"] = current_permission
 

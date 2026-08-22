@@ -11,6 +11,7 @@
       "*": "allow",
       "*.env": "deny",
       "*.env.*": "deny",
+      "*.env.example": "allow",
       "*secret*": "deny",
       "*private-key*": "deny",
       "*.pem": "deny",

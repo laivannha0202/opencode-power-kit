@@ -36,6 +36,12 @@ SECRET_RULES = {
     "*.pem": "certificate.pem",
     "*.key": "private.key",
 }
+DENY_CONTRACT_EXCEPTIONS = {
+    "read": {
+        "*.env.example": "allow",
+    },
+}
+
 DESTRUCTIVE_RULES = {
     "rm -rf*": "rm -rf build",
     "rm -fr*": "rm -fr build",
@@ -324,6 +330,7 @@ def deny_contract(permission: Any, key: str, required: dict[str, str]) -> tuple[
             for index, (pattern, effect) in enumerate(rules.items())
             if index > first_deny
             and effect != "deny"
+            and DENY_CONTRACT_EXCEPTIONS.get(key, {}).get(pattern) != effect
             and any(wildcard_match(representative(pattern), required_pattern) for required_pattern in required)
         )
     return not missing, missing
@@ -383,6 +390,7 @@ __all__ = [
     "POWER_ALLOW_KEYS",
     "OPTIONAL_ALLOW_KEYS",
     "SECRET_RULES",
+    "DENY_CONTRACT_EXCEPTIONS",
     "DESTRUCTIVE_RULES",
     "strip_jsonc",
     "resolve_config_path",

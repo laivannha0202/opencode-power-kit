@@ -145,6 +145,67 @@ for jsonc_backup in "${jsonc_backups[@]}"; do
 done
 [[ "$jsonc_backup_match" == true ]]
 
+# Existing custom permissions upgraded without --mode receive the narrow
+# .env.example read exception only when the user did not explicitly override
+# that exact pattern.
+ENV_EXAMPLE_HOME="$TMP/env-example-home"
+mkdir -p "$ENV_EXAMPLE_HOME/.config/opencode"
+cat >"$ENV_EXAMPLE_HOME/.config/opencode/opencode.json" <<'EOF'
+{
+  "model": "fixture/custom",
+  "permission": {
+    "*": "ask",
+    "read": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny"
+    },
+    "bash": {
+      "*": "ask"
+    }
+  }
+}
+EOF
+HOME="$ENV_EXAMPLE_HOME" SHELL=/bin/bash \
+  bash "$KIT_DIR/install-global.sh" --yes >/dev/null
+python3 - "$ENV_EXAMPLE_HOME/.config/opencode/opencode.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+rules = d["permission"]["read"]
+assert rules["*.env"] == "deny"
+assert rules["*.env.*"] == "deny"
+assert rules["*.env.example"] == "allow"
+keys = list(rules)
+assert keys.index("*.env.example") > keys.index("*.env.*")
+PY
+
+# An explicit user deny for the exception itself is preserved.
+USER_DENY_HOME="$TMP/env-example-user-deny-home"
+mkdir -p "$USER_DENY_HOME/.config/opencode"
+cat >"$USER_DENY_HOME/.config/opencode/opencode.json" <<'EOF'
+{
+  "permission": {
+    "*": "ask",
+    "read": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      "*.env.example": "deny"
+    },
+    "bash": {
+      "*": "ask"
+    }
+  }
+}
+EOF
+HOME="$USER_DENY_HOME" SHELL=/bin/bash \
+  bash "$KIT_DIR/install-global.sh" --yes >/dev/null
+python3 - "$USER_DENY_HOME/.config/opencode/opencode.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+assert d["permission"]["read"]["*.env.example"] == "deny"
+PY
+
 # Concurrent installers serialize all config, asset, manifest, RC, and shim writes.
 CONCURRENT_HOME="$TMP/concurrent-home"
 mkdir -p "$CONCURRENT_HOME"
