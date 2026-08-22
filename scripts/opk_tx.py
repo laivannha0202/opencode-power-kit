@@ -98,32 +98,175 @@ def _sanitize(rel):
     return re.sub(r"[^A-Za-z0-9._-]", "_", rel)
 
 
+def _open_state_dir(root, create=False):
+    """Open <root>/.opk-state without following the final component.
+
+    Returns (root_fd, state_fd). The caller owns both descriptors.
+    """
+    root = io.canonical_root(root)
+    root_fd = io.open_root(root)
+    state_fd = None
+    try:
+        while True:
+            try:
+                st = os.stat(STATE_REL, dir_fd=root_fd, follow_symlinks=False)
+            except FileNotFoundError as exc:
+                if not create:
+                    raise io.PathMissingError(
+                        "state directory does not exist: %s" % STATE_REL
+                    ) from exc
+                try:
+                    os.mkdir(STATE_REL, 0o755, dir_fd=root_fd)
+                except FileExistsError:
+                    # Another actor created/replaced it. Re-stat and validate.
+                    continue
+                st = os.stat(
+                    STATE_REL, dir_fd=root_fd, follow_symlinks=False
+                )
+
+            if stat.S_ISLNK(st.st_mode):
+                raise TxUnsafe(
+                    "refusing symlinked transaction state directory: %s"
+                    % STATE_REL
+                )
+            if not stat.S_ISDIR(st.st_mode):
+                raise TxUnsafe(
+                    "transaction state path is not a directory: %s"
+                    % STATE_REL
+                )
+
+            try:
+                state_fd = os.open(
+                    STATE_REL,
+                    os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                    dir_fd=root_fd,
+                )
+            except OSError as exc:
+                if exc.errno in (errno.ELOOP, errno.ENOTDIR):
+                    raise TxUnsafe(
+                        "refusing unsafe transaction state directory: %s"
+                        % STATE_REL
+                    ) from exc
+                if exc.errno == errno.ENOENT:
+                    if create:
+                        continue
+                    raise io.PathMissingError(
+                        "state directory disappeared: %s" % STATE_REL
+                    ) from exc
+                raise TxError(
+                    "cannot open transaction state directory: %s" % exc
+                ) from exc
+
+            current = os.fstat(state_fd)
+            if not stat.S_ISDIR(current.st_mode):
+                raise TxUnsafe(
+                    "transaction state fd is not a directory"
+                )
+            return root_fd, state_fd
+    except Exception:
+        io.close_fd(state_fd)
+        io.close_fd(root_fd)
+        raise
+
+
+def _open_state_child_dir(state_fd, name, missing_ok=False):
+    """Open one state subdirectory by dir_fd, never following a symlink."""
+    try:
+        st = os.stat(name, dir_fd=state_fd, follow_symlinks=False)
+    except FileNotFoundError as exc:
+        if missing_ok:
+            return None
+        raise io.PathMissingError(
+            "state child directory missing: %s" % name
+        ) from exc
+
+    if stat.S_ISLNK(st.st_mode):
+        raise TxUnsafe("refusing symlinked state directory: %s" % name)
+    if not stat.S_ISDIR(st.st_mode):
+        raise TxUnsafe("state path is not a directory: %s" % name)
+
+    try:
+        fd = os.open(
+            name,
+            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+            dir_fd=state_fd,
+        )
+    except OSError as exc:
+        if exc.errno in (errno.ELOOP, errno.ENOTDIR):
+            raise TxUnsafe(
+                "refusing unsafe state directory: %s" % name
+            ) from exc
+        if exc.errno == errno.ENOENT and missing_ok:
+            return None
+        raise TxError("cannot open state directory %s: %s" % (name, exc)) from exc
+
+    if not stat.S_ISDIR(os.fstat(fd).st_mode):
+        io.close_fd(fd)
+        raise TxUnsafe("state directory fd is not a directory: %s" % name)
+    return fd
+
+
+def _open_state_lock(root, name):
+    """Create/open a lock relative to a verified .opk-state dir fd."""
+    root_fd = None
+    state_fd = None
+    lock_fd = None
+    try:
+        root_fd, state_fd = _open_state_dir(root, create=True)
+        try:
+            lock_fd = os.open(
+                name,
+                os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW,
+                0o600,
+                dir_fd=state_fd,
+            )
+        except OSError as exc:
+            if exc.errno in (errno.ELOOP, errno.ENOTDIR):
+                raise TxUnsafe(
+                    "refusing symlinked/unsafe lock path: %s/%s"
+                    % (STATE_REL, name)
+                ) from exc
+            raise TxError(
+                "cannot open lock %s/%s: %s"
+                % (STATE_REL, name, exc)
+            ) from exc
+
+        st = os.fstat(lock_fd)
+        if not stat.S_ISREG(st.st_mode) or st.st_nlink > 1:
+            raise TxUnsafe(
+                "lock is not a regular single-link file: %s/%s"
+                % (STATE_REL, name)
+            )
+        return lock_fd
+    except Exception:
+        io.close_fd(lock_fd)
+        raise
+    finally:
+        io.close_fd(state_fd)
+        io.close_fd(root_fd)
+
+
 class Lock:
-    """Per-invocation advisory lock. The file is opened with O_NOFOLLOW so a
-    symlinked lock path is refused instead of being followed."""
+    """Per-invocation advisory transaction lock.
+
+    Both the parent .opk-state directory and the final lock file are opened
+    relative to verified dir_fds with O_NOFOLLOW.
+    """
 
     def __init__(self, root):
-        self.root = root
+        self.root = io.canonical_root(root)
         self.fd = None
 
     def __enter__(self):
-        lock_dir = os.path.join(self.root, STATE_REL)
-        if not os.path.isdir(lock_dir):
-            io.mkdir(self.root, STATE_REL, create_parents=True)
-        try:
-            self.fd = os.open(os.path.join(lock_dir, ".tx-lock"),
-                              os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
-        except OSError as exc:
-            if exc.errno == errno.ELOOP:
-                raise TxUnsafe("refusing symlinked tx lock path") from exc
-            raise TxError("cannot open tx lock: %s" % exc) from exc
-        st = os.fstat(self.fd)
-        if not stat.S_ISREG(st.st_mode) or st.st_nlink > 1:
-            raise TxUnsafe("tx lock is not a regular single-link file")
+        self.fd = _open_state_lock(self.root, ".tx-lock")
         try:
             fcntl.flock(self.fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError as exc:
-            raise TxError("another opk transaction is in progress") from exc
+            io.close_fd(self.fd)
+            self.fd = None
+            raise TxError(
+                "another opk transaction is in progress"
+            ) from exc
         return self
 
     def __exit__(self, *exc):
@@ -132,66 +275,82 @@ class Lock:
                 fcntl.flock(self.fd, fcntl.LOCK_UN)
             except OSError:
                 pass
-            try:
-                os.close(self.fd)
-            except OSError:
-                pass
+            io.close_fd(self.fd)
+            self.fd = None
         return False
 
-
 def tx_dir(root, tx_id):
+    """Compatibility/display helper only; never use this path for state I/O."""
     return os.path.join(root, STATE_REL, "transactions", tx_id)
 
 
 def manifest_path(root, tx_id):
+    """Compatibility/display helper only; never use this path for state I/O."""
     return os.path.join(tx_dir(root, tx_id), MANIFEST)
 
 
-def _write_json_abs(path, obj):
-    tmp = "%s.tmp-%s" % (path, uuid.uuid4().hex[:12])
-    with open(tmp, "w", encoding="utf-8") as fh:
-        json.dump(obj, fh, sort_keys=True, indent=2)
-        fh.flush()
-        os.fsync(fh.fileno())
-    os.replace(tmp, path)
-    dfd = os.open(os.path.dirname(path), os.O_RDONLY | os.O_DIRECTORY)
-    try:
-        os.fsync(dfd)
-    finally:
-        os.close(dfd)
+def _manifest_rel(tx_id):
+    return os.path.join(TX_DIR_REL, tx_id, MANIFEST)
 
 
-def _read_json_abs(path):
-    with open(path, "r", encoding="utf-8") as fh:
-        return json.load(fh)
+def _journal_rel(tx_id):
+    return os.path.join(TX_DIR_REL, tx_id, JOURNAL)
+
+
+def _json_bytes(obj):
+    return (
+        json.dumps(obj, sort_keys=True, indent=2) + "\n"
+    ).encode("utf-8")
 
 
 def _journal_append(root, tx_id, entry):
-    path = os.path.join(tx_dir(root, tx_id), JOURNAL)
-    with open(path, "a", encoding="utf-8") as fh:
-        fh.write(json.dumps(entry, sort_keys=True) + "\n")
-        fh.flush()
-        os.fsync(fh.fileno())
+    rel = _journal_rel(tx_id)
+    try:
+        existing = io.safe_read(root, rel)
+    except io.PathMissingError:
+        existing = b""
+
+    if existing and not existing.endswith(b"\n"):
+        existing += b"\n"
+
+    line = (json.dumps(entry, sort_keys=True) + "\n").encode("utf-8")
+    io.write(root, rel, existing + line, preserve_mode=True)
 
 
 def _load_manifest(root, tx_id):
-    path = manifest_path(root, tx_id)
-    if not os.path.exists(path):
-        raise TxError("transaction %s does not exist under %s" % (tx_id, root))
-    return _read_json_abs(path)
+    rel = _manifest_rel(tx_id)
+    try:
+        raw = io.safe_read(root, rel)
+    except io.PathMissingError as exc:
+        raise TxError(
+            "transaction %s does not exist under %s" % (tx_id, root)
+        ) from exc
+    try:
+        return json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError) as exc:
+        raise TxError(
+            "transaction %s has an unreadable manifest" % tx_id
+        ) from exc
 
 
 def _save_manifest(root, tx_id, manifest):
-    _write_json_abs(manifest_path(root, tx_id), manifest)
+    io.write(
+        root,
+        _manifest_rel(tx_id),
+        _json_bytes(manifest),
+        preserve_mode=True,
+    )
 
 
 def _rel_of_manifest(root, tx_id):
     manifest = _load_manifest(root, tx_id)
     root_canon = io.canonical_root(root)
     if manifest.get("project_root") != root_canon:
-        raise TxError("manifest project_root mismatch: %s" % manifest.get("project_root"))
+        raise TxError(
+            "manifest project_root mismatch: %s"
+            % manifest.get("project_root")
+        )
     return manifest
-
 
 def _active_other_lease(root, lease):
     """Return an active transaction owned by a different lease, if any.
@@ -477,25 +636,93 @@ def _rollback_op(root, tx_id, op):
 
 
 def list_txs(root):
+    """List transaction manifests without following state-directory symlinks."""
     root = io.canonical_root(root)
-    base = os.path.join(root, TX_DIR_REL)
-    if not os.path.isdir(base):
-        return []
-    out = []
-    for name in sorted(os.listdir(base)):
-        path = os.path.join(base, name)
-        if not os.path.isdir(path):
-            continue
-        mp = os.path.join(path, MANIFEST)
-        if not os.path.isfile(mp):
-            continue
-        try:
-            out.append(_read_json_abs(mp))
-        except (OSError, ValueError):
-            out.append({"tx_id": name, "status": "corrupt",
-                        "project_root": root, "reason": "unreadable manifest"})
-    return out
+    root_fd = None
+    state_fd = None
+    tx_fd = None
 
+    try:
+        try:
+            root_fd, state_fd = _open_state_dir(root, create=False)
+        except io.PathMissingError:
+            return []
+
+        tx_fd = _open_state_child_dir(
+            state_fd, "transactions", missing_ok=True
+        )
+        if tx_fd is None:
+            return []
+
+        names = sorted(os.listdir(tx_fd))
+    finally:
+        io.close_fd(tx_fd)
+        io.close_fd(state_fd)
+        io.close_fd(root_fd)
+
+    out = []
+    for name in names:
+        tx_rel = os.path.join(TX_DIR_REL, name)
+        try:
+            info = io.check(root, tx_rel)
+        except io.UnsafePathError as exc:
+            raise TxUnsafe(
+                "unsafe transaction state entry: %s" % tx_rel
+            ) from exc
+
+        if not info["exists"]:
+            continue
+        if info["is_symlink"]:
+            raise TxUnsafe(
+                "refusing symlinked transaction directory: %s" % tx_rel
+            )
+        if not info["is_dir"]:
+            continue
+
+        manifest_rel = _manifest_rel(name)
+        try:
+            manifest_info = io.check(root, manifest_rel)
+        except io.UnsafePathError as exc:
+            raise TxUnsafe(
+                "unsafe transaction manifest path: %s" % manifest_rel
+            ) from exc
+
+        if not manifest_info["exists"]:
+            continue
+        if manifest_info["is_symlink"]:
+            raise TxUnsafe(
+                "refusing symlinked transaction manifest: %s"
+                % manifest_rel
+            )
+        if not manifest_info["is_reg"]:
+            out.append({
+                "tx_id": name,
+                "status": "corrupt",
+                "project_root": root,
+                "reason": "manifest is not a regular file",
+            })
+            continue
+
+        try:
+            raw = io.safe_read(root, manifest_rel)
+            out.append(json.loads(raw.decode("utf-8")))
+        except io.UnsafePathError as exc:
+            raise TxUnsafe(
+                "unsafe transaction manifest path: %s" % manifest_rel
+            ) from exc
+        except (
+            OSError,
+            UnicodeDecodeError,
+            ValueError,
+            io.OpkSafeIOError,
+        ):
+            out.append({
+                "tx_id": name,
+                "status": "corrupt",
+                "project_root": root,
+                "reason": "unreadable manifest",
+            })
+    return out
 
 def status(root, tx_id=None):
     txs = list_txs(root)
@@ -539,70 +766,43 @@ def recover(root, which="latest", txid=None, yes=False):
 
 
 def check_lock(root):
-    """Create/validate the global installer lock file (used by install.sh /
-    update-bmad.sh with flock(1)). O_NOFOLLOW: a symlinked lock is refused."""
+    """Create/validate the global installer lock without following .opk-state."""
     root = io.canonical_root(root)
-    lock_dir = os.path.join(root, STATE_REL)
-    if not os.path.isdir(lock_dir):
-        io.mkdir(root, STATE_REL, create_parents=True)
-    try:
-        fd = os.open(os.path.join(lock_dir, ".install.lock"),
-                     os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
-    except OSError as exc:
-        if exc.errno == errno.ELOOP:
-            raise TxUnsafe("refusing symlinked install lock path") from exc
-        raise TxError("cannot open install lock: %s" % exc) from exc
-    try:
-        st = os.fstat(fd)
-        if not stat.S_ISREG(st.st_mode) or st.st_nlink > 1:
-            raise TxUnsafe("install lock is not a regular single-link file")
-    finally:
-        os.close(fd)
+    fd = _open_state_lock(root, ".install.lock")
+    io.close_fd(fd)
     return {"lock": STATE_REL + "/.install.lock", "ok": True}
 
 
 def hold_lock(root):
-    """Create/validate the global installer lock file, take an exclusive
-    flock on it, and HOLD it until the process is terminated.
+    """Take the global installer flock and hold it until termination.
 
-    install.sh / update-bmad.sh run this in the background; the lock is
-    released automatically when the holder process dies (SIGTERM from the
-    caller's EXIT trap, or the OS closing the fd). A second installer
-    fails with an error instead of proceeding concurrently.
+    The .opk-state parent and .install.lock file are both opened with
+    verified dir_fds + O_NOFOLLOW.
     """
     root = io.canonical_root(root)
-    lock_dir = os.path.join(root, STATE_REL)
-    if not os.path.isdir(lock_dir):
-        io.mkdir(root, STATE_REL, create_parents=True)
+    fd = _open_state_lock(root, ".install.lock")
     try:
-        fd = os.open(os.path.join(lock_dir, ".install.lock"),
-                     os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
-    except OSError as exc:
-        if exc.errno == errno.ELOOP:
-            raise TxUnsafe("refusing symlinked install lock path") from exc
-        raise TxError("cannot open install lock: %s" % exc) from exc
-    try:
-        st = os.fstat(fd)
-        if not stat.S_ISREG(st.st_mode) or st.st_nlink > 1:
-            raise TxUnsafe("install lock is not a regular single-link file")
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError as exc:
-            raise TxError("another installer is holding the install lock") from exc
-    except BaseException:
-        os.close(fd)
-        raise
-    print(json.dumps({"lock": STATE_REL + "/.install.lock", "ok": True,
-                      "pid": os.getpid()}))
-    sys.stdout.flush()
-    try:
-        while True:
-            time.sleep(3600)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        os.close(fd)
+            raise TxError(
+                "another installer is holding the install lock"
+            ) from exc
 
+        print(json.dumps({
+            "lock": STATE_REL + "/.install.lock",
+            "ok": True,
+            "pid": os.getpid(),
+        }))
+        sys.stdout.flush()
+
+        try:
+            while True:
+                time.sleep(3600)
+        except KeyboardInterrupt:
+            pass
+    finally:
+        io.close_fd(fd)
 
 # ─── CLI ─────────────────────────────────────────────────────────
 
@@ -678,13 +878,13 @@ if __name__ == "__main__":
     try:
         main(sys.argv[1:])
         sys.exit(0)
-    except TxUnsafe as exc:
+    except (TxUnsafe, io.UnsafePathError) as exc:
         print(json.dumps({"error": "unsafe-path", "message": str(exc)}))
         sys.exit(2)
     except io.PathMissingError as exc:
         print(json.dumps({"error": "missing", "message": str(exc)}))
         sys.exit(3)
-    except TxError as exc:
+    except (TxError, io.OpkSafeIOError) as exc:
         print(json.dumps({"error": "error", "message": str(exc)}))
         sys.exit(1)
     except BrokenPipeError:

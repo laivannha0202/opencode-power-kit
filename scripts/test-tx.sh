@@ -134,6 +134,55 @@ wait "$LOCKER_PID" 2>/dev/null
 expect_rc "begin works after lock released" 0 $TX begin --root "$PROJ" --reason after
 check "lock file exists" "$( [ -f "$PROJ/.opk-state/.tx-lock" ]; echo $?)"
 
+echo "== .opk-state parent symlink hardening =="
+SYM_PROJ="$TMP_ROOT/state-symlink-proj"
+OUT_STATE="$TMP_ROOT/outside-state"
+mkdir -p "$SYM_PROJ" "$OUT_STATE"
+echo "outside-state-sentinel" > "$OUT_STATE/sentinel.txt"
+ln -s "$OUT_STATE" "$SYM_PROJ/.opk-state"
+
+expect_rc ".opk-state symlink rejects check-lock" 2 \
+  $TX check-lock --root "$SYM_PROJ"
+expect_rc ".opk-state symlink rejects begin" 2 \
+  $TX begin --root "$SYM_PROJ" --reason state-symlink
+expect_rc ".opk-state symlink rejects status/list_txs" 2 \
+  $TX status --root "$SYM_PROJ"
+expect_rc ".opk-state symlink rejects hold-lock" 2 \
+  bash "$SCRIPT_DIR/timeout.sh" 2 \
+  python3 "$SCRIPT_DIR/opk_tx.py" hold-lock --root "$SYM_PROJ"
+
+check "outside state sentinel unchanged" \
+  "$( [ "$(cat "$OUT_STATE/sentinel.txt")" = "outside-state-sentinel" ]; echo $? )"
+check "no tx lock created through parent symlink" \
+  "$( [ ! -e "$OUT_STATE/.tx-lock" ]; echo $? )"
+check "no install lock created through parent symlink" \
+  "$( [ ! -e "$OUT_STATE/.install.lock" ]; echo $? )"
+check "no transaction tree created through parent symlink" \
+  "$( [ ! -e "$OUT_STATE/transactions" ]; echo $? )"
+
+BAD_STATE_PROJ="$TMP_ROOT/state-file-proj"
+mkdir -p "$BAD_STATE_PROJ"
+printf 'not-a-directory\n' > "$BAD_STATE_PROJ/.opk-state"
+expect_rc ".opk-state regular file is unsafe" 2 \
+  $TX begin --root "$BAD_STATE_PROJ" --reason state-file
+
+echo "== transactions child symlink hardening =="
+TX_SYM_PROJ="$TMP_ROOT/tx-child-symlink-proj"
+OUT_TX="$TMP_ROOT/outside-transactions"
+mkdir -p "$TX_SYM_PROJ/.opk-state" "$OUT_TX"
+echo "outside-tx-sentinel" > "$OUT_TX/sentinel.txt"
+ln -s "$OUT_TX" "$TX_SYM_PROJ/.opk-state/transactions"
+
+expect_rc "transactions symlink rejects status/list_txs" 2 \
+  $TX status --root "$TX_SYM_PROJ"
+expect_rc "transactions symlink rejects begin" 2 \
+  $TX begin --root "$TX_SYM_PROJ" --reason tx-child-symlink
+check "outside transaction sentinel unchanged" \
+  "$( [ "$(cat "$OUT_TX/sentinel.txt")" = "outside-tx-sentinel" ]; echo $? )"
+check "no manifest created through transactions symlink" \
+  "$( [ "$(find "$OUT_TX" -mindepth 1 ! -name sentinel.txt -print -quit)" = "" ]; echo $? )"
+
+
 echo ""
 echo "============================="
 echo "  tx: $PASSED/$TOTAL passed"
