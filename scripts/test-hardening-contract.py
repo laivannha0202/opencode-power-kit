@@ -62,15 +62,70 @@ need("opk-token-guard.js" in commands and "opk-main.md" in commands, "opk auto r
 token = text("templates/plugins/opk-token-guard.js")
 for needle in ("isProtectedSecretPath", "findProtectedPathLiteral", "PROJECT_SECRET_PATH_PATTERNS"):
     need(needle in token, f"token guard missing {needle}")
-safety = text("templates/plugins/opk-safety-guard.js")
-bash_guard = text("scripts/guard-rules.sh")
-need("Nested execution: inspect raw quoted payloads for ssh/eval" in safety, "JS nested execution guard missing")
-need("Nested execution: inspect raw ssh/eval segments before quote stripping" in bash_guard, "Bash nested execution guard missing")
 
+# Check executable nested-guard structure, not historical comment wording.
+safety = text("templates/plugins/opk-safety-guard.js")
+for needle in (
+    "function scanCommandText(command, depth = 0)",
+    'if (exe === "bash" || exe === "sh" || exe === "zsh")',
+    'if (exe === "eval")',
+    'return scanCommandText(args.join(" "), depth + 1);',
+    'if (exe === "ssh")',
+    'return scanCommandText(args.slice(i).join(" "), depth + 1);',
+):
+    need(needle in safety, f"JS nested execution implementation missing: {needle}")
+
+bash_guard = text("scripts/guard-rules.sh")
+for needle in (
+    "_opk_guard_scan_text_core() {",
+    "bash|sh|zsh)",
+    "eval)",
+    "ssh)",
+):
+    need(needle in bash_guard, f"Bash nested execution implementation missing: {needle}")
+need(
+    bash_guard.count('_opk_guard_scan_text_core "$payload" "$((depth + 1))"') >= 3,
+    "Bash nested execution recursion coverage incomplete",
+)
+
+# Shared corpus is the behavioral truth oracle for both runtimes.
 corpus = json.loads(text("templates/guard/guard-corpus.json"))
 verdicts = {str(c.get("cmd")): c.get("verdict") for c in corpus.get("cases", []) if isinstance(c, dict)}
 need(verdicts.get('ssh user@host "rm -rf /tmp/x"') == "block", "ssh quoted destructive corpus case must block")
 need(verdicts.get('eval "rm -rf /tmp/x"') == "block", "eval quoted destructive corpus case must block")
+
+command_guard_test = text("scripts/test-command-guard.sh")
+need(
+    "guard-corpus.json" in command_guard_test
+    and "opk_guard_check" in command_guard_test,
+    "Bash guard test must execute the shared verdict corpus",
+)
+need(
+    "sync-guard-bashrc.sh" in command_guard_test
+    and "diff -q" in command_guard_test,
+    "Bash guard test must enforce generated-fragment freshness",
+)
+
+safety_test = text("scripts/test-safety-plugin.mjs")
+need(
+    "guard-corpus.json" in safety_test
+    and "for (const c of corpus.cases)" in safety_test
+    and 'hook = plugin && plugin["tool.execute.before"]' in safety_test
+    and 'await hook({ tool: "bash" }, { args: { command: c.cmd } });' in safety_test,
+    "JS safety-plugin test must drive the shared corpus through the public hook",
+)
+
+release_gate = text("scripts/release-gate.sh")
+need(
+    'run_cmd "test-safety-plugin"' in release_gate
+    and "scripts/test-safety-plugin.mjs" in release_gate,
+    "release gate must run the JS safety-plugin behavioral test",
+)
+need(
+    'run_cmd "test-command-guard"' in release_gate
+    and "scripts/test-command-guard.sh" in release_gate,
+    "release gate must run the Bash guard corpus/freshness test",
+)
 
 # Tests must prove deployment, not merely source existence.
 project_test = text("scripts/test-installer-preservation.sh")
@@ -80,9 +135,13 @@ for name, body in (("project installer", project_test), ("global installer", glo
     need("opk-token-guard.js" in body, f"{name} test missing token-guard reachability proof")
     need("opk-main" in body, f"{name} test missing opk-main proof")
 
-# Generated BASH_ENV fragment must embed canonical new rule.
+# Generated BASH_ENV must embed the canonical Bash engine, not a stale copy.
 generated = text("templates/guard/opk-guard-bashrc")
-need("Nested execution: inspect raw ssh/eval segments before quote stripping" in generated, "generated BASH_ENV guard is stale")
+canonical_guard_body = bash_guard.split("\n", 1)[1] if "\n" in bash_guard else ""
+need(
+    bool(canonical_guard_body) and canonical_guard_body in generated,
+    "generated BASH_ENV guard does not embed the canonical Bash guard",
+)
 
 # No old explicit known-gap allow should survive.
 need("KNOWN SHARED GAP" not in text("templates/guard/guard-corpus.json"), "known destructive shared gap remains in corpus")
