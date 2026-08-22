@@ -41,6 +41,39 @@ info()  { echo "  ℹ️  $*"; }
 section() { echo ""; echo "=== $* ==="; }
 errors=0
 
+runtime_plugin_check() {
+  local label="$1" safety="$2" token="${3:-}" output
+  if ! command -v node >/dev/null 2>&1; then
+    fail "$label: node is required for dynamic plugin validation"
+    errors=$((errors + 1))
+    return 1
+  fi
+  if [[ ! -f "$KIT_DIR/scripts/check-runtime-plugins.mjs" || \
+        -L "$KIT_DIR/scripts/check-runtime-plugins.mjs" ]]; then
+    fail "$label: scripts/check-runtime-plugins.mjs missing/unsafe"
+    errors=$((errors + 1))
+    return 1
+  fi
+
+  local -a cmd=(
+    node "$KIT_DIR/scripts/check-runtime-plugins.mjs"
+    --safety "$safety"
+  )
+  [[ -z "$token" ]] || cmd+=(--token "$token")
+
+  if output="$("${cmd[@]}" 2>&1)"; then
+    pass "$label"
+    return 0
+  fi
+
+  fail "$label"
+  while IFS= read -r line; do
+    [[ -z "$line" ]] || info "$line"
+  done <<<"$output"
+  errors=$((errors + 1))
+  return 1
+}
+
 # --- Section 1: Kit integrity ---
 section "Kit Integrity"
 if [ -f "$KIT_DIR/VERSION" ]; then
@@ -95,17 +128,10 @@ for tpl in opencode.json opencode.power.json opencode.safe.json; do
   fi
 done
 
-if [ -f "$KIT_DIR/templates/plugins/opk-safety-guard.js" ]; then
-  pass "Safety plugin exists"
-  # Check ESM export
-  if grep -q "tool.execute.before" "$KIT_DIR/templates/plugins/opk-safety-guard.js" 2>/dev/null; then
-    pass "Safety plugin uses tool.execute.before hook"
-  else
-    warn "Safety plugin may need tool.execute.before hook"
-  fi
-else
-  warn "Safety plugin template missing"
-fi
+runtime_plugin_check \
+  "Template safety+token plugins load and pass smoke behavior" \
+  "$KIT_DIR/templates/plugins/opk-safety-guard.js" \
+  "$KIT_DIR/templates/plugins/opk-token-guard.js" || true
 
 # --- Section 3: Scripts ---
 section "Scripts"
@@ -113,7 +139,7 @@ SCRIPT_COUNT=$(find "$KIT_DIR/scripts" -maxdepth 1 \( -name "*.sh" -o -name "*.p
 info "Scripts found: $SCRIPT_COUNT"
 
 # Key scripts
-for s in detect-mode.py merge-opk-project.py validate-opencode-pack.py; do
+for s in detect-mode.py merge-opk-project.py validate-opencode-pack.py check-runtime-plugins.mjs; do
   if [ -f "$KIT_DIR/scripts/$s" ]; then
     pass "scripts/$s exists"
   else
@@ -194,10 +220,23 @@ if [ -n "$CFG" ]; then
   esac
 fi
 
-if [ -f ".opencode/plugins/opk-safety-guard.js" ]; then
-  pass "Safety plugin installed in project"
+PROJECT_SAFETY=".opencode/plugins/opk-safety-guard.js"
+PROJECT_TOKEN=".opencode/plugins/opk-token-guard.js"
+if [[ -e "$PROJECT_SAFETY" || -L "$PROJECT_SAFETY" || \
+      -e "$PROJECT_TOKEN" || -L "$PROJECT_TOKEN" ]]; then
+  if runtime_plugin_check \
+      "Project runtime guards load and pass smoke behavior" \
+      "$PROJECT_SAFETY" "$PROJECT_TOKEN"; then
+    if cmp -s "$PROJECT_SAFETY" "$KIT_DIR/templates/plugins/opk-safety-guard.js" && \
+       cmp -s "$PROJECT_TOKEN" "$KIT_DIR/templates/plugins/opk-token-guard.js"; then
+      pass "Project runtime guards match reviewed OPK templates"
+    else
+      fail "Project runtime guard is stale/custom; run: opk install"
+      errors=$((errors + 1))
+    fi
+  fi
 else
-  info "Safety plugin not installed in project"
+  info "OPK runtime guards not installed in project"
 fi
 
 if [ -f "AGENTS.md" ]; then

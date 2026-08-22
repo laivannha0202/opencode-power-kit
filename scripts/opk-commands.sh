@@ -144,13 +144,40 @@ opk_run_auto(){
 opk_safety_plugin_status(){
   # Public command remains scoped to the safety plugin only.
   # Unattended mode separately requires safety + token + opk-main.
-  if [[ -f .opencode/plugins/opk-safety-guard.js ]] && \
-     grep -qF '@opk-plugin opk-safety-guard' .opencode/plugins/opk-safety-guard.js; then
-    echo INSTALLED
+  local installed=".opencode/plugins/opk-safety-guard.js"
+  local source="$KIT_DIR/templates/plugins/opk-safety-guard.js"
+  local checker="$KIT_DIR/scripts/check-runtime-plugins.mjs"
+
+  need "$source"
+  need "$checker"
+
+  if [[ ! -e "$installed" && ! -L "$installed" ]]; then
+    echo AVAILABLE_NOT_INSTALLED
     return 0
   fi
-  need "$KIT_DIR/templates/plugins/opk-safety-guard.js"
-  echo AVAILABLE_NOT_INSTALLED
+
+  if [[ ! -f "$installed" || -L "$installed" ]]; then
+    echo "BROKEN safety plugin target is missing/unsafe" >&2
+    return 1
+  fi
+
+  if ! cmp -s "$installed" "$source"; then
+    echo "BROKEN safety plugin is stale/custom; run: opk safety-plugin install --yes" >&2
+    return 1
+  fi
+
+  if ! command -v node >/dev/null 2>&1; then
+    echo "BROKEN node is required to validate safety plugin runtime" >&2
+    return 1
+  fi
+
+  if ! node "$checker" --safety "$installed" >/dev/null; then
+    echo "BROKEN safety plugin cannot load/pass runtime smoke checks" >&2
+    return 1
+  fi
+
+  echo INSTALLED
+  return 0
 }
 
 # --- BASH_ENV guard (opk guard status|install|uninstall) -------------------
