@@ -17,7 +17,26 @@ while (($#)); do
 done
 VERSION="${BMAD_METHOD_VERSION:-$OPK_BMAD_VERSION}"
 TARGET="$(pwd -P)"
-[[ -f "$TARGET/opencode.json" ]] || { echo 'ERROR: run opk install first or opk mode migrate' >&2; exit 1; }
+if ! ACTIVE_CONFIG="$(python3 - "$KIT_DIR/scripts" "$TARGET" <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, sys.argv[1])
+from opk_mode import resolve_config_path
+
+try:
+    path = resolve_config_path(Path(sys.argv[2]), required=True)
+except ValueError as exc:
+    print(f"ERROR: {exc}", file=sys.stderr)
+    raise SystemExit(1)
+
+print(path.name)
+PY
+)"; then
+  echo 'ERROR: run opk install first or opk mode migrate; exactly one of opencode.json/opencode.jsonc is required' >&2
+  exit 1
+fi
+echo "OpenCode config: $ACTIVE_CONFIG"
 CMD=(npx --yes "bmad-method@$VERSION" install --modules bmm --tools opencode --user-name "${OPK_USER_NAME:-${USER:-User}}" --communication-language Vietnamese --document-output-language Vietnamese --directory "$TARGET" -y)
 printf 'BMAD plan:'; printf ' %q' "${CMD[@]}"; printf '\n'
 [[ "$MODE" == dry-run ]] && exit 0

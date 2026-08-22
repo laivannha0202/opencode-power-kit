@@ -178,6 +178,46 @@ def strip_jsonc(text: str) -> str:
     return _strip_trailing_commas(_strip_comments(text))
 
 
+def resolve_config_path(
+    directory: Path | str,
+    *,
+    required: bool = True,
+) -> Path | None:
+    # Resolve the single active OpenCode config in directory.
+    # Supports opencode.json and opencode.jsonc; conflicts/symlinks fail closed.
+    root = Path(directory)
+    json_path = root / "opencode.json"
+    jsonc_path = root / "opencode.jsonc"
+
+    for candidate in (json_path, jsonc_path):
+        if candidate.is_symlink():
+            raise ValueError(
+                f"refusing symlink OpenCode config: {candidate}"
+            )
+        if candidate.exists() and not candidate.is_file():
+            raise ValueError(
+                f"OpenCode config is not a regular file: {candidate}"
+            )
+
+    json_exists = json_path.is_file()
+    jsonc_exists = jsonc_path.is_file()
+
+    if json_exists and jsonc_exists:
+        raise ValueError(
+            "conflict: both opencode.json and opencode.jsonc exist in "
+            f"{root}"
+        )
+    if json_exists:
+        return json_path
+    if jsonc_exists:
+        return jsonc_path
+    if required:
+        raise ValueError(
+            f"no opencode.json or opencode.jsonc found in {root}"
+        )
+    return None
+
+
 def load_config(path: Path | str) -> dict[str, Any]:
     """Parse a JSON/JSONC config file into a dict.
 
@@ -345,6 +385,7 @@ __all__ = [
     "SECRET_RULES",
     "DESTRUCTIVE_RULES",
     "strip_jsonc",
+    "resolve_config_path",
     "load_config",
     "validate_action",
     "validate_rule_map",

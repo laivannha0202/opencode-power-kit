@@ -146,6 +146,75 @@ EOF
 }
 
 # ============================================================================
+# Section: update-bmad config discovery (.json / .jsonc / conflict)
+# ============================================================================
+echo "=== update-bmad config discovery ==="
+UPDATE_BMAD="$KIT_DIR/update-bmad.sh"
+
+P="$(new_project update-bmad-json)"
+printf '{"model":"fixture/json"}\n' >"$P/opencode.json"
+RC=0
+(
+  cd "$P"
+  bash "$UPDATE_BMAD" --dry-run
+) >"$TMP/update-bmad-json.out" 2>"$TMP/update-bmad-json.err" || RC=$?
+check "update-bmad json: dry-run accepted" "0" "$RC"
+check "update-bmad json: resolver selected .json" "1" \
+  "$(grep -c '^OpenCode config: opencode.json$' "$TMP/update-bmad-json.out" || true)"
+
+P="$(new_project update-bmad-jsonc)"
+mk_jsonc_safe >"$P/opencode.jsonc"
+RC=0
+(
+  cd "$P"
+  bash "$UPDATE_BMAD" --dry-run
+) >"$TMP/update-bmad-jsonc.out" 2>"$TMP/update-bmad-jsonc.err" || RC=$?
+check "update-bmad jsonc: dry-run accepted" "0" "$RC"
+check "update-bmad jsonc: resolver selected .jsonc" "1" \
+  "$(grep -c '^OpenCode config: opencode.jsonc$' "$TMP/update-bmad-jsonc.out" || true)"
+check "update-bmad jsonc: no parallel .json created" "absent" \
+  "$([[ -e "$P/opencode.json" ]] && echo present || echo absent)"
+
+P="$(new_project update-bmad-conflict)"
+printf '{"model":"json-side"}\n' >"$P/opencode.json"
+mk_jsonc_safe >"$P/opencode.jsonc"
+JSON_BEFORE="$(cat "$P/opencode.json")"
+JSONC_BEFORE="$(cat "$P/opencode.jsonc")"
+RC=0
+(
+  cd "$P"
+  bash "$UPDATE_BMAD" --dry-run
+) >"$TMP/update-bmad-conflict.out" 2>"$TMP/update-bmad-conflict.err" || RC=$?
+ex_nonzero "update-bmad conflict: rejected" "$RC"
+check "update-bmad conflict: explains both configs" "1" \
+  "$(grep -c 'both opencode.json and opencode.jsonc exist' "$TMP/update-bmad-conflict.err" || true)"
+check "update-bmad conflict: json untouched" "$JSON_BEFORE" \
+  "$(cat "$P/opencode.json")"
+check "update-bmad conflict: jsonc untouched" "$JSONC_BEFORE" \
+  "$(cat "$P/opencode.jsonc")"
+
+P="$(new_project update-bmad-missing)"
+RC=0
+(
+  cd "$P"
+  bash "$UPDATE_BMAD" --dry-run
+) >"$TMP/update-bmad-missing.out" 2>"$TMP/update-bmad-missing.err" || RC=$?
+ex_nonzero "update-bmad missing config: rejected" "$RC"
+
+P="$(new_project update-bmad-symlink)"
+printf '{"model":"external"}\n' >"$TMP/external-opencode.json"
+ln -s "$TMP/external-opencode.json" "$P/opencode.json"
+RC=0
+(
+  cd "$P"
+  bash "$UPDATE_BMAD" --dry-run
+) >"$TMP/update-bmad-symlink.out" 2>"$TMP/update-bmad-symlink.err" || RC=$?
+ex_nonzero "update-bmad symlink config: rejected" "$RC"
+check "update-bmad symlink: external target untouched" \
+  '{"model":"external"}' "$(cat "$TMP/external-opencode.json")"
+
+
+# ============================================================================
 # Section: Project root config — only .json
 # ============================================================================
 echo "=== Project root: only .json ==="
