@@ -336,8 +336,70 @@ def evaluate_rules(rules: dict[str, str], resource: str) -> str:
     return effect
 
 
-def representative(pattern: str) -> str:
-    return pattern.replace("*", "x").replace("?", "x")
+def _wildcard_variants(pattern: str) -> tuple[str, ...]:
+    """Return standard-glob variants for one OpenCode wildcard pattern."""
+    normalized = pattern.replace("\\", "/")
+    if normalized.endswith(" *"):
+        # OpenCode makes the trailing " *" optional.  Standard wildcard
+        # semantics for the original pattern cover the branch with the space;
+        # the stripped variant covers the branch with no trailing argument.
+        return (normalized[:-2], normalized)
+    return (normalized,)
+
+
+def _standard_wildcards_overlap(left: str, right: str) -> bool:
+    """Decide whether two ``*``/``?`` wildcard languages intersect.
+
+    This is a product walk over the two tiny wildcard NFAs:
+    - ``*`` has an epsilon edge to the next token and an any-char self-loop;
+    - ``?`` consumes one arbitrary character;
+    - every other character is literal.
+
+    The state space is finite: ``(len(left)+1) * (len(right)+1)``.
+    """
+    pending = [(0, 0)]
+    seen: set[tuple[int, int]] = set()
+
+    while pending:
+        i, j = pending.pop()
+        state = (i, j)
+        if state in seen:
+            continue
+        seen.add(state)
+
+        if i == len(left) and j == len(right):
+            return True
+
+        if i < len(left) and left[i] == "*":
+            pending.append((i + 1, j))
+        if j < len(right) and right[j] == "*":
+            pending.append((i, j + 1))
+
+        if i >= len(left) or j >= len(right):
+            continue
+
+        left_token = left[i]
+        right_token = right[j]
+
+        left_any = left_token in ("*", "?")
+        right_any = right_token in ("*", "?")
+        if not (left_any or right_any or left_token == right_token):
+            continue
+
+        next_i = i if left_token == "*" else i + 1
+        next_j = j if right_token == "*" else j + 1
+        pending.append((next_i, next_j))
+
+    return False
+
+
+def wildcard_patterns_overlap(left: str, right: str) -> bool:
+    """Return whether two OpenCode wildcard patterns can match one resource."""
+    return any(
+        _standard_wildcards_overlap(left_variant, right_variant)
+        for left_variant in _wildcard_variants(left)
+        for right_variant in _wildcard_variants(right)
+    )
 
 
 def deny_contract(permission: Any, key: str, required: dict[str, str]) -> tuple[bool, list[str]]:
@@ -349,18 +411,28 @@ def deny_contract(permission: Any, key: str, required: dict[str, str]) -> tuple[
         for pattern, sample in required.items()
         if rules.get(pattern) != "deny" or evaluate_rules(rules, sample) != "deny"
     ]
+
+    # POWER/SAFE are strict reviewed profiles, not a proof that an arbitrary
+    # equivalent ruleset is safe.  Fail closed when a later non-deny rule has
+    # any language overlap with a required deny.  OpenCode permission runtime
+    # is insertion-order, last-match-wins; a later overlap can therefore
+    # reopen at least part of a protected resource class.
     positions = {pattern: index for index, pattern in enumerate(rules)}
-    present_positions = [positions[pattern] for pattern in required if pattern in positions]
-    if present_positions:
-        first_deny = min(present_positions)
-        missing.extend(
-            f"late non-deny rule: {pattern}"
-            for index, (pattern, effect) in enumerate(rules.items())
-            if index > first_deny
-            and effect != "deny"
-            and DENY_CONTRACT_EXCEPTIONS.get(key, {}).get(pattern) != effect
-            and any(wildcard_match(representative(pattern), required_pattern) for required_pattern in required)
-        )
+    for required_pattern in required:
+        required_position = positions.get(required_pattern)
+        if required_position is None:
+            continue
+        for index, (pattern, effect) in enumerate(rules.items()):
+            if index <= required_position or effect == "deny":
+                continue
+            if DENY_CONTRACT_EXCEPTIONS.get(key, {}).get(pattern) == effect:
+                continue
+            if wildcard_patterns_overlap(pattern, required_pattern):
+                missing.append(
+                    "late non-deny rule overlaps "
+                    f"{required_pattern}: {pattern}"
+                )
+
     return not missing, missing
 
 
@@ -430,7 +502,7 @@ __all__ = [
     "agent_conflicts",
     "wildcard_match",
     "evaluate_rules",
-    "representative",
+    "wildcard_patterns_overlap",
     "deny_contract",
     "classify",
 ]

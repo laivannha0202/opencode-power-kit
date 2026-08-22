@@ -118,7 +118,11 @@ if python3 - "$KIT_DIR/scripts" <<'PY'
 import sys
 
 sys.path.insert(0, sys.argv[1])
-from opk_mode import evaluate_rules, wildcard_match
+from opk_mode import (
+    evaluate_rules,
+    wildcard_match,
+    wildcard_patterns_overlap,
+)
 
 # * and ? are the only wildcard tokens.
 assert wildcard_match("file1.txt", "file?.txt")
@@ -148,6 +152,13 @@ rules = {
 }
 assert evaluate_rules(rules, "app.env") == "deny"
 assert evaluate_rules(rules, "app.env.example") == "allow"
+
+# Deny-contract overlap checks must reason about wildcard languages rather
+# than one guessed representative string.
+assert wildcard_patterns_overlap("foo*", "*.env")
+assert wildcard_patterns_overlap("cat *", "*.env*")
+assert wildcard_patterns_overlap("git *", "git")
+assert not wildcard_patterns_overlap("README.md", "*.env")
 PY
 then
   check "OpenCode wildcard contract" "pass" "pass"
@@ -158,6 +169,52 @@ fi
 # 1) Power template
 cp "$KIT_DIR/templates/opencode.power.json" "$TMP/power.json"
 check "opencode.power.json" "POWER" "$(python3 "$DETECT" "$TMP/power.json")"
+
+# 1b) A late allow whose wildcard intersects a required secret deny must
+# disqualify POWER even when the historical representative sample misses it.
+python3 - "$KIT_DIR/templates/opencode.power.json" >"$TMP/power-late-read-overlap.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    data = json.load(handle)
+data["permission"]["read"]["foo*"] = "allow"
+print(json.dumps(data, ensure_ascii=False))
+PY
+check \
+  "late overlapping read allow cannot remain POWER" \
+  "CUSTOM" \
+  "$(python3 "$DETECT" "$TMP/power-late-read-overlap.json")"
+
+# Same contract for bash: "cat *" intersects protected "*.env*" commands.
+python3 - "$KIT_DIR/templates/opencode.power.json" >"$TMP/power-late-bash-overlap.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    data = json.load(handle)
+data["permission"]["bash"]["cat *"] = "allow"
+print(json.dumps(data, ensure_ascii=False))
+PY
+check \
+  "late overlapping bash allow cannot remain POWER" \
+  "CUSTOM" \
+  "$(python3 "$DETECT" "$TMP/power-late-bash-overlap.json")"
+
+# A late non-deny with no overlap must not create a false conflict.
+python3 - "$KIT_DIR/templates/opencode.power.json" >"$TMP/power-late-disjoint.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    data = json.load(handle)
+data["permission"]["read"]["README.md"] = "allow"
+print(json.dumps(data, ensure_ascii=False))
+PY
+check \
+  "late disjoint read allow remains POWER" \
+  "POWER" \
+  "$(python3 "$DETECT" "$TMP/power-late-disjoint.json")"
 
 # 2) Safe template
 cp "$KIT_DIR/templates/opencode.safe.json" "$TMP/safe.json"
@@ -341,6 +398,10 @@ shopt -u nullglob
 check "mode leaves no temporary config" "0" "${#mode_temps[@]}"
 
 # 12) Nested Git projects use the exact current directory, never the Git top-level.
+# OpenCode merges ancestor -> descendant project configs with deep object merge.
+# SAFE therefore intentionally has no convenience Bash allow keys that POWER
+# lacks: such new keys would be appended after inherited deny keys and could
+# reopen protected command languages under last-match-wins.
 MONO="$TMP/monorepo"
 NESTED="$MONO/apps/web"
 mkdir -p "$NESTED"
