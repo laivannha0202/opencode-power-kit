@@ -28,7 +28,7 @@ mkdir -p "$(dirname "$OUT")"
 {
   cat <<'EOF'
 # ────────────────────────────────────────────────────────────────────────────
-# opk-guard-bashrc — opencode-power-kit v2.2.0
+# opk-guard-bashrc — opencode-power-kit
 #
 # Guard Bash: blocks/warns dangerous shell commands BEFORE they execute
 # (rm -rf, git reset --hard, git clean -f, git push --force/-f,

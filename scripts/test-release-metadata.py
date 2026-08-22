@@ -56,6 +56,8 @@ header_surfaces = (
     "verify.sh",
     "scripts/validate-opencode-pack.py",
     "scripts/test-command-guard.sh",
+    "scripts/sync-guard-bashrc.sh",
+    "templates/guard/opk-guard-bashrc",
     "templates/plugins/opk-safety-guard.js",
     "templates/plugins/opk-token-guard.js",
 )
