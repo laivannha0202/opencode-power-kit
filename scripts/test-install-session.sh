@@ -156,5 +156,64 @@ check "legacy original restored" \
 check "merge-created root config removed for legacy project" \
   test ! -e "$P2/opencode.json"
 
+printf '\nleased-transaction session uninstall\n'
+P3="$TMP/leased"
+mkdir -p "$P3"
+T3_JSON="$(
+  python3 "$TX" begin \
+    --root "$P3" \
+    --reason "leased-session" \
+    --lease leased-test
+)"
+T3="$(
+  printf '%s' "$T3_JSON" |
+    python3 -c 'import json,sys; print(json.load(sys.stdin)["tx_id"])'
+)"
+python3 "$TX" stage \
+  --root "$P3" \
+  --txid "$T3" \
+  --kind CREATE \
+  --rel leased.txt \
+  --text 'managed leased file' \
+  --lease leased-test >/dev/null
+python3 "$TX" commit \
+  --root "$P3" \
+  --txid "$T3" \
+  --lease leased-test >/dev/null
+
+S3_JSON="$(
+  python3 "$SESSION" create \
+    --root "$P3" \
+    --txid "$T3" \
+    --lease leased-test
+)"
+S3="$(
+  printf '%s' "$S3_JSON" |
+    python3 -c 'import json,sys; print(json.load(sys.stdin)["session_id"])'
+)"
+python3 "$SESSION" finalize \
+  --root "$P3" \
+  --session "$S3" >/dev/null
+
+check "leased transaction target exists before uninstall" \
+  test -f "$P3/leased.txt"
+
+python3 "$SESSION" uninstall \
+  --root "$P3" \
+  --session "$S3" \
+  --yes >/dev/null
+
+check "session uninstall rolls back leased transaction" \
+  test ! -e "$P3/leased.txt"
+
+S3_STATUS="$(
+  python3 "$SESSION" show \
+    --root "$P3" \
+    --session "$S3" |
+    python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])'
+)"
+check "leased session marked uninstalled" \
+  test "$S3_STATUS" = uninstalled
+
 printf '\ninstall-session: %d passed, %d failed\n' "$PASS" "$FAIL"
 ((FAIL == 0))

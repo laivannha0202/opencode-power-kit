@@ -4,6 +4,9 @@ set -euo pipefail
 
 KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 INSTALLER="$KIT_DIR/scripts/install-fullstack-profile.sh"
+SESSION="$KIT_DIR/scripts/opk_install_session.py"
+MERGE="$KIT_DIR/scripts/merge-opk-project.py"
+TX="$KIT_DIR/scripts/opk_tx.py"
 TMP="$(mktemp -d)"
 cleanup() { [[ ! -d "$TMP" ]] || rm -r -- "$TMP"; }
 trap cleanup EXIT
@@ -36,6 +39,38 @@ make_project() {
   printf '{"name":"fixture","private":true}\n' >"$project/package.json"
   printf '# User AGENTS\nKEEP-AGENTS\n' >"$project/AGENTS.md"
   printf '# User OPENCODE\nKEEP-OPENCODE\n' >"$project/OPENCODE.md"
+}
+
+make_base_session() {
+  local project="$1"
+  local merge_json txid session_json sid
+
+  merge_json="$(
+    python3 "$MERGE" --project-dir "$project" --mode power --json
+  )"
+  txid="$(
+    python3 "$TX" begin \
+      --root "$project" \
+      --reason "fullstack-test: base install session" |
+      python3 -c 'import json,sys; print(json.load(sys.stdin)["tx_id"])'
+  )"
+  python3 "$TX" commit --root "$project" --txid "$txid" >/dev/null
+
+  session_json="$(
+    python3 "$SESSION" create \
+      --root "$project" \
+      --merge-json "$merge_json" \
+      --txid "$txid" \
+      --lease fullstack-test
+  )"
+  sid="$(
+    printf '%s' "$session_json" |
+      python3 -c 'import json,sys; print(json.load(sys.stdin)["session_id"])'
+  )"
+  python3 "$SESSION" finalize \
+    --root "$project" \
+    --session "$sid" >/dev/null
+  printf '%s\n' "$sid"
 }
 
 # ---------------------------------------------------------------------------
@@ -151,6 +186,92 @@ check "report symlink referent unchanged" test "$?" -eq 0
 check "report failure rolls back command tree" test "$?" -eq 0
 [[ ! -e "$R/.agents/skills" ]]
 check "report failure rolls back skill tree" test "$?" -eq 0
+
+# ---------------------------------------------------------------------------
+# Installed-session extension: fullstack must become part of the base OPK
+# lifecycle so one uninstall restores the pre-OPK project state.
+# ---------------------------------------------------------------------------
+L="$TMP/session-extension"
+make_project "$L"
+cp "$L/AGENTS.md" "$TMP/session-agents.orig"
+cp "$L/OPENCODE.md" "$TMP/session-opencode.orig"
+SID="$(make_base_session "$L")"
+
+run_install "$L"
+
+python3 - "$SESSION" "$L" "$SID" <<'PY'
+import json
+import subprocess
+import sys
+
+helper, root, sid = sys.argv[1:]
+data = json.loads(
+    subprocess.check_output(
+        ["python3", helper, "show", "--root", root, "--session", sid],
+        text=True,
+    )
+)
+assert data["status"] == "installed"
+assert len(data.get("tx_ids", [])) >= 2
+assert "FULLSTACK_PROFILE_REPORT.md" in data.get("final_state", {})
+assert any(
+    str(item.get("reason", "")).startswith("install-fullstack-profile:")
+    for item in data.get("extensions", [])
+)
+PY
+check "fullstack transaction extends active install session" test "$?" -eq 0
+
+python3 "$SESSION" uninstall \
+  --root "$L" \
+  --session "$SID" \
+  --yes >/dev/null
+
+check "single uninstall restores pre-OPK AGENTS" \
+  cmp -s "$L/AGENTS.md" "$TMP/session-agents.orig"
+check "single uninstall restores pre-OPK OPENCODE" \
+  cmp -s "$L/OPENCODE.md" "$TMP/session-opencode.orig"
+check "single uninstall removes merger-created root config" \
+  test ! -e "$L/opencode.json"
+check "single uninstall removes fullstack report" \
+  test ! -e "$L/FULLSTACK_PROFILE_REPORT.md"
+check "single uninstall removes fullstack command tree" \
+  test ! -e "$L/.opencode/commands/fullstack"
+check "single uninstall removes fullstack skill tree" \
+  test ! -e "$L/.agents/skills"
+
+# ---------------------------------------------------------------------------
+# User edits after the base install must stop fullstack BEFORE mutation.
+# ---------------------------------------------------------------------------
+U="$TMP/session-user-edit"
+make_project "$U"
+USID="$(make_base_session "$U")"
+printf '\nUSER EDIT AFTER BASE INSTALL\n' >>"$U/AGENTS.md"
+before_agents="$(sha256sum "$U/AGENTS.md" | awk '{print $1}')"
+before_opencode="$(sha256sum "$U/OPENCODE.md" | awk '{print $1}')"
+
+if run_install "$U"; then
+  check "post-install user edit blocks fullstack session extension" false
+else
+  check "post-install user edit blocks fullstack session extension" true
+fi
+after_agents="$(sha256sum "$U/AGENTS.md" | awk '{print $1}')"
+after_opencode="$(sha256sum "$U/OPENCODE.md" | awk '{print $1}')"
+check "blocked extension preserves edited AGENTS" \
+  test "$before_agents" = "$after_agents"
+check "blocked extension leaves OPENCODE untouched" \
+  test "$before_opencode" = "$after_opencode"
+check "blocked extension creates no fullstack report" \
+  test ! -e "$U/FULLSTACK_PROFILE_REPORT.md"
+if grep -qF '<!-- OPENCODE-POWER-KIT-MARKER: fullstack-profile-begin -->' "$U/AGENTS.md"; then
+  check "blocked extension adds no fullstack AGENTS marker" false
+else
+  check "blocked extension adds no fullstack AGENTS marker" true
+fi
+
+# Keep the base session test fixture itself uninstallable after restoring the
+# deliberate user-edit mutation.
+git_hash_unused="$USID"
+# No cleanup through uninstall is required here; TMP is removed by the test trap.
 
 echo
 if [[ "$fail" -ne 0 ]]; then

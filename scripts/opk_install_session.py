@@ -620,6 +620,290 @@ def finalize_session(root: str, session_id: str) -> dict[str, Any]:
     }
 
 
+def acquire_install_lock(root: str) -> int:
+    """Acquire the project-wide OPK install/uninstall lock."""
+    root = _canonical(root)
+    lock_fd = tx._open_state_lock(root, ".install.lock")
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError as exc:
+        io.close_fd(lock_fd)
+        raise SessionError(
+            "another installer/uninstaller is holding the install lock"
+        ) from exc
+    return lock_fd
+
+
+def release_install_lock(lock_fd: int | None) -> None:
+    if lock_fd is None:
+        return
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+    except OSError:
+        pass
+    io.close_fd(lock_fd)
+
+
+def prepare_extension(root: str) -> str | None:
+    """Return the latest installed session after proving it is still clean.
+
+    A standalone full-stack install is allowed when no OPK install session
+    exists.  When a session does exist, callers must extend that same session
+    so one uninstall can reverse the complete OPK lifecycle.
+    """
+    root = _canonical(root)
+    latest = _latest_session(root, status="installed")
+    if latest is None:
+        return None
+    session_id, manifest = latest
+    _compare_final_state(root, manifest)
+    _preflight_restore_material(root, manifest)
+    return session_id
+
+
+def _extension_pre_snapshot(
+    root: str,
+    tx_id: str,
+    op: dict[str, Any],
+) -> dict[str, Any]:
+    pre_exists = op.get("pre_exists")
+    if pre_exists is False:
+        return {"type": "missing"}
+    if pre_exists is not True:
+        raise SessionError(
+            "extension transaction op has invalid pre_exists: %s"
+            % op.get("rel")
+        )
+
+    if op.get("op") == "MKDIR":
+        return {"type": "dir"}
+
+    backup_raw = op.get("backup_rel")
+    pre_hash = op.get("pre_hash")
+    if not isinstance(backup_raw, str) or not isinstance(pre_hash, str):
+        raise SessionError(
+            "extension transaction missing file pre-state: %s"
+            % op.get("rel")
+        )
+    backup_rel = _safe_rel(backup_raw, allow_state=True)
+    prefix = ".opk-state/transactions/%s/backups/" % tx_id
+    if not backup_rel.startswith(prefix):
+        raise SessionError(
+            "extension transaction backup path is outside its tx: %s"
+            % backup_rel
+        )
+    data = io.safe_read(root, backup_rel)
+    digest = hashlib.sha256(data).hexdigest()
+    if digest != pre_hash:
+        raise SessionError(
+            "extension transaction pre-state checksum mismatch: %s"
+            % op.get("rel")
+        )
+    return {
+        "type": "file",
+        "sha256": digest,
+        "size": len(data),
+    }
+
+
+def _verify_transaction_post_state(
+    root: str,
+    tx_manifest: dict[str, Any],
+) -> None:
+    ops = tx_manifest.get("ops", [])
+    if not isinstance(ops, list):
+        raise SessionError("extension transaction ops are corrupt")
+
+    last_by_rel: dict[str, dict[str, Any]] = {}
+    for op in ops:
+        if not isinstance(op, dict):
+            raise SessionError("extension transaction op is corrupt")
+        rel_raw = op.get("rel")
+        if rel_raw:
+            rel = _safe_rel(str(rel_raw))
+            last_by_rel[rel] = op
+
+    conflicts: list[str] = []
+    for rel, op in sorted(last_by_rel.items()):
+        got = _snapshot(root, rel)
+        post_hash = op.get("post_hash")
+        kind = op.get("op")
+
+        if isinstance(post_hash, str):
+            good = (
+                got.get("type") == "file"
+                and got.get("sha256") == post_hash
+            )
+        elif kind == "MKDIR":
+            good = got.get("type") == "dir"
+        elif kind in ("REMOVE_MANAGED", "ARCHIVE"):
+            good = got.get("type") == "missing"
+        else:
+            raise SessionError(
+                "extension transaction has unverifiable post-state: %s"
+                % rel
+            )
+
+        if not good:
+            conflicts.append(
+                "%s (tx-post=%s, current=%s)"
+                % (
+                    rel,
+                    json.dumps(
+                        {
+                            "op": kind,
+                            "post_hash": post_hash,
+                        },
+                        sort_keys=True,
+                    ),
+                    json.dumps(got, sort_keys=True),
+                )
+            )
+
+    if conflicts:
+        raise SessionError(
+            "transaction outputs changed after staging:\n  - "
+            + "\n  - ".join(conflicts)
+        )
+
+
+def verify_transaction_post_state(root: str, tx_id: str) -> None:
+    root = _canonical(root)
+    manifest = _tx_manifest(root, tx_id)
+    if manifest.get("status") != "committed":
+        raise SessionError(
+            "transaction %s is not committed (status=%s)"
+            % (tx_id, manifest.get("status"))
+        )
+    _verify_transaction_post_state(root, manifest)
+
+
+def extend_session(
+    root: str,
+    session_id: str,
+    tx_id: str,
+) -> dict[str, Any]:
+    """Attach one committed OPK transaction to an installed session.
+
+    The transaction's recorded pre-state must equal the session's previous
+    finalized state for every overlapping path.  Untouched session paths must
+    still be byte-identical.  The transaction's current outputs must also
+    match its recorded post-state before the session manifest is updated.
+    """
+    root = _canonical(root)
+    manifest = _load_session(root, session_id)
+    if manifest.get("status") != "installed":
+        raise SessionError(
+            "cannot extend session %s in status %s"
+            % (session_id, manifest.get("status"))
+        )
+
+    tx_ids = manifest.get("tx_ids", [])
+    if not isinstance(tx_ids, list):
+        raise SessionError("session tx_ids is corrupt")
+    tx_ids = [str(value) for value in tx_ids]
+
+    if tx_id in tx_ids:
+        _compare_final_state(root, manifest)
+        return {
+            "session_id": session_id,
+            "status": "installed",
+            "extended": False,
+            "tx_id": tx_id,
+        }
+
+    tx_manifest = _tx_manifest(root, tx_id)
+    if tx_manifest.get("status") != "committed":
+        raise SessionError(
+            "cannot extend with transaction %s status=%s"
+            % (tx_id, tx_manifest.get("status"))
+        )
+
+    final_state = manifest.get("final_state")
+    if not isinstance(final_state, dict) or not final_state:
+        raise SessionError("install session has no finalized state")
+
+    ops = tx_manifest.get("ops", [])
+    if not isinstance(ops, list):
+        raise SessionError("extension transaction ops are corrupt")
+
+    first_by_rel: dict[str, dict[str, Any]] = {}
+    for op in ops:
+        if not isinstance(op, dict):
+            raise SessionError("extension transaction op is corrupt")
+        rel_raw = op.get("rel")
+        if rel_raw:
+            rel = _safe_rel(str(rel_raw))
+            first_by_rel.setdefault(rel, op)
+
+    conflicts: list[str] = []
+    for rel, wanted in sorted(final_state.items()):
+        if not isinstance(wanted, dict):
+            raise SessionError("corrupt final_state entry: %s" % rel)
+        if rel in first_by_rel:
+            got = _extension_pre_snapshot(
+                root,
+                tx_id,
+                first_by_rel[rel],
+            )
+        else:
+            got = _snapshot(root, rel)
+        if got != wanted:
+            conflicts.append(
+                "%s (session=%s, tx-pre/current=%s)"
+                % (
+                    rel,
+                    json.dumps(wanted, sort_keys=True),
+                    json.dumps(got, sort_keys=True),
+                )
+            )
+
+    if conflicts:
+        raise SessionError(
+            "refusing session extension because project changed after "
+            "the base install:\n  - "
+            + "\n  - ".join(conflicts)
+        )
+
+    _verify_transaction_post_state(root, tx_manifest)
+
+    updated = dict(manifest)
+    updated["tx_ids"] = [*tx_ids, tx_id]
+    extensions = updated.get("extensions", [])
+    if not isinstance(extensions, list):
+        raise SessionError("session extensions metadata is corrupt")
+    updated["extensions"] = [
+        *extensions,
+        {
+            "tx_id": tx_id,
+            "reason": tx_manifest.get("reason", ""),
+            "extended_at": time.strftime(
+                "%Y-%m-%dT%H:%M:%SZ",
+                time.gmtime(),
+            ),
+        },
+    ]
+
+    _preflight_restore_material(root, updated)
+    targets = _derive_targets(root, updated)
+    updated["final_state"] = {
+        rel: _snapshot(root, rel) for rel in targets
+    }
+    updated["extended_at"] = time.strftime(
+        "%Y-%m-%dT%H:%M:%SZ",
+        time.gmtime(),
+    )
+    _json_write(root, _session_rel(session_id), updated)
+
+    return {
+        "session_id": session_id,
+        "status": "installed",
+        "extended": True,
+        "tx_id": tx_id,
+        "managed_paths": len(targets),
+    }
+
+
 def show_session(
     root: str,
     session_id: str | None = None,
@@ -686,7 +970,18 @@ def uninstall_session(
 
         tx_ids = [str(value) for value in manifest.get("tx_ids", [])]
         for tx_id in reversed(tx_ids):
-            tx.rollback(root, tx_id, force=True)
+            tx_manifest = _tx_manifest(root, tx_id)
+            tx_lease = tx_manifest.get("lease")
+            if tx_lease is not None and not isinstance(tx_lease, str):
+                raise SessionError(
+                    "transaction %s has invalid lease metadata" % tx_id
+                )
+            tx.rollback(
+                root,
+                tx_id,
+                force=True,
+                lease=tx_lease,
+            )
 
         _restore_wal(root, manifest)
         restored_legacy = _restore_legacy_archives(root, manifest)

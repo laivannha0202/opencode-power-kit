@@ -15,6 +15,7 @@ import sys
 import time
 from pathlib import Path
 
+import opk_install_session
 import opk_safe_io as io
 import opk_tx
 
@@ -316,6 +317,10 @@ def main() -> int:
 
     txid: str | None = None
     lease = f"fullstack-{os.getpid()}-{time.time_ns()}"
+    install_lock_fd: int | None = None
+    session_id: str | None = None
+    tx_committed = False
+    root: str | None = None
 
     try:
         root = validate_runtime(args.project_dir)
@@ -330,6 +335,11 @@ def main() -> int:
                 if reply not in ("y", "yes"):
                     print("Đã hủy.")
                     return 0
+
+        install_lock_fd = opk_install_session.acquire_install_lock(root)
+        session_id = opk_install_session.prepare_extension(root)
+        if session_id is not None:
+            info(f"Extending OPK install session: {session_id}")
 
         info(f"Project: {root}")
         info(f"Profile: {PROFILE_DIR}")
@@ -370,6 +380,12 @@ def main() -> int:
         tx_stage(root, txid, lease, "REPLACE", REPORT_REL, text=report)
 
         opk_tx.commit(root, txid, lease=lease)
+        tx_committed = True
+
+        if session_id is not None:
+            opk_install_session.extend_session(root, session_id, txid)
+            ok(f"Full-stack transaction attached to install session {session_id}")
+
         ok("Full-stack profile transaction committed")
         info(f"Report: {os.path.join(root, REPORT_REL)}")
         return 0
@@ -377,9 +393,23 @@ def main() -> int:
     except Exception as error:
         if txid is not None:
             try:
+                rollback_root = (
+                    root
+                    if root is not None
+                    else io.canonical_root(args.project_dir or os.getcwd())
+                )
+                if tx_committed:
+                    # A committed transaction may be force-rolled back only
+                    # while its outputs still match the transaction post-state.
+                    # This avoids overwriting a concurrent user edit.
+                    opk_install_session.verify_transaction_post_state(
+                        rollback_root,
+                        txid,
+                    )
                 opk_tx.rollback(
-                    io.canonical_root(args.project_dir or os.getcwd()),
+                    rollback_root,
                     txid,
+                    force=tx_committed,
                     lease=lease,
                 )
             except Exception as rollback_error:
@@ -390,6 +420,8 @@ def main() -> int:
                 return 1
         print(f"[ERROR] {error}", file=sys.stderr)
         return 1
+    finally:
+        opk_install_session.release_install_lock(install_lock_fd)
 
 
 if __name__ == "__main__":
