@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   release-gate:
-    name: Release gate (Linux)
+    name: Release gate (Linux, pinned OpenCode)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -23,8 +23,38 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install opencode (required by resolved-config tests)
-        run: npm install -g opencode-ai
+      - name: Install reviewed OpenCode pin
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Required CI must not inherit an external compatibility override.
+          unset OPK_OPENCODE_VERSION
+          source scripts/upstream-versions.sh
+          npm install -g "opencode-ai@${OPK_OPENCODE_VERSION}"
+          actual="$(opencode --version)"
+          if [[ "$actual" != "$OPK_OPENCODE_VERSION" ]]; then
+            echo "OpenCode version mismatch: want=$OPK_OPENCODE_VERSION got=$actual" >&2
+            exit 1
+          fi
+          echo "Required OpenCode: $actual"
 
       - name: Run release gate
         run: bash scripts/release-gate.sh
+
+  opencode-latest-canary:
+    name: OpenCode latest compatibility canary
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install latest OpenCode
+        run: |
+          set -euo pipefail
+          npm install -g opencode-ai@latest
+          opencode --version
+
+      - name: Run OpenCode compatibility smoke
+        run: bash scripts/test-opencode-resolved-config.sh

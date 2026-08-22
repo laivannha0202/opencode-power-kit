@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Central, reviewed upstream pins for OpenCode Power Kit.
 # Environment variables may override pins for controlled compatibility testing.
+# Required CI explicitly unsets OPK_OPENCODE_VERSION before sourcing this file
+# so the release lane always exercises the reviewed OpenCode version.
+: "${OPK_OPENCODE_VERSION:=1.18.20}"
 
 : "${OPK_BMAD_VERSION:=6.11.0}"
 : "${OPK_GSD_VERSION:=1.8.0}"
@@ -9,5 +12,5 @@
 : "${OPK_TASTE_SOURCE:=https://github.com/Leonxlnx/taste-skill}"
 : "${OPK_SUPERMEMORY_PACKAGE:=supermemory}"
 
-export OPK_BMAD_VERSION OPK_GSD_VERSION OPK_SUPERPOWERS_VERSION
+export OPK_OPENCODE_VERSION OPK_BMAD_VERSION OPK_GSD_VERSION OPK_SUPERPOWERS_VERSION
 export OPK_MARKITDOWN_VERSION OPK_TASTE_SOURCE OPK_SUPERMEMORY_PACKAGE

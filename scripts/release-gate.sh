@@ -168,7 +168,7 @@ section "6. Scripts"
 for s in detect-mode.py merge-opk-project.py install-global.py install-fullstack-profile.py opk-permissions.py \
          opk_safe_io.py opk_tx.py opk_install_session.py check-runtime-plugins.mjs \
          validate-opencode-pack.py check-cli-file-references.py \
-         check-opencode-config-paths.py check-agent-permission-contracts.py \
+         check-opencode-config-paths.py check-agent-permission-contracts.py test-ci-opencode-pin.py \
          test-cli-contracts.sh test-global-installer.sh \
          test-opencode-resolved-config.sh audit-hermes.sh; do
   if [ -f "$KIT_DIR/scripts/$s" ]; then
@@ -228,7 +228,7 @@ for s in test-permission-rules.py test-safety-plugin.mjs test-token-guard.mjs \
          test-wal-recovery.sh test-legacy-recovery.sh test-safe-io.sh \
          test-tx.sh test-install-tx.sh test-install-session.sh test-bmad-log-lifecycle.sh test-doctor-runtime.sh test-hardening-contract.py \
          test-command-guard.sh test-guard-no-env-bypass.sh test-guard-interactive.py \
-         test-phase2-upstream-contract.py test-release-metadata.py \
+         test-phase2-upstream-contract.py test-release-metadata.py test-ci-opencode-pin.py \
          check-bmad-runtime-prereqs.sh; do
   if [ -f "$KIT_DIR/scripts/$s" ]; then
     pass "scripts/$s exists"
@@ -370,6 +370,9 @@ run_cmd "test-phase2-upstream-contract" \
 
 run_cmd "test-release-metadata" \
   "python3 $KIT_DIR/scripts/test-release-metadata.py"
+
+run_cmd "test-ci-opencode-pin" \
+  "python3 $KIT_DIR/scripts/test-ci-opencode-pin.py"
 
 # --- Shell Tests ---
 echo ""
