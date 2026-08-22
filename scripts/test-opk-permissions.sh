@@ -132,6 +132,111 @@ else
   ok "symlink project path is rejected"
 fi
 
+# Diagnostics must distinguish the standard global JSON/JSONC config from
+# OPENCODE_CONFIG and OPENCODE_CONFIG_DIR custom sources.
+JSONC_HOME="$TMP/home-jsonc"
+mkdir -p "$JSONC_HOME/.config/opencode"
+printf '{// fixture\n"share":"manual",\n}\n' >"$JSONC_HOME/.config/opencode/opencode.jsonc"
+JSONC_REPORT="$TMP/jsonc-report.json"
+HOME="$JSONC_HOME" PATH="$TMP/bin:$PATH" \
+  OPENCODE_CONFIG="$TMP/custom-config.jsonc" \
+  OPENCODE_CONFIG_DIR="$TMP/custom-dir" \
+  python3 "$CHECKER" --project-dir "$exact" --json >"$JSONC_REPORT"
+if python3 - "$JSONC_REPORT" "$JSONC_HOME" "$TMP" <<'PY'
+import json
+import os
+import sys
+
+report = json.load(open(sys.argv[1], encoding="utf-8"))
+home = sys.argv[2]
+tmp = sys.argv[3]
+assert report["global_config"] == os.path.join(
+    home, ".config", "opencode", "opencode.jsonc"
+)
+assert report["global_config_exists"] is True
+assert report["global_config_error"] is None
+assert report["custom_config"] == os.path.join(tmp, "custom-config.jsonc")
+assert report["custom_config_dir"] == os.path.join(tmp, "custom-dir")
+assert report["environment"]["OPENCODE_CONFIG_CONTENT"] == "unset"
+PY
+then
+  ok "diagnostics report JSONC global config and custom sources separately"
+else
+  fail "diagnostics report JSONC global config and custom sources separately"
+fi
+
+MISSING_HOME="$TMP/home-missing-global"
+mkdir -p "$MISSING_HOME"
+MISSING_REPORT="$TMP/missing-global-report.json"
+env -u OPENCODE_CONFIG -u OPENCODE_CONFIG_DIR -u OPENCODE_CONFIG_CONTENT \
+  HOME="$MISSING_HOME" PATH="$TMP/bin:$PATH" \
+  python3 "$CHECKER" --project-dir "$exact" --json >"$MISSING_REPORT"
+if python3 - "$MISSING_REPORT" "$MISSING_HOME" <<'PY'
+import json
+import os
+import sys
+
+report = json.load(open(sys.argv[1], encoding="utf-8"))
+assert report["global_config"] == os.path.join(
+    sys.argv[2], ".config", "opencode", "opencode.json"
+)
+assert report["global_config_exists"] is False
+assert report["global_config_error"] is None
+assert report["custom_config"] is None
+assert report["custom_config_dir"] is None
+PY
+then
+  ok "missing global config reports default candidate without claiming presence"
+else
+  fail "missing global config reports default candidate without claiming presence"
+fi
+
+CONFLICT_HOME="$TMP/home-global-conflict"
+mkdir -p "$CONFLICT_HOME/.config/opencode"
+printf '{}\n' >"$CONFLICT_HOME/.config/opencode/opencode.json"
+printf '{}\n' >"$CONFLICT_HOME/.config/opencode/opencode.jsonc"
+CONFLICT_REPORT="$TMP/conflict-global-report.json"
+env -u OPENCODE_CONFIG -u OPENCODE_CONFIG_DIR -u OPENCODE_CONFIG_CONTENT \
+  HOME="$CONFLICT_HOME" PATH="$TMP/bin:$PATH" \
+  python3 "$CHECKER" --project-dir "$exact" --json >"$CONFLICT_REPORT"
+if python3 - "$CONFLICT_REPORT" <<'PY'
+import json
+import sys
+
+report = json.load(open(sys.argv[1], encoding="utf-8"))
+assert report["global_config"] is None
+assert report["global_config_exists"] is False
+assert "both opencode.json and opencode.jsonc" in (report["global_config_error"] or "")
+PY
+then
+  ok "global JSON/JSONC conflict is surfaced explicitly"
+else
+  fail "global JSON/JSONC conflict is surfaced explicitly"
+fi
+
+SYMLINK_HOME="$TMP/home-global-symlink"
+mkdir -p "$SYMLINK_HOME/.config/opencode"
+printf '{}\n' >"$SYMLINK_HOME/outside.json"
+ln -s "$SYMLINK_HOME/outside.json" "$SYMLINK_HOME/.config/opencode/opencode.json"
+SYMLINK_REPORT="$TMP/symlink-global-report.json"
+env -u OPENCODE_CONFIG -u OPENCODE_CONFIG_DIR -u OPENCODE_CONFIG_CONTENT \
+  HOME="$SYMLINK_HOME" PATH="$TMP/bin:$PATH" \
+  python3 "$CHECKER" --project-dir "$exact" --json >"$SYMLINK_REPORT"
+if python3 - "$SYMLINK_REPORT" <<'PY'
+import json
+import sys
+
+report = json.load(open(sys.argv[1], encoding="utf-8"))
+assert report["global_config"] is None
+assert report["global_config_exists"] is False
+assert "symlink" in (report["global_config_error"] or "").lower()
+PY
+then
+  ok "symlinked standard global config is reported unsafe"
+else
+  fail "symlinked standard global config is reported unsafe"
+fi
+
 if PATH="$TMP/bin:$PATH" python3 "$CHECKER" --project-dir "$exact" --require-power >/dev/null 2>&1; then
   ok "require-power accepts complete Power contract"
 else

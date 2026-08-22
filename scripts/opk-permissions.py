@@ -25,6 +25,7 @@ from opk_mode import (  # noqa: E402
     action,
     classify,
     count_action,
+    resolve_config_path,
 )
 
 
@@ -115,6 +116,24 @@ def opencode_version() -> str:
     return result.stdout.strip() or "unknown"
 
 
+def global_config_diagnostics() -> tuple[Path | None, bool, str | None]:
+    """Report the standard global config without confusing custom env sources.
+
+    OpenCode's standard global config lives under ~/.config/opencode and may
+    use JSON or JSONC. OPENCODE_CONFIG and OPENCODE_CONFIG_DIR are separate
+    custom sources and are reported independently by ``report``.
+    """
+    directory = Path.home() / ".config" / "opencode"
+    default = directory / "opencode.json"
+    try:
+        active = resolve_config_path(directory, required=False)
+    except ValueError as error:
+        return None, False, str(error)
+    if active is None:
+        return default, False, None
+    return active, True, None
+
+
 def report(project: Path, descriptor: int, as_json: bool, require_power: bool) -> int:
     root_json = project / "opencode.json"
     root_jsonc = project / "opencode.jsonc"
@@ -134,11 +153,20 @@ def report(project: Path, descriptor: int, as_json: bool, require_power: bool) -
     for key in OPTIONAL_ALLOW_KEYS:
         if isinstance(permission, dict) and key not in permission:
             effective[key] = "not_present"
+
+    global_config, global_config_exists, global_config_error = global_config_diagnostics()
+    custom_config = os.environ.get("OPENCODE_CONFIG", "") or None
+    custom_config_dir = os.environ.get("OPENCODE_CONFIG_DIR", "") or None
+
     data = {
         "opencode_version": opencode_version(),
         "project_root": str(project),
         "git_root": git_root(project),
-        "global_config": str(Path.home() / ".config" / "opencode" / "opencode.json"),
+        "global_config": str(global_config) if global_config is not None else None,
+        "global_config_exists": global_config_exists,
+        "global_config_error": global_config_error,
+        "custom_config": custom_config,
+        "custom_config_dir": custom_config_dir,
         "project_config": str(active_root),
         "project_config_exists": active_root.is_file() and not active_root.is_symlink(),
         "legacy_config": str(legacy),
@@ -175,7 +203,17 @@ def report(project: Path, descriptor: int, as_json: bool, require_power: bool) -
 
     print(f"OpenCode version: {data['opencode_version']}")
     print(f"Project root: {project}")
-    print(f"Global config: {data['global_config']}")
+    if data["global_config_error"]:
+        print(f"Global config: conflict/unsafe ({data['global_config_error']})")
+    else:
+        print(
+            f"Global config: {data['global_config']} "
+            f"({'present' if data['global_config_exists'] else 'missing'})"
+        )
+    if data["custom_config"]:
+        print(f"Custom config (OPENCODE_CONFIG): {data['custom_config']}")
+    if data["custom_config_dir"]:
+        print(f"Custom config dir (OPENCODE_CONFIG_DIR): {data['custom_config_dir']}")
     print(f"Project config: {active_root} ({'present' if data['project_config_exists'] else 'missing'})")
     print(f"Legacy config: {legacy} ({'present' if data['legacy_config_exists'] else 'absent'})")
     for key, value in data["effective"].items():
@@ -187,10 +225,19 @@ def report(project: Path, descriptor: int, as_json: bool, require_power: bool) -
     print(f"--auto support: {'yes' if data['auto_supported'] else 'no'}")
     for key, value in data["environment"].items():
         print(f"{key}: {value}")
-    config_dir = os.environ.get("OPENCODE_CONFIG_DIR", "")
-    if config_dir:
-        print("WARNING: current shell overrides the default global asset directory.")
-        print("Remediation: unset OPENCODE_CONFIG_DIR; open a new shell after running opk global.")
+    if custom_config_dir:
+        print(
+            "WARNING: OPENCODE_CONFIG_DIR adds a custom OpenCode config/assets "
+            "directory that can override managed OPK assets."
+        )
+        print(
+            "Remediation: unset OPENCODE_CONFIG_DIR if this override is not intentional."
+        )
+    if global_config_error:
+        print(
+            "WARNING: standard global config location is ambiguous/unsafe; "
+            "keep exactly one regular opencode.json or opencode.jsonc."
+        )
     if legacy.exists():
         print("Remediation: opk mode migrate")
     if data["mode"] != "POWER":
