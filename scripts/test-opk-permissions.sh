@@ -89,6 +89,41 @@ value["agent"] = {"build": {"permission": {"edit": "ask"}}}
 write("agent-ask", value)
 
 value = copy.deepcopy(power)
+value["agent"] = {"build": {"permission": {"read": "allow"}}}
+write("agent-read-allow", value)
+
+value = copy.deepcopy(power)
+value["agent"] = {
+    "build": {
+        "permission": {
+            "bash": {
+                "rm -rf /tmp/*": "allow",
+            }
+        }
+    }
+}
+write("agent-bash-overlap-allow", value)
+
+value = copy.deepcopy(power)
+value["agent"] = {
+    "build": {
+        "permission": {
+            "read": {
+                "README.md": "allow",
+            },
+            "bash": {
+                "git status": "allow",
+            },
+        }
+    }
+}
+write("agent-disjoint-allow", value)
+
+value = copy.deepcopy(safe)
+value["agent"] = {"build": {"permission": {"read": "allow"}}}
+write("safe-agent-read-allow", value)
+
+value = copy.deepcopy(power)
 del value["permission"]["bash"]["git reset --hard*"]
 write("missing-destructive-deny", value)
 
@@ -110,9 +145,10 @@ PY
 printf 'Permission classification\n'
 expect_mode power POWER "$TMP/fixtures/power.json"
 expect_mode safe SAFE "$TMP/fixtures/safe.json"
-for fixture in read-ask skill-ask task-ask external_directory-ask doom_loop-ask bash-ask agent-ask missing-destructive-deny missing-secret-deny deny-before-wildcard late-narrow-allow; do
+for fixture in read-ask skill-ask task-ask external_directory-ask doom_loop-ask bash-ask agent-ask agent-read-allow agent-bash-overlap-allow safe-agent-read-allow missing-destructive-deny missing-secret-deny deny-before-wildcard late-narrow-allow; do
   expect_mode "$fixture" CUSTOM "$TMP/fixtures/$fixture.json"
 done
+expect_mode agent-disjoint-allow POWER "$TMP/fixtures/agent-disjoint-allow.json"
 expect_mode invalid-permission BROKEN "$TMP/fixtures/invalid-permission.json"
 
 exact="$TMP/projects/exact-cwd"
@@ -248,6 +284,13 @@ if PATH="$TMP/bin:$PATH" python3 "$CHECKER" --project-dir "$exact" --require-pow
   fail "require-power rejects agent ask"
 else
   ok "require-power rejects agent ask"
+fi
+
+cp "$TMP/fixtures/agent-read-allow.json" "$exact/resolved.json"
+if PATH="$TMP/bin:$PATH" python3 "$CHECKER" --project-dir "$exact" --require-power >/dev/null 2>&1; then
+  fail "require-power rejects agent safety override"
+else
+  ok "require-power rejects agent safety override"
 fi
 
 printf '\nPermission tests: %d passed, %d failed\n' "$PASS" "$FAIL"

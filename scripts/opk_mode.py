@@ -293,7 +293,7 @@ def count_action(value: Any, wanted: str) -> int:
     return int(value == wanted)
 
 
-def agent_conflicts(config: dict[str, Any]) -> list[str]:
+def agent_ask_conflicts(config: dict[str, Any]) -> list[str]:
     conflicts: list[str] = []
     agents = config.get("agent", {})
     if not isinstance(agents, dict):
@@ -415,6 +415,137 @@ def wildcard_patterns_overlap(left: str, right: str) -> bool:
     )
 
 
+def _agent_permission_rules(
+    permission: Any,
+    agent_name: str,
+) -> list[tuple[str, str, str]]:
+    """Flatten one agent permission override like OpenCode ``fromConfig``."""
+    if isinstance(permission, str):
+        return [
+            (
+                "*",
+                "*",
+                validate_action(permission, f"agent.{agent_name}.permission"),
+            )
+        ]
+    if not isinstance(permission, dict):
+        raise ValueError(f"invalid permission for agent {agent_name}")
+
+    result: list[tuple[str, str, str]] = []
+    for permission_pattern, value in permission.items():
+        if not isinstance(permission_pattern, str):
+            raise ValueError(
+                f"invalid permission pattern for agent {agent_name}"
+            )
+        if isinstance(value, str):
+            result.append(
+                (
+                    permission_pattern,
+                    "*",
+                    validate_action(
+                        value,
+                        f"agent.{agent_name}.permission.{permission_pattern}",
+                    ),
+                )
+            )
+            continue
+        rules = validate_rule_map(
+            value,
+            f"agent.{agent_name}.permission.{permission_pattern}",
+        )
+        result.extend(
+            (permission_pattern, resource_pattern, effect)
+            for resource_pattern, effect in rules.items()
+        )
+    return result
+
+
+def _is_reviewed_exception_for(
+    key: str,
+    pattern: str,
+    effect: str,
+    required_pattern: str,
+) -> bool:
+    if DENY_CONTRACT_EXCEPTIONS.get(key, {}).get(pattern) != effect:
+        return False
+    return required_pattern in DENY_CONTRACT_EXCEPTION_SCOPES.get(
+        key, {}
+    ).get(pattern, ())
+
+
+def agent_safety_conflicts(config: dict[str, Any]) -> list[str]:
+    """Return agents whose late overrides weaken OPK's reviewed safety denies.
+
+    OpenCode appends each agent's permission rules after the global user
+    ruleset.  Any later non-deny that overlaps a protected global deny wins at
+    runtime, so classification must reject that resolved config.
+    """
+    agents = config.get("agent", {})
+    if not isinstance(agents, dict):
+        raise ValueError("resolved agent config must be an object")
+
+    conflicts: list[str] = []
+    for name, agent in agents.items():
+        if not isinstance(name, str) or not isinstance(agent, dict):
+            raise ValueError("resolved agent entry is invalid")
+
+        unsafe = False
+        for permission_pattern, resource_pattern, effect in _agent_permission_rules(
+            agent.get("permission", {}),
+            name,
+        ):
+            if effect == "deny":
+                continue
+
+            for key, required in (
+                ("read", SECRET_RULES),
+                ("bash", DESTRUCTIVE_RULES),
+            ):
+                if not wildcard_match(key, permission_pattern):
+                    continue
+                for required_pattern in required:
+                    if _is_reviewed_exception_for(
+                        key,
+                        resource_pattern,
+                        effect,
+                        required_pattern,
+                    ):
+                        continue
+                    if wildcard_patterns_overlap(
+                        resource_pattern,
+                        required_pattern,
+                    ):
+                        unsafe = True
+                        break
+                if unsafe:
+                    break
+            if unsafe:
+                break
+
+            for key in ("external_directory", "doom_loop"):
+                if wildcard_match(key, permission_pattern):
+                    # The global POWER/SAFE contract denies these permission
+                    # classes entirely.  Any later agent non-deny rule can
+                    # reopen at least one resource in that class.
+                    unsafe = True
+                    break
+            if unsafe:
+                break
+
+        if unsafe:
+            conflicts.append(name)
+
+    return sorted(conflicts)
+
+
+def agent_conflicts(config: dict[str, Any]) -> list[str]:
+    """Conflicts that disqualify unattended POWER mode."""
+    return sorted(
+        set(agent_ask_conflicts(config))
+        | set(agent_safety_conflicts(config))
+    )
+
+
 def deny_contract(permission: Any, key: str, required: dict[str, str]) -> tuple[bool, list[str]]:
     if not isinstance(permission, dict) or not isinstance(permission.get(key), dict):
         return False, list(required)
@@ -438,12 +569,13 @@ def deny_contract(permission: Any, key: str, required: dict[str, str]) -> tuple[
         for index, (pattern, effect) in enumerate(rules.items()):
             if index <= required_position or effect == "deny":
                 continue
-            if DENY_CONTRACT_EXCEPTIONS.get(key, {}).get(pattern) == effect:
-                allowed_overrides = DENY_CONTRACT_EXCEPTION_SCOPES.get(
-                    key, {}
-                ).get(pattern, ())
-                if required_pattern in allowed_overrides:
-                    continue
+            if _is_reviewed_exception_for(
+                key,
+                pattern,
+                effect,
+                required_pattern,
+            ):
+                continue
             if wildcard_patterns_overlap(pattern, required_pattern):
                 missing.append(
                     "late non-deny rule overlaps "
@@ -461,7 +593,9 @@ def classify(config: dict[str, Any] | None, error: str | None) -> tuple[str, dic
         if not isinstance(permission, (str, dict)):
             raise ValueError("resolved permission must be a string or object")
         effective = {key: action(permission, key) for key in (*POWER_ALLOW_KEYS, *OPTIONAL_ALLOW_KEYS, "external_directory", "doom_loop")}
-        conflicts = agent_conflicts(config)
+        ask_conflicts = agent_ask_conflicts(config)
+        safety_conflicts = agent_safety_conflicts(config)
+        conflicts = sorted(set(ask_conflicts) | set(safety_conflicts))
         agent_asks = sum(
             count_action(agent.get("permission", {}), "ask")
             for agent in config.get("agent", {}).values()
@@ -488,10 +622,12 @@ def classify(config: dict[str, Any] | None, error: str | None) -> tuple[str, dic
             and effective["doom_loop"] == "deny"
             and secret_ok
             and destructive_ok
+            and not safety_conflicts
         )
         details = {
             "effective": effective,
             "agent_override_conflicts": conflicts,
+            "agent_safety_conflicts": safety_conflicts,
             "agent_ask_count": agent_asks,
             "global_ask_count": global_asks,
             "missing_secret_denies": missing_secret,
@@ -516,6 +652,8 @@ __all__ = [
     "validate_rule_map",
     "action",
     "count_action",
+    "agent_ask_conflicts",
+    "agent_safety_conflicts",
     "agent_conflicts",
     "wildcard_match",
     "evaluate_rules",
