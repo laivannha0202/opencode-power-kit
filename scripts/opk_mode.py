@@ -268,7 +268,11 @@ def action(permission: Any, key: str) -> str:
         return validate_action(value, key)
     if isinstance(value, dict):
         rules = validate_rule_map(value, key)
-        return rules.get("*", "ask")
+        # OpenCode's top-level permission "*" remains an earlier wildcard
+        # rule. If this permission-specific map has no local "*" rule, a
+        # resource that misses all specific patterns falls back to that
+        # top-level rule rather than implicitly becoming "ask".
+        return rules.get("*", fallback)
     raise ValueError(f"invalid permission value for {key}")
 
 

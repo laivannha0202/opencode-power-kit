@@ -119,6 +119,7 @@ import sys
 
 sys.path.insert(0, sys.argv[1])
 from opk_mode import (
+    action,
     evaluate_rules,
     wildcard_match,
     wildcard_patterns_overlap,
@@ -159,6 +160,11 @@ assert wildcard_patterns_overlap("foo*", "*.env")
 assert wildcard_patterns_overlap("cat *", "*.env*")
 assert wildcard_patterns_overlap("git *", "git")
 assert not wildcard_patterns_overlap("README.md", "*.env")
+
+# A permission-specific object without its own "*" inherits the top-level
+# permission wildcard, matching OpenCode fromConfig() + findLast() behavior.
+assert action({"*": "allow", "read": {"*.env": "deny"}}, "read") == "allow"
+assert action({"*": "ask", "read": {"*.env": "deny"}}, "read") == "ask"
 PY
 then
   check "OpenCode wildcard contract" "pass" "pass"
@@ -215,6 +221,24 @@ check \
   "late disjoint read allow remains POWER" \
   "POWER" \
   "$(python3 "$DETECT" "$TMP/power-late-disjoint.json")"
+
+# 1c) OpenCode keeps the top-level permission wildcard as the fallback when a
+# permission-specific map omits its own "*".  Removing the redundant local
+# read/bash "*" rules from the Power template must therefore remain POWER.
+python3 - "$KIT_DIR/templates/opencode.power.json" >"$TMP/power-inherited-fallback.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    data = json.load(handle)
+data["permission"]["read"].pop("*")
+data["permission"]["bash"].pop("*")
+print(json.dumps(data, ensure_ascii=False))
+PY
+check \
+  "Power nested maps inherit top-level allow fallback" \
+  "POWER" \
+  "$(python3 "$DETECT" "$TMP/power-inherited-fallback.json")"
 
 # 2) Safe template
 cp "$KIT_DIR/templates/opencode.safe.json" "$TMP/safe.json"
