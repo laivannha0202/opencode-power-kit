@@ -240,6 +240,40 @@ check \
   "POWER" \
   "$(python3 "$DETECT" "$TMP/power-inherited-fallback.json")"
 
+# 1d) The reviewed *.env.example allow is scoped only to the *.env.* deny.
+# If config merging/reordering places it after an independent secret-name deny,
+# OpenCode last-match-wins would allow e.g. secret.env.example.  That resolved
+# config must not still classify as POWER.
+python3 - "$KIT_DIR/templates/opencode.power.json" >"$TMP/power-late-env-example.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    data = json.load(handle)
+
+rules = data["permission"]["read"]
+effect = rules.pop("*.env.example")
+rules["*.env.example"] = effect
+
+# Prove the reordered rules are genuinely unsafe under runtime ordering.
+def match(value, pattern):
+    import re
+    escaped = re.escape(pattern).replace(r"\*", ".*").replace(r"\?", ".")
+    return re.fullmatch(escaped, value, flags=re.DOTALL) is not None
+
+result = "ask"
+for pattern, action in rules.items():
+    if match("secret.env.example", pattern):
+        result = action
+assert result == "allow"
+
+print(json.dumps(data, ensure_ascii=False))
+PY
+check \
+  "late env-example exception cannot bypass secret deny" \
+  "CUSTOM" \
+  "$(python3 "$DETECT" "$TMP/power-late-env-example.json")"
+
 # 2) Safe template
 cp "$KIT_DIR/templates/opencode.safe.json" "$TMP/safe.json"
 check "opencode.safe.json" "SAFE" "$(python3 "$DETECT" "$TMP/safe.json")"

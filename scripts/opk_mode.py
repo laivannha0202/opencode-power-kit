@@ -42,6 +42,15 @@ DENY_CONTRACT_EXCEPTIONS = {
     },
 }
 
+# Reviewed exceptions are scoped to the specific required deny language they
+# are allowed to reopen.  ``*.env.example`` is an exception only to
+# ``*.env.*``; it must never bypass independent secret-name/key denies.
+DENY_CONTRACT_EXCEPTION_SCOPES = {
+    "read": {
+        "*.env.example": ("*.env.*",),
+    },
+}
+
 DESTRUCTIVE_RULES = {
     "rm -rf*": "rm -rf build",
     "rm -fr*": "rm -fr build",
@@ -430,7 +439,11 @@ def deny_contract(permission: Any, key: str, required: dict[str, str]) -> tuple[
             if index <= required_position or effect == "deny":
                 continue
             if DENY_CONTRACT_EXCEPTIONS.get(key, {}).get(pattern) == effect:
-                continue
+                allowed_overrides = DENY_CONTRACT_EXCEPTION_SCOPES.get(
+                    key, {}
+                ).get(pattern, ())
+                if required_pattern in allowed_overrides:
+                    continue
             if wildcard_patterns_overlap(pattern, required_pattern):
                 missing.append(
                     "late non-deny rule overlaps "
